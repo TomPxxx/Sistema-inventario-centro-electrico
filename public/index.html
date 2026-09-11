@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Grupo Eléctrico | Sistema Multi-Sede & Logística</title>
+  
+  <!-- Tipografías Oficiales Google Fonts -->
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+  
+  <!-- Iconografía Material Symbols Outlined -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  
+  <!-- Tailwind CSS CDN con configuración personalizada de Grupo Eléctrico -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            surface: "#081613",
+            "surface-dim": "#081613",
+            "surface-container-lowest": "#04110e",
+            "surface-container-low": "#101e1b",
+            "surface-container": "#14221f",
+            "surface-container-high": "#1e2d29",
+            "surface-container-highest": "#293834",
+            "surface-variant": "#293834",
+            "surface-bright": "#2e3c38",
+            "on-surface": "#d6e6e0",
+            "on-surface-variant": "#bbcabf",
+            outline: "#86948a",
+            "outline-variant": "#3c4a42",
+            primary: "#10b981",
+            "primary-fixed": "#6ffbbe",
+            "primary-fixed-dim": "#4edea3",
+            "primary-container": "#10b981",
+            "on-primary": "#003824",
+            "on-primary-container": "#00422b",
+            secondary: "#ffe083",
+            "secondary-container": "#facc15",
+            "secondary-fixed": "#ffe083",
+            "secondary-fixed-dim": "#eec200",
+            "on-secondary": "#3c2f00",
+            "on-secondary-container": "#422006",
+            "industrial-yellow": "#facc15",
+            "industrial-yellow-hover": "#eab308",
+            tertiary: "#b2ccc2",
+            "tertiary-container": "#8fa89f",
+            error: "#ffb4ab",
+            "error-container": "#93000a",
+            "on-error": "#690005",
+            "on-error-container": "#ffdad6"
+          },
+          fontFamily: {
+            headline: ["Space Grotesk", "sans-serif"],
+            body: ["Inter", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+  
+  <style>
+    @layer base {
+      html, body {
+        margin: 0;
+        padding: 0;
+        background-color: #04110e;
+        color: #d6e6e0;
+        font-family: 'Inter', sans-serif;
+      }
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #081613;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #293834;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #10b981;
+    }
+    .custom-glow {
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.15);
+    }
+    .yellow-glow {
+      box-shadow: 0 0 20px rgba(250, 204, 21, 0.25);
+    }
+  </style>
+</head>
+<body class="bg-surface-container-lowest text-on-surface antialiased min-h-screen flex flex-col justify-between selection:bg-primary selection:text-on-primary">
+
+  <!-- ========================================================================= -->
+  <!-- SECCIÓN 1: VISTA DE AUTENTICACIÓN / PORTAL DE INGRESO MULTI-SEDE -->
+  <!-- ========================================================================= -->
+  <section id="authSection" class="w-full flex-1 flex flex-col items-center justify-center p-4 md:p-8 relative overflow-hidden">
+    <div class="absolute -top-24 -left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-24 -right-20 w-96 h-96 bg-secondary/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="w-full max-w-5xl z-10 flex flex-col gap-6 my-auto">
+      
+      <!-- Barra Superior Telemática -->
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4 bg-surface-container-low p-4 rounded-xl border border-outline-variant/40 shadow-xl">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-auto flex items-center">
+            <svg class="h-10 w-auto" fill="none" viewBox="0 0 280 60" xmlns="http://www.w3.org/2000/svg">
+              <rect fill="url(#gradLogoGreen)" height="44" rx="10" stroke="#10b981" stroke-width="1.2" width="44" x="8" y="8"></rect>
+              <path d="M30 13L21 28H31L25 43L39 27H29L35 13H30Z" fill="#FACC15" stroke="#04110E" stroke-linejoin="round" stroke-width="1.2"></path>
+              <circle cx="15" cy="15" fill="#10B981" r="2.5"></circle>
+              <circle cx="45" cy="15" fill="#10B981" r="2.5"></circle>
+              <circle cx="15" cy="45" fill="#10B981" r="2.5"></circle>
+              <circle cx="45" cy="45" fill="#10B981" r="2.5"></circle>
+              <defs>
+                <linearGradient gradientUnits="userSpaceOnUse" id="gradLogoGreen" x1="8" x2="52" y1="8" x2="52">
+                  <stop stop-color="#06241D"></stop>
+                  <stop offset="1" stop-color="#0B382D"></stop>
+                </linearGradient>
+              </defs>
+              <text fill="#F0FDF4" font-family="'Space Grotesk', system-ui, sans-serif" font-size="20" font-weight="800" letter-spacing="-0.5" x="62" y="32">GRUPO <tspan fill="#FACC15">ELÉCTRICO</tspan></text>
+              <text fill="#86EFAC" font-family="'JetBrains Mono', monospace" font-size="9.5" font-weight="600" letter-spacing="1.5" x="62" y="46">SISTEMA MULTI-SEDE &amp; LOGÍSTICA</text>
+            </svg>
+          </div>
+          <div class="hidden sm:flex flex-col">
+            <span class="text-[10px] font-mono tracking-widest text-primary font-bold uppercase">Consola de Turno v4.8.2</span>
+            <span class="text-xs text-on-surface-variant font-mono">BOG-DIST-MESH · TLS 1.3 / AES-256</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <div id="dbStatusBadge" class="flex items-center gap-2 px-3 py-1 bg-surface-container rounded-lg border border-outline-variant/40 text-xs font-mono">
+            <span id="dbDot" class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+            <span id="dbStatusText" class="text-primary font-semibold">Comprobando MySQL...</span>
+          </div>
+          <button type="button" id="btnInitDbTrigger" class="text-xs font-mono text-outline hover:text-secondary px-2 py-1 bg-surface-container rounded border border-outline-variant/30 transition-colors" title="Recargar tablas y datos semilla">
+            <span class="material-symbols-outlined text-[14px] align-middle">database</span> Reset Seed
+          </button>
+        </div>
+      </div>
+
+      <!-- Alerta Global Dinámica -->
+      <div id="authAlert" class="hidden p-3 rounded-lg text-xs font-mono border transition-all flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span id="authAlertIcon" class="material-symbols-outlined text-base">info</span>
+          <span id="authAlertMsg">Mensaje de alerta</span>
+        </div>
+        <button type="button" onclick="hideAuthAlert()" class="text-on-surface-variant hover:text-on-surface">
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      </div>
+
+      <!-- Grid Principal: Jerarquía de Roles (Izquierda) + Consola de Ingreso / Registro (Derecha) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Columna Izquierda: Jerarquía de 3 Cargos & Topología de Sedes (5 Cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-4">
+          <div class="bg-surface-container rounded-xl p-5 border border-outline-variant/40 shadow-xl space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-secondary">security</span>
+                <h3 class="font-headline font-bold text-sm tracking-wide uppercase text-on-surface">Jerarquías de Acceso</h3>
+              </div>
+              <span class="text-[10px] font-mono bg-secondary/10 text-secondary px-2 py-0.5 rounded font-bold">3 CARGOS</span>
+            </div>
+
+            <!-- Mini tarjetas limpias de los 3 roles -->
+            <div class="space-y-2 font-mono text-xs">
+              <div class="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 hover:border-secondary/50 transition-colors flex items-start gap-3">
+                <span class="material-symbols-outlined text-secondary text-lg mt-0.5">admin_panel_settings</span>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <strong class="text-secondary font-bold text-xs">ADMINISTRADOR (Cesar)</strong>
+                    <span class="text-[9px] px-1.5 py-0.2 rounded bg-secondary/15 text-secondary">Tier 0</span>
+                  </div>
+                  <p class="text-[11px] text-on-surface-variant font-sans mt-0.5">Gestión de catálogo, creación de productos y precios, traslados y usuarios.</p>
+                </div>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 hover:border-primary/50 transition-colors flex items-start gap-3">
+                <span class="material-symbols-outlined text-primary text-lg mt-0.5">warehouse</span>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <strong class="text-primary font-bold text-xs">ENCARGADO DE SEDE</strong>
+                    <span class="text-[9px] px-1.5 py-0.2 rounded bg-primary/15 text-primary">Tier 1</span>
+                  </div>
+                  <p class="text-[11px] text-on-surface-variant font-sans mt-0.5">Vista fijada a su sede asignada. Stock local, alertas de reposición y transferencias.</p>
+                </div>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 hover:border-tertiary/50 transition-colors flex items-start gap-3">
+                <span class="material-symbols-outlined text-tertiary text-lg mt-0.5">badge</span>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <strong class="text-tertiary font-bold text-xs">EMPLEADO / OPERADOR</strong>
+                    <span class="text-[9px] px-1.5 py-0.2 rounded bg-surface-container-high text-tertiary">Tier 2</span>
+                  </div>
+                  <p class="text-[11px] text-on-surface-variant font-sans mt-0.5">Lector de código de barras, consulta rápida de precios y recepción de entregas.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Red de Sedes Grupo Eléctrico (Sin textos redundantes ni especializaciones) -->
+            <div class="pt-2 border-t border-outline-variant/30">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] uppercase font-mono text-outline tracking-wider flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[13px] text-primary">hub</span> 4 Sedes Interconectadas
+                </span>
+                <span class="text-[10px] text-primary font-mono font-bold">EN LÍNEA</span>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono">
+                <div class="p-1.5 bg-surface-container-low rounded border border-outline-variant/20 truncate">
+                  <span class="text-primary font-bold">●</span> Centro Eléctrico EP
+                </div>
+                <div class="p-1.5 bg-surface-container-low rounded border border-outline-variant/20 truncate">
+                  <span class="text-secondary font-bold">●</span> Centro Eléctrico EP1
+                </div>
+                <div class="p-1.5 bg-surface-container-low rounded border border-outline-variant/20 truncate">
+                  <span class="text-primary font-bold">●</span> Grupo Eléctrico EP3
+                </div>
+                <div class="p-1.5 bg-surface-container-low rounded border border-outline-variant/20 truncate">
+                  <span class="text-yellow-400 font-bold">●</span> EP6 Ecoiluminación
+                </div>
+              </div>
+            </div>
+
+            <!-- Accesos de Prueba Rápida -->
+            <div class="pt-2 border-t border-outline-variant/30">
+              <span class="text-[10px] font-mono text-outline uppercase tracking-wider block mb-1.5">⚡ Perfiles de Prueba Rápida:</span>
+              <div class="grid grid-cols-3 gap-1 text-center font-mono text-[10px]">
+                <button type="button" class="quick-login-btn p-1.5 bg-surface-container-high hover:bg-surface-bright rounded text-secondary border border-secondary/30 transition-colors" data-user="Cesar" data-pass="Password123!">
+                  Cesar (Admin)
+                </button>
+                <button type="button" class="quick-login-btn p-1.5 bg-surface-container-high hover:bg-surface-bright rounded text-primary border border-primary/30 transition-colors" data-user="encargado_matriz" data-pass="Password123!">
+                  Encargado
+                </button>
+                <button type="button" class="quick-login-btn p-1.5 bg-surface-container-high hover:bg-surface-bright rounded text-tertiary border border-outline-variant/40 transition-colors" data-user="empleado1" data-pass="Password123!">
+                  Empleado
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Tarjeta de Autenticación con Pestañas Login / Registro (7 Cols) -->
+        <div class="lg:col-span-7 bg-surface-container rounded-xl p-6 border border-outline-variant/50 shadow-2xl relative">
+          
+          <div class="flex items-center justify-between border-b border-outline-variant/30 pb-3 mb-5">
+            <div class="flex items-center gap-2">
+              <button type="button" id="tabLoginBtn" onclick="switchAuthTab('login')" class="px-3 py-1.5 rounded-lg font-headline font-bold text-sm bg-primary text-on-primary shadow-md transition-all flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[18px]">login</span>
+                <span>Ingreso al Sistema</span>
+              </button>
+              <button type="button" id="tabRegisterBtn" onclick="switchAuthTab('register')" class="px-3 py-1.5 rounded-lg font-headline font-semibold text-sm bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-all flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[18px]">person_add</span>
+                <span>Crear Nuevo Usuario</span>
+              </button>
+            </div>
+            <span class="text-xs font-mono text-outline hidden sm:inline">AUTH.V4</span>
+          </div>
+
+          <!-- FORMULARIO 1: INICIO DE SESIÓN -->
+          <form id="loginForm" class="space-y-4" onsubmit="handleLoginSubmit(event)">
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="text-xs font-mono text-on-surface-variant uppercase tracking-wider font-semibold" for="loginUsername">
+                  Usuario o Correo
+                </label>
+                <span class="text-[11px] font-mono text-primary font-bold">Admin: Cesar</span>
+              </div>
+              <div class="relative flex items-center">
+                <span class="material-symbols-outlined text-outline absolute left-3 text-[18px] pointer-events-none">badge</span>
+                <input class="w-full bg-surface-container-low text-on-surface font-mono text-sm pl-10 pr-3 py-2.5 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary focus:bg-surface-container-lowest transition-colors shadow-inner" id="loginUsername" placeholder="Ej: Cesar, encargado_matriz, empleado1..." required type="text" value="Cesar"/>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="text-xs font-mono text-on-surface-variant uppercase tracking-wider font-semibold" for="loginPassword">
+                  Contraseña de Seguridad
+                </label>
+                <button type="button" onclick="openForgotPasswordModal()" class="text-xs text-secondary hover:underline font-mono">
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
+              <div class="relative flex items-center">
+                <span class="material-symbols-outlined text-outline absolute left-3 text-[18px] pointer-events-none">lock</span>
+                <input class="w-full bg-surface-container-low text-on-surface font-mono text-sm pl-10 pr-10 py-2.5 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary focus:bg-surface-container-lowest transition-colors shadow-inner" id="loginPassword" placeholder="••••••••••••" required type="password" value="Password123!"/>
+                <button type="button" onclick="togglePassVisibility('loginPassword', 'loginEyeIcon')" class="absolute right-3 text-outline hover:text-on-surface">
+                  <span class="material-symbols-outlined text-[18px]" id="loginEyeIcon">visibility</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <button id="btnLoginSubmit" type="submit" class="w-full py-3.5 px-4 bg-industrial-yellow hover:bg-industrial-yellow-hover text-[#422006] font-headline font-bold text-sm tracking-wider uppercase rounded-lg shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-2 active:scale-[0.99] yellow-glow">
+                <span class="material-symbols-outlined text-[20px]">bolt</span>
+                <span id="btnLoginText">Autenticar y Abrir Panel del Software</span>
+                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+              </button>
+            </div>
+
+            <div class="text-center text-[11px] font-mono text-outline pt-2 flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[14px]">terminal</span>
+              <span>Validación directa en base de datos MySQL</span>
+            </div>
+          </form>
+
+          <!-- FORMULARIO 2: REGISTRO DE NUEVO USUARIO -->
+          <form id="registerForm" class="space-y-3.5 hidden" onsubmit="handleRegisterSubmit(event)">
+            <div>
+              <label class="text-xs font-mono text-on-surface-variant uppercase tracking-wider block mb-1 font-semibold" for="regFullName">
+                Nombre Completo
+              </label>
+              <div class="relative flex items-center">
+                <span class="material-symbols-outlined text-outline absolute left-3 text-[18px] pointer-events-none">person</span>
+                <input class="w-full bg-surface-container-low text-on-surface text-xs pl-10 pr-3 py-2 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary shadow-inner" id="regFullName" placeholder="Ej: Andrés Camilo Pérez" required type="text"/>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs font-mono text-on-surface-variant uppercase tracking-wider block mb-1 font-semibold" for="regUsername">
+                  Usuario (Login)
+                </label>
+                <div class="relative flex items-center">
+                  <span class="material-symbols-outlined text-outline absolute left-3 text-[18px] pointer-events-none">badge</span>
+                  <input class="w-full bg-surface-container-low text-on-surface font-mono text-xs pl-10 pr-3 py-2 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary shadow-inner" id="regUsername" placeholder="Ej: andres_ep" required type="text"/>
+                </div>
+              </div>
+
+              <div>
+                <label class="text-xs font-mono text-on-surface-variant uppercase tracking-wider block mb-1 font-semibold" for="regEmail">
+                  Correo Electrónico
+                </label>
+                <div class="relative flex items-center">
+                  <span class="material-symbols-outlined text-outline absolute left-3 text-[18px] pointer-events-none">mail</span>
+                  <input class="w-full bg-surface-container-low text-on-surface text-xs pl-10 pr-3 py-2 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary shadow-inner" id="regEmail" placeholder="andres@grupoelectrico.com" required type="email"/>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs font-mono text-on-surface-variant uppercase tracking-wider block mb-1 font-semibold" for="regPassword">
+                  Contraseña
+                </label>
+                <div class="relative flex items-center">
+                  <span class="material-symbols-outlined text-outline absolute left-3 text-[18px] pointer-events-none">lock</span>
+                  <input class="w-full bg-surface-container-low text-on-surface font-mono text-xs pl-10 pr-10 py-2 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary shadow-inner" id="regPassword" placeholder="Mínimo 6 caracteres" required minlength="6" type="password"/>
+                  <button type="button" onclick="togglePassVisibility('regPassword', 'regEyeIcon')" class="absolute right-3 text-outline hover:text-on-surface">
+                    <span class="material-symbols-outlined text-[16px]" id="regEyeIcon">visibility</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label class="text-xs font-mono text-on-surface-variant uppercase tracking-wider block mb-1 font-semibold" for="regRol">
+                  Cargo / Rol
+                </label>
+                <div class="relative flex items-center">
+                  <span class="material-symbols-outlined text-outline absolute left-3 text-[18px] pointer-events-none">shield_person</span>
+                  <select id="regRol" onchange="handleRoleChange()" class="w-full bg-surface-container-low text-on-surface text-xs pl-10 pr-8 py-2 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary appearance-none cursor-pointer">
+                    <option value="ENCARGADO" selected>ENCARGADO (Sede)</option>
+                    <option value="EMPLEADO">EMPLEADO (Operador)</option>
+                    <option value="ADMINISTRADOR">ADMINISTRADOR (Global)</option>
+                  </select>
+                  <span class="material-symbols-outlined text-outline absolute right-2 text-sm pointer-events-none">expand_more</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Selección de Sede Obligatoria para Encargados -->
+            <div id="sedeSelectContainer" class="p-3 bg-surface-container-lowest rounded-lg border border-primary/40 space-y-1.5 transition-all">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-mono text-primary uppercase font-bold flex items-center gap-1" for="regSedeId">
+                  <span class="material-symbols-outlined text-[15px]">warehouse</span> Sede Asignada
+                </label>
+                <span class="text-[10px] font-mono text-secondary bg-secondary/10 px-1.5 py-0.2 rounded">Requerido</span>
+              </div>
+              <div class="relative flex items-center">
+                <select id="regSedeId" class="w-full bg-surface-container text-on-surface text-xs p-2 rounded border border-outline-variant/40 focus:outline-none focus:border-primary cursor-pointer">
+                  <option value="1">Centro Eléctrico EP (Crr 20 # 12-30)</option>
+                  <option value="2">Centro Eléctrico EP1 (Crr 20 # 12-04)</option>
+                  <option value="3">Grupo Eléctrico EP3 (Crr 20 # 12-10)</option>
+                  <option value="4">EP6 Ecoiluminación (Crr 19 # 12-51)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <button id="btnRegisterSubmit" type="submit" class="w-full py-3 px-4 bg-primary hover:bg-emerald-400 text-on-primary font-headline font-bold text-sm tracking-wider uppercase rounded-lg shadow-lg transition-all flex items-center justify-center gap-2 active:scale-[0.99] custom-glow">
+                <span class="material-symbols-outlined text-[20px]">how_to_reg</span>
+                <span id="btnRegisterText">Registrar en Base de Datos</span>
+              </button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+
+    </div>
+
+    <footer class="mt-6 text-center text-xs font-mono text-outline/70 pb-4">
+      © Grupo Eléctrico S.A.S. · Sistema Multi-Sede &amp; Logística · Versión 4.8.2-PROD
+    </footer>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: RECUPERACIÓN DE CONTRASEÑA ENLAZADA AL CORREO -->
+  <!-- ========================================================================= -->
+  <div id="forgotPasswordModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-surface-container rounded-xl p-6 border border-outline-variant/60 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-outline-variant/30 pb-3">
+        <div class="flex items-center gap-2 text-secondary">
+          <span class="material-symbols-outlined">lock_reset</span>
+          <h3 class="font-headline font-bold text-base text-on-surface">Recuperar Contraseña</h3>
+        </div>
+        <button type="button" onclick="closeForgotPasswordModal()" class="text-outline hover:text-on-surface">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+
+      <p class="text-xs text-on-surface-variant">
+        Ingresa tu correo o usuario para generar un código PIN de recuperación.
+      </p>
+
+      <div id="recoveryStep1" class="space-y-3">
+        <div>
+          <label class="text-xs font-mono text-on-surface-variant uppercase block mb-1 font-semibold" for="recoveryIdentifier">
+            Usuario o Correo
+          </label>
+          <div class="relative flex items-center">
+            <span class="material-symbols-outlined text-outline absolute left-3 text-[18px]">mail</span>
+            <input id="recoveryIdentifier" class="w-full bg-surface-container-low text-on-surface font-mono text-xs pl-10 pr-3 py-2 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-secondary" placeholder="Ej: cesar@grupoelectrico.com o Cesar" type="text"/>
+          </div>
+        </div>
+
+        <button type="button" onclick="requestRecoveryPin()" id="btnSendPin" class="w-full py-2.5 bg-secondary hover:bg-yellow-400 text-on-secondary font-headline font-bold text-xs uppercase rounded-lg transition-colors flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-sm">send</span>
+          <span>Enviar Código de Recuperación</span>
+        </button>
+      </div>
+
+      <div id="recoveryStep2" class="space-y-3 hidden">
+        <div class="p-2.5 bg-secondary/10 border border-secondary/30 rounded text-xs text-secondary font-mono" id="recoveryNotice">
+          Código generado.
+        </div>
+
+        <div>
+          <label class="text-xs font-mono text-on-surface-variant uppercase block mb-1 font-semibold" for="recoveryPin">
+            PIN de Seguridad (6 dígitos)
+          </label>
+          <input id="recoveryPin" class="w-full bg-surface-container-low text-secondary font-mono text-center tracking-widest text-base font-bold py-2 rounded-lg border border-secondary/50 focus:outline-none" placeholder="000000" maxlength="6" type="text"/>
+        </div>
+
+        <div>
+          <label class="text-xs font-mono text-on-surface-variant uppercase block mb-1 font-semibold" for="recoveryNewPassword">
+            Nueva Contraseña
+          </label>
+          <input id="recoveryNewPassword" class="w-full bg-surface-container-low text-on-surface font-mono text-xs p-2 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-secondary" placeholder="Mínimo 6 caracteres" minlength="6" type="password"/>
+        </div>
+
+        <button type="button" onclick="confirmResetPassword()" id="btnConfirmReset" class="w-full py-2.5 bg-primary hover:bg-emerald-400 text-on-primary font-headline font-bold text-xs uppercase rounded-lg transition-colors flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-sm">check_circle</span>
+          <span>Restablecer Contraseña</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- SECCIÓN 2: APLICACIÓN DEL SOFTWARE CON VISTAS PERSONALIZADAS POR ROL -->
+  <!-- ========================================================================= -->
+  <div id="appSection" class="hidden min-h-screen w-full flex-col bg-surface">
+    
+    <!-- Header Global del Software -->
+    <header class="fixed top-0 left-0 right-0 h-16 z-50 bg-[#04110e]/95 backdrop-blur-xl border-b border-outline-variant/40 px-4 md:px-6 shadow-[0_2px_12px_rgba(0,0,0,0.6)] flex items-center justify-between gap-4">
+      
+      <div class="flex items-center gap-4">
+        <div class="h-9 w-auto flex items-center">
+          <svg class="h-8 w-auto" fill="none" viewBox="0 0 280 60" xmlns="http://www.w3.org/2000/svg">
+            <rect fill="url(#headerLogoGreen)" height="44" rx="10" stroke="#10b981" stroke-width="1.2" width="44" x="8" y="8"></rect>
+            <path d="M30 13L21 28H31L25 43L39 27H29L35 13H30Z" fill="#FACC15" stroke="#04110E" stroke-linejoin="round" stroke-width="1.2"></path>
+            <circle cx="15" cy="15" fill="#10B981" r="2.5"></circle>
+            <circle cx="45" cy="15" fill="#10B981" r="2.5"></circle>
+            <circle cx="15" cy="45" fill="#10B981" r="2.5"></circle>
+            <circle cx="45" cy="45" fill="#10B981" r="2.5"></circle>
+            <defs>
+              <linearGradient gradientUnits="userSpaceOnUse" id="headerLogoGreen" x1="8" x2="52" y1="8" x2="52">
+                <stop stop-color="#06241D"></stop>
+                <stop offset="1" stop-color="#0B382D"></stop>
+              </linearGradient>
+            </defs>
+            <text fill="#F0FDF4" font-family="'Space Grotesk', system-ui, sans-serif" font-size="20" font-weight="800" letter-spacing="-0.5" x="62" y="32">GRUPO <tspan fill="#FACC15">ELÉCTRICO</tspan></text>
+            <text fill="#86EFAC" font-family="'JetBrains Mono', monospace" font-size="9.5" font-weight="600" letter-spacing="1.5" x="62" y="46">SISTEMA MULTI-SEDE &amp; LOGÍSTICA</text>
+          </svg>
+        </div>
+
+        <div class="hidden sm:flex items-center bg-surface-container px-3 py-1.5 rounded-lg border border-outline-variant/50">
+          <span class="material-symbols-outlined text-primary text-[18px] mr-1.5">domain</span>
+          <div class="flex flex-col">
+            <span id="appHeaderSede" class="font-mono text-xs font-bold text-on-surface">Cargando Sede...</span>
+            <span id="appHeaderSedeSub" class="text-[9px] text-outline">Red Central</span>
+          </div>
+          <span class="font-mono text-[10px] bg-secondary text-on-secondary font-bold px-1.5 py-0.2 rounded ml-2">4 Sedes</span>
+        </div>
+
+        <div class="hidden md:flex items-center bg-surface-container-high/80 px-3 py-1.5 rounded-lg border border-outline-variant/40 font-mono text-xs">
+          <span class="w-2 h-2 rounded-full bg-primary animate-pulse mr-2"></span>
+          <span class="text-on-surface-variant mr-1">Rol:</span>
+          <span id="appHeaderRole" class="text-primary font-bold">ADMINISTRADOR</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 pl-2 bg-surface-container-lowest border border-outline-variant/50 py-1 pr-3 rounded-lg">
+          <div class="w-7 h-7 rounded bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">
+            <span id="appUserInitial" class="font-headline font-bold">C</span>
+          </div>
+          <div class="flex flex-col text-left">
+            <span id="appUserName" class="font-headline text-xs font-bold text-on-surface leading-tight">Cesar</span>
+            <span id="appUserUsername" class="text-[10px] font-mono text-primary leading-none">@Cesar</span>
+          </div>
+        </div>
+
+        <button type="button" onclick="handleLogout()" class="px-2.5 py-1.5 bg-surface-container hover:bg-error-container hover:text-on-error text-outline rounded-lg border border-outline-variant/40 text-xs font-mono transition-colors flex items-center gap-1" title="Cerrar Sesión">
+          <span class="material-symbols-outlined text-[16px]">logout</span>
+          <span class="hidden sm:inline">Salir</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Barra Lateral de Navegación (Sidebar) -->
+    <aside class="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-low z-40 flex flex-col justify-between p-4 border-r border-outline-variant/40 shadow-[4px_0_24px_rgba(0,0,0,0.4)]">
+      <div class="flex flex-col gap-4">
+        <div class="px-2 pt-1 flex items-center justify-between">
+          <span class="text-[10px] uppercase font-mono tracking-widest text-primary font-bold">Panel Principal</span>
+          <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-primary/10 text-primary border border-primary/20">ONLINE</span>
+        </div>
+
+        <nav class="flex flex-col gap-1 text-xs font-mono">
+          <a href="#" class="sidebar-link active flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/15 text-primary border border-primary/40 font-bold transition-all">
+            <span class="material-symbols-outlined text-[18px]">dashboard</span>
+            <span class="font-sans font-semibold">Panel Operativo</span>
+          </a>
+          <button type="button" onclick="toggleQuickTransferModal()" class="sidebar-link flex items-center justify-between px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all text-left">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-[18px]">swap_horiz</span>
+              <span class="font-sans font-medium">Mover Stock</span>
+            </div>
+            <span class="text-[10px] bg-industrial-yellow text-[#422006] px-1.5 py-0.2 rounded font-bold">En Vivo</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/40 text-[11px] font-mono space-y-1.5">
+        <div class="flex items-center justify-between text-on-surface font-semibold">
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>4 Sedes Conectadas</span>
+          <span class="text-primary font-bold">OK</span>
+        </div>
+        <div class="text-[10px] text-on-surface-variant divide-y divide-outline-variant/20 pt-1">
+          <div class="flex justify-between py-0.5"><span>Centro Eléctrico EP</span><span class="text-primary font-bold">●</span></div>
+          <div class="flex justify-between py-0.5"><span>Centro Eléctrico EP1</span><span class="text-secondary font-bold">●</span></div>
+          <div class="flex justify-between py-0.5"><span>Grupo Eléctrico EP3</span><span class="text-primary font-bold">●</span></div>
+          <div class="flex justify-between py-0.5"><span>EP6 Ecoiluminación</span><span class="text-yellow-400 font-bold">●</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Contenedor Principal de las Vistas -->
+    <div class="pl-64 pt-16 min-h-screen">
+      <main class="w-full p-6 space-y-6">
+
+        <!-- =================================================================== -->
+        <!-- VISTA 1: ADMINISTRADOR GLOBAL (CESAR) -->
+        <!-- =================================================================== -->
+        <div id="viewAdmin" class="space-y-6 hidden">
+          <div class="relative bg-surface-container-low border border-outline-variant/50 p-6 rounded-xl overflow-hidden shadow-xl">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-secondary/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="px-2 py-0.5 rounded bg-secondary/20 border border-secondary/40 text-secondary font-mono text-xs font-bold uppercase">
+                    Administrador Global · Cesar
+                  </span>
+                </div>
+                <h1 class="font-headline font-bold text-2xl text-on-surface tracking-tight">Inventario Maestro Multi-Sede</h1>
+                <p class="text-xs text-on-surface-variant max-w-2xl mt-1">Crea nuevos productos, asigna sus precios a cada sede y transfiere stock con impacto directo en MySQL.</p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="toggleQuickTransferModal()" class="px-4 py-2.5 bg-secondary hover:bg-yellow-400 text-on-secondary font-headline font-bold text-xs uppercase rounded-lg shadow-md transition-all flex items-center gap-1.5 active:scale-95">
+                  <span class="material-symbols-outlined text-[18px]">swap_horiz</span>
+                  <span>Trasladar Stock</span>
+                </button>
+                <button type="button" onclick="openCreateProductModal()" class="px-4 py-2.5 bg-primary hover:bg-emerald-400 text-on-primary font-headline font-bold text-xs uppercase rounded-lg shadow-md transition-all flex items-center gap-1.5 active:scale-95 custom-glow">
+                  <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                  <span>+ Crear Producto</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Matriz de Existencias Multi-Sede (Directo de MySQL) -->
+          <div class="bg-surface-container rounded-xl border border-outline-variant/40 shadow-xl overflow-hidden">
+            <div class="p-4 bg-surface-container-high/60 border-b border-outline-variant/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="font-headline font-bold text-base text-on-surface">Catálogo de Productos &amp; Stock en Tiempo Real</h3>
+                <span class="text-xs font-mono text-on-surface-variant">Conexión activa con MySQL · Muestra existencias en cada sede</span>
+              </div>
+              <button type="button" onclick="loadRealInventory()" class="text-xs font-mono px-3 py-1.5 rounded bg-surface-container-lowest hover:bg-surface-container border border-outline-variant/40 text-primary flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">refresh</span>
+                <span>Actualizar Stock</span>
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse font-sans text-xs">
+                <thead>
+                  <tr class="bg-surface-container-lowest border-b border-outline-variant/40 font-mono text-[11px] uppercase tracking-wider text-outline">
+                    <th class="py-3 px-4">SKU / Producto</th>
+                    <th class="py-3 px-4">Unidad</th>
+                    <th class="py-3 px-4">Centro EP</th>
+                    <th class="py-3 px-4">EP1</th>
+                    <th class="py-3 px-4">EP3</th>
+                    <th class="py-3 px-4">EP6</th>
+                    <th class="py-3 px-4 text-center">Total Red</th>
+                    <th class="py-3 px-4 text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/20 text-on-surface" id="adminInventoryTableBody">
+                  <!-- Se cargará desde MySQL con loadRealInventory() -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- VISTA 2: ENCARGADO DE SEDE -->
+        <!-- =================================================================== -->
+        <div id="viewEncargado" class="space-y-6 hidden">
+          <div class="relative bg-surface-container-low border border-primary/40 p-6 rounded-xl overflow-hidden shadow-xl">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="px-2 py-0.5 rounded bg-primary/20 border border-primary/40 text-primary font-mono text-xs font-bold uppercase">
+                    Encargado de Sede
+                  </span>
+                </div>
+                <h1 class="font-headline font-bold text-2xl text-on-surface tracking-tight" id="encargadoSedeTitle">Sede Asignada</h1>
+                <p class="text-xs text-on-surface-variant max-w-xl mt-1">Gestión del almacén de esta sucursal y solicitudes de material.</p>
+              </div>
+
+              <button type="button" onclick="toggleQuickTransferModal()" class="px-4 py-2.5 bg-primary hover:bg-emerald-400 text-on-primary font-headline font-bold text-xs uppercase rounded-lg shadow-md transition-all flex items-center gap-1.5 active:scale-95">
+                <span class="material-symbols-outlined text-[18px]">swap_horiz</span>
+                <span>Pedir Traslado de Material</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-surface-container rounded-xl border border-outline-variant/40 shadow-xl overflow-hidden">
+            <div class="p-4 bg-surface-container-high/60 border-b border-outline-variant/40 flex items-center justify-between">
+              <h3 class="font-headline font-bold text-base text-on-surface" id="encargadoTableHeading">Stock en Sede</h3>
+              <span class="text-xs font-mono text-outline">Datos en Vivo</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse font-sans text-xs">
+                <thead>
+                  <tr class="bg-surface-container-lowest border-b border-outline-variant/40 font-mono text-[11px] uppercase tracking-wider text-outline">
+                    <th class="py-3 px-4">SKU</th>
+                    <th class="py-3 px-4">Producto</th>
+                    <th class="py-3 px-4">Precio Venta</th>
+                    <th class="py-3 px-4">Stock en Sede</th>
+                    <th class="py-3 px-4 text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/20 text-on-surface" id="encargadoInventoryTableBody">
+                  <!-- Se poblará dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- VISTA 3: EMPLEADO / OPERADOR (SIN REFERENCIAS A VEHÍCULOS) -->
+        <!-- =================================================================== -->
+        <div id="viewEmpleado" class="space-y-6 hidden">
+          <div class="relative bg-surface-container-low border border-outline-variant/50 p-6 rounded-xl overflow-hidden shadow-xl">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="px-2 py-0.5 rounded bg-tertiary/20 border border-tertiary/40 text-tertiary font-mono text-xs font-bold uppercase">
+                    Operador / Empleado
+                  </span>
+                </div>
+                <h1 class="font-headline font-bold text-2xl text-on-surface tracking-tight">Consulta de Precios y Traslados</h1>
+                <p class="text-xs text-on-surface-variant max-w-xl mt-1">Lector de código de barras para verificación rápida, consulta de precios en las 4 sedes y registro de entregas entre sedes.</p>
+              </div>
+
+              <button type="button" onclick="simulateBarcodeScan()" class="px-4 py-2.5 bg-secondary hover:bg-yellow-400 text-on-secondary font-headline font-bold text-xs uppercase rounded-lg shadow-md transition-all flex items-center gap-1.5 active:scale-95">
+                <span class="material-symbols-outlined text-[18px]">barcode_scanner</span>
+                <span>Escanear Producto</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Consulta Rápida de Precios -->
+            <div class="bg-surface-container p-4 rounded-xl border border-outline-variant/40 space-y-3">
+              <div class="flex items-center gap-2 text-primary font-mono text-xs font-bold uppercase">
+                <span class="material-symbols-outlined text-base">price_check</span>
+                <span>Consulta de Precios</span>
+              </div>
+              <p class="text-xs text-on-surface-variant">Consulta el precio de cualquier producto en las 4 sedes.</p>
+              <input id="quickPriceInput" oninput="handleQuickPriceSearch(this.value)" placeholder="Buscar producto o SKU..." class="w-full bg-surface-container-low text-xs p-2 rounded border border-outline-variant/40 text-on-surface font-mono" type="text"/>
+              <div id="quickPriceResults" class="space-y-1.5 max-h-48 overflow-y-auto font-mono text-xs">
+                <!-- Resultados -->
+              </div>
+            </div>
+
+            <!-- Traslados Activos Entre Sedes (Caminando / Entregas Directas Cercanas) -->
+            <div class="bg-surface-container p-4 rounded-xl border border-outline-variant/40 space-y-3 md:col-span-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-secondary font-mono text-xs font-bold uppercase">
+                  <span class="material-symbols-outlined text-base">swap_horiz</span>
+                  <span>Traslados Entre Sedes</span>
+                </div>
+                <button type="button" onclick="toggleQuickTransferModal()" class="px-3 py-1 bg-primary text-on-primary rounded text-xs font-mono font-bold">
+                  + Registrar Entrega
+                </button>
+              </div>
+
+              <div class="space-y-2 font-mono text-xs" id="employeeTransfersList">
+                <!-- Se poblarán los traslados activos -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: CREAR NUEVO PRODUCTO CON PRECIOS POR SEDE (SUPERADMIN) -->
+  <!-- ========================================================================= -->
+  <div id="createProductModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-xl bg-surface-container rounded-xl p-6 border border-outline-variant/60 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-outline-variant/30 pb-3">
+        <div class="flex items-center gap-2 text-primary">
+          <span class="material-symbols-outlined">add_circle</span>
+          <h3 class="font-headline font-bold text-base text-on-surface">Crear Producto en la Base de Datos</h3>
+        </div>
+        <button type="button" onclick="closeCreateProductModal()" class="text-outline hover:text-on-surface">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+
+      <form id="createProductForm" onsubmit="handleCreateProductSubmit(event)" class="space-y-3 font-mono text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-outline uppercase block mb-1">Código SKU *</label>
+            <input id="newProdSku" required placeholder="Ej: CAB-THHN-14AWG" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40 uppercase"/>
+          </div>
+          <div>
+            <label class="text-outline uppercase block mb-1">Unidad de Medida</label>
+            <select id="newProdUnit" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40">
+              <option value="UNIDAD">UNIDAD</option>
+              <option value="METRO">METRO</option>
+              <option value="ROLLO">ROLLO</option>
+              <option value="CAJA">CAJA</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-outline uppercase block mb-1">Nombre del Material *</label>
+          <input id="newProdName" required placeholder="Ej: Cable Cobre THHN Calibre 14 AWG" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40 font-sans"/>
+        </div>
+
+        <div>
+          <label class="text-outline uppercase block mb-1">Descripción Técnica (Opcional)</label>
+          <input id="newProdDesc" placeholder="Especificaciones, norma técnica, etc." class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40 font-sans"/>
+        </div>
+
+        <!-- Stock y Precios en las 4 Sedes -->
+        <div class="pt-2 border-t border-outline-variant/30 space-y-2">
+          <span class="text-secondary font-bold uppercase block text-[11px]">Stock Inicial y Precio de Venta por Sede:</span>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+            <!-- Sede 1 -->
+            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
+              <span class="text-primary font-bold">1. Centro Eléctrico EP</span>
+              <div class="grid grid-cols-2 gap-1.5">
+                <input id="stock_sede_1" type="number" min="0" placeholder="Stock: 100" value="100" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+                <input id="precio_sede_1" type="number" step="0.01" min="0" placeholder="Precio $: 3500" value="3500" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+              </div>
+            </div>
+
+            <!-- Sede 2 -->
+            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
+              <span class="text-secondary font-bold">2. Centro Eléctrico EP1</span>
+              <div class="grid grid-cols-2 gap-1.5">
+                <input id="stock_sede_2" type="number" min="0" placeholder="Stock: 50" value="50" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+                <input id="precio_sede_2" type="number" step="0.01" min="0" placeholder="Precio $: 3500" value="3500" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+              </div>
+            </div>
+
+            <!-- Sede 3 -->
+            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
+              <span class="text-primary font-bold">3. Grupo Eléctrico EP3</span>
+              <div class="grid grid-cols-2 gap-1.5">
+                <input id="stock_sede_3" type="number" min="0" placeholder="Stock: 30" value="30" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+                <input id="precio_sede_3" type="number" step="0.01" min="0" placeholder="Precio $: 3400" value="3400" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+              </div>
+            </div>
+
+            <!-- Sede 4 -->
+            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
+              <span class="text-yellow-400 font-bold">4. EP6 Ecoiluminación</span>
+              <div class="grid grid-cols-2 gap-1.5">
+                <input id="stock_sede_4" type="number" min="0" placeholder="Stock: 20" value="20" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+                <input id="precio_sede_4" type="number" step="0.01" min="0" placeholder="Precio $: 3600" value="3600" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button id="btnSubmitNewProduct" type="submit" class="w-full py-3 bg-primary hover:bg-emerald-400 text-on-primary font-headline font-bold text-xs uppercase rounded-lg transition-colors flex items-center justify-center gap-2 custom-glow">
+            <span class="material-symbols-outlined text-base">save</span>
+            <span>Guardar Producto en MySQL</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: TRASLADO ENTRE SEDES EN TIEMPO REAL -->
+  <!-- ========================================================================= -->
+  <div id="transferModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-surface-container rounded-xl p-6 border border-outline-variant/60 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-outline-variant/30 pb-3">
+        <div class="flex items-center gap-2 text-secondary">
+          <span class="material-symbols-outlined">swap_horiz</span>
+          <h3 class="font-headline font-bold text-base text-on-surface">Traslado de Stock Entre Sedes</h3>
+        </div>
+        <button type="button" onclick="toggleQuickTransferModal()" class="text-outline hover:text-on-surface">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+
+      <form id="executeTransferForm" onsubmit="handleExecuteTransferSubmit(event)" class="space-y-3 font-mono text-xs">
+        <div>
+          <label class="text-outline uppercase block mb-1">Producto a Mover</label>
+          <select id="modalTransferProduct" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40">
+            <!-- Se poblará dinámicamente con los productos reales de la BD -->
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-primary uppercase block mb-1">Sede Origen (Sale)</label>
+            <select id="modalTransferOrigin" onchange="updateTransferAvailabilityHint()" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40">
+              <option value="1">Centro Eléctrico EP</option>
+              <option value="2">Centro Eléctrico EP1</option>
+              <option value="3">Grupo Eléctrico EP3</option>
+              <option value="4">EP6 Ecoiluminación</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-secondary uppercase block mb-1">Sede Destino (Entra)</label>
+            <select id="modalTransferDest" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40">
+              <option value="2" selected>Centro Eléctrico EP1</option>
+              <option value="1">Centro Eléctrico EP</option>
+              <option value="3">Grupo Eléctrico EP3</option>
+              <option value="4">EP6 Ecoiluminación</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-outline uppercase">Cantidad a Trasladar</label>
+            <span id="transferStockHint" class="text-primary font-bold">Disponible: --</span>
+          </div>
+          <input id="modalTransferQty" type="number" min="1" step="any" value="10" required class="w-full bg-surface-container-low text-primary font-bold text-center p-2 rounded border border-outline-variant/40 text-sm"/>
+        </div>
+
+        <div>
+          <label class="text-outline uppercase block mb-1">Observación / Motivo</label>
+          <input id="modalTransferObs" placeholder="Ej: Traslado directo entre sedes" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40 font-sans"/>
+        </div>
+
+        <div class="pt-2">
+          <button id="btnExecuteTransferSubmit" type="submit" class="w-full py-3 bg-secondary hover:bg-yellow-400 text-on-secondary font-headline font-bold text-xs uppercase rounded-lg transition-colors flex items-center justify-center gap-2 yellow-glow">
+            <span class="material-symbols-outlined text-base">sync_alt</span>
+            <span>Confirmar Traslado en Base de Datos</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>
