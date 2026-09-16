@@ -434,9 +434,17 @@ function renderAdminView() {
       <td class="py-3 px-4 font-mono ${s4 > 0 ? 'text-on-surface font-bold' : 'text-error'}">${s4}</td>
       <td class="py-3 px-4 text-center font-mono font-bold text-on-surface text-sm">${p.total_stock}</td>
       <td class="py-3 px-4 text-right">
-        <button type="button" onclick="openTransferForProduct(${p.id}, '${p.codigo_sku}')" class="px-2.5 py-1 bg-secondary text-on-secondary hover:bg-yellow-400 font-mono text-[11px] font-bold rounded shadow-sm transition-colors">
-          Mover Stock
-        </button>
+        <div class="flex items-center justify-end gap-1.5">
+          <button type="button" onclick="openTransferForProduct(${p.id}, '${p.codigo_sku}')" class="px-2 py-1 bg-secondary text-on-secondary hover:bg-yellow-400 font-mono text-[10px] font-bold rounded shadow-sm transition-colors" title="Mover Stock">
+            <span class="material-symbols-outlined text-sm align-middle">swap_horiz</span>
+          </button>
+          <button type="button" onclick="openEditProductModal(${p.id})" class="px-2 py-1 bg-surface-container hover:bg-surface-container-high text-primary font-mono text-[10px] font-bold rounded border border-outline-variant/40 shadow-sm transition-colors" title="Editar Producto">
+            <span class="material-symbols-outlined text-sm align-middle">edit</span>
+          </button>
+          <button type="button" onclick="openDeleteProductModal(${p.id})" class="px-2 py-1 bg-surface-container hover:bg-error/20 hover:text-error text-error font-mono text-[10px] font-bold rounded border border-outline-variant/40 shadow-sm transition-colors" title="Eliminar Producto">
+            <span class="material-symbols-outlined text-sm align-middle">delete</span>
+          </button>
+        </div>
       </td>
     `;
     tableBody.appendChild(row);
@@ -646,6 +654,124 @@ async function handleCreateProductSubmit(e) {
     btn.textContent = 'Guardar Producto en MySQL';
   }
 }
+
+// =============================================================================
+// 7.1 MODAL Y EDICIÓN/ELIMINACIÓN DE PRODUCTOS EN MYSQL (SUPERADMIN)
+// =============================================================================
+
+function openEditProductModal(id) {
+  const product = liveProducts.find(p => p.id === id);
+  if (!product) return;
+
+  document.getElementById('editProdId').value = product.id;
+  document.getElementById('editProdSku').value = product.codigo_sku;
+  document.getElementById('editProdName').value = product.nombre;
+  document.getElementById('editProdUnit').value = product.unidad_medida;
+  document.getElementById('editProdDesc').value = product.descripcion || '';
+
+  // Poblar sedes
+  for (let i = 1; i <= 4; i++) {
+    const s = product.sedes[i];
+    document.getElementById(`edit_stock_sede_${i}`).value = s ? s.stock_actual : 0;
+    document.getElementById(`edit_precio_sede_${i}`).value = s ? s.precio_venta : 0;
+  }
+
+  document.getElementById('editProductModal').classList.remove('hidden');
+}
+
+function closeEditProductModal() {
+  document.getElementById('editProductModal').classList.add('hidden');
+}
+
+async function handleEditProductSubmit(e) {
+  e.preventDefault();
+
+  const id = document.getElementById('editProdId').value;
+  const sku = document.getElementById('editProdSku').value.trim();
+  const name = document.getElementById('editProdName').value.trim();
+  const unit = document.getElementById('editProdUnit').value;
+  const desc = document.getElementById('editProdDesc').value.trim();
+
+  const sedesData = [1, 2, 3, 4].map(sede_id => ({
+    sede_id,
+    stock_actual: parseFloat(document.getElementById(`edit_stock_sede_${sede_id}`).value) || 0,
+    precio_venta: parseFloat(document.getElementById(`edit_precio_sede_${sede_id}`).value) || 0
+  }));
+
+  const btn = document.getElementById('btnSubmitEditProduct');
+  btn.disabled = true;
+  btn.textContent = 'Actualizando en BD...';
+
+  try {
+    const res = await fetch(`${API_BASE}/inventory/products/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        codigo_sku: sku,
+        nombre: name,
+        descripcion: desc,
+        unidad_medida: unit,
+        sedesData
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert('Error: ' + data.message);
+      return;
+    }
+
+    alert('✓ Producto actualizado exitosamente.');
+    closeEditProductModal();
+    await loadRealInventory();
+  } catch (err) {
+    alert('Error al comunicar con el servidor.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-outlined text-base">save</span><span>Actualizar Producto</span>';
+  }
+}
+
+let deleteProductId = null;
+
+function openDeleteProductModal(id) {
+  deleteProductId = id;
+  document.getElementById('deleteProductModal').classList.remove('hidden');
+}
+
+function closeDeleteProductModal() {
+  deleteProductId = null;
+  document.getElementById('deleteProductModal').classList.add('hidden');
+}
+
+document.getElementById('btnConfirmDeleteProduct')?.addEventListener('click', async () => {
+  if (!deleteProductId) return;
+
+  const btn = document.getElementById('btnConfirmDeleteProduct');
+  btn.disabled = true;
+  btn.textContent = 'Eliminando...';
+
+  try {
+    const res = await fetch(`${API_BASE}/inventory/products/${deleteProductId}`, {
+      method: 'DELETE'
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert('Error: ' + data.message);
+      return;
+    }
+
+    alert('✓ Producto eliminado.');
+    closeDeleteProductModal();
+    await loadRealInventory();
+  } catch (err) {
+    alert('Error al comunicar con el servidor.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Eliminar';
+  }
+});
 
 // =============================================================================
 // 8. TRASLADOS EN TIEMPO REAL ENTRE SEDES (CAMBIO EN VIVO EN LA BD)

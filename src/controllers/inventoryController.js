@@ -339,3 +339,113 @@ export const getRecentTransfers = async (req, res) => {
     });
   }
 };
+
+/**
+ * Actualizar producto y sus precios/stock en sede
+ * PUT /api/inventory/products/:id
+ */
+export const updateProduct = async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { id } = req.params;
+    const { nombre, descripcion, unidad_medida, sedesData } = req.body;
+
+    await connection.beginTransaction();
+
+    // Actualizar producto global si vienen los datos
+    if (nombre || descripcion || unidad_medida) {
+      const updates = [];
+      const values = [];
+      if (nombre) { updates.push('nombre = ?'); values.push(nombre.trim()); }
+      if (descripcion !== undefined) { updates.push('descripcion = ?'); values.push(descripcion ? descripcion.trim() : null); }
+      if (unidad_medida) { updates.push('unidad_medida = ?'); values.push(unidad_medida); }
+      
+      if (updates.length > 0) {
+        values.push(id);
+        await connection.query(
+          `UPDATE productos SET ${updates.join(', ')} WHERE id = ?`,
+          values
+        );
+      }
+    }
+
+    // Actualizar datos por sede si vienen especificados
+    if (sedesData && Array.isArray(sedesData)) {
+      for (const data of sedesData) {
+        if (!data.sede_id) continue;
+        
+        // Verifica si existe el producto en esa sede
+        const [existing] = await connection.query(
+          'SELECT stock_actual FROM producto_sede WHERE producto_id = ? AND sede_id = ?',
+          [id, data.sede_id]
+        );
+
+        if (existing.length > 0) {
+          const updates = [];
+          const values = [];
+          if (data.stock_actual !== undefined) { updates.push('stock_actual = ?'); values.push(parseFloat(data.stock_actual) || 0); }
+          if (data.stock_minimo !== undefined) { updates.push('stock_minimo = ?'); values.push(parseFloat(data.stock_minimo) || 0); }
+          if (data.precio_venta !== undefined) { updates.push('precio_venta = ?'); values.push(parseFloat(data.precio_venta) || 0); }
+          
+          if (updates.length > 0) {
+            values.push(id, data.sede_id);
+            await connection.query(
+              `UPDATE producto_sede SET ${updates.join(', ')} WHERE producto_id = ? AND sede_id = ?`,
+              values
+            );
+          }
+        }
+      }
+    }
+
+    await connection.commit();
+    return res.status(200).json({
+      success: true,
+      message: 'Producto actualizado exitosamente.'
+    });
+
+  } catch (error) {
+    await connection.rollback();
+    console.error('[Update Product Error]:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al actualizar el producto: ' + error.message
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+/**
+ * Desactivar un producto (Soft Delete)
+ * DELETE /api/inventory/products/:id
+ */
+export const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Simplemente cambiamos su estado a inactivo
+    const [result] = await pool.query(
+      'UPDATE productos SET activo = FALSE WHERE id = ?',
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Producto no encontrado.'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Producto desactivado (Soft Delete) correctamente.'
+    });
+  } catch (error) {
+    console.error('[Delete Product Error]:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al desactivar el producto.'
+    });
+  }
+};

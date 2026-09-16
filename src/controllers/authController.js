@@ -36,7 +36,8 @@ export const login = async (req, res) => {
     if (rows.length === 0) {
       return res.status(401).json({
         success: false,
-        message: 'Credenciales inválidas. Verifica tu usuario o contraseña.'
+        error_type: 'USER_NOT_FOUND',
+        message: 'Usuario no encontrado. Verifica que el nombre de usuario o correo sea correcto.'
       });
     }
 
@@ -55,7 +56,8 @@ export const login = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: 'Credenciales inválidas. Verifica tu usuario o contraseña.'
+        error_type: 'INVALID_PASSWORD',
+        message: 'La contraseña es incorrecta. Inténtalo nuevamente.'
       });
     }
 
