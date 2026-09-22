@@ -1,42 +1,33 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
-import { pool } from '../config/db.js';
+import UserRepository from '../repositories/UserRepository.js';
 
 /**
  * Middleware para validar el token JWT en las peticiones que requieren autenticación.
  */
 export const authenticateJWT = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
+  // Ahora el token vendrá de la cookie httpOnly (Fase 2)
+  const token = req.cookies?.token;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!token) {
     return res.status(401).json({
       success: false,
-      message: 'Acceso no autorizado. Se requiere un token Bearer válido.'
+      message: 'Acceso no autorizado. Se requiere iniciar sesión.'
     });
   }
-
-  const token = authHeader.split(' ')[1];
 
   try {
     const decoded = jwt.verify(token, config.jwt.secret);
 
-    // Opcional: verificar que el usuario siga existiendo y esté ACTIVO en la BD
-    const [rows] = await pool.query(
-      `SELECT u.id, u.nombre_completo, u.username, u.email, u.rol, u.sede_id, u.estado, s.nombre AS sede_nombre
-       FROM usuarios u
-       LEFT JOIN sedes s ON u.sede_id = s.id
-       WHERE u.id = ?`,
-      [decoded.id]
-    );
+    // Verificar que el usuario siga existiendo y esté ACTIVO usando el Repositorio
+    const user = await UserRepository.findById(decoded.id);
 
-    if (rows.length === 0) {
+    if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'El usuario asociado a este token ya no existe.'
+        message: 'El usuario asociado a esta sesión ya no existe.'
       });
     }
-
-    const user = rows[0];
 
     if (user.estado !== 'ACTIVO') {
       return res.status(403).json({
@@ -50,9 +41,15 @@ export const authenticateJWT = async (req, res, next) => {
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
+      // Si expira, limpiamos la cookie de inmediato
+      res.clearCookie('token', {
+        httpOnly: true,
+        secure: config.nodeEnv === 'production',
+        sameSite: 'strict'
+      });
       return res.status(401).json({
         success: false,
-        message: 'La sesión ha expirado. Por favor, inicia sesión nuevamente.',
+        message: 'La sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.',
         code: 'TOKEN_EXPIRED'
       });
     }
@@ -63,3 +60,4 @@ export const authenticateJWT = async (req, res, next) => {
     });
   }
 };
+

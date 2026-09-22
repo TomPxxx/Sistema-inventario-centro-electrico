@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import apiRouter from './routes/index.js';
@@ -12,13 +13,15 @@ const app = express();
 
 // Middlewares globales
 app.use(cors({
-  origin: '*', // Permite peticiones desde frontend local o herramientas como Postman/ThunderClient
+  origin: 'http://localhost:5173', // Cambiado temporalmente a un origen explícito para permitir cookies (credentials: true)
+  credentials: true, // Importante para enviar/recibir cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Servir archivos estáticos del frontend desde la carpeta 'public'
 const publicPath = path.join(__dirname, '../public');

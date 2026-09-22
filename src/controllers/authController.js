@@ -1,225 +1,182 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import { pool } from '../config/db.js';
 import { config } from '../config/env.js';
 import { initializeDatabase } from '../database/initDb.js';
+import UserRepository from '../repositories/UserRepository.js';
+import SedeRepository from '../repositories/SedeRepository.js';
+
+// Configuración de la cookie compartida
+const cookieOptions = {
+  httpOnly: true, // No accesible mediante JavaScript (Previene XSS)
+  secure: config.nodeEnv === 'production', // Solo HTTPS en producción
+  sameSite: 'strict', // Previene ataques CSRF
+  maxAge: 12 * 60 * 60 * 1000 // 12 horas en milisegundos
+};
+
+// Versión actual de la política de tratamiento de datos
+const CURRENT_POLICY_VERSION = 'v1.0';
 
 /**
  * Iniciar sesión (Login)
  * POST /api/auth/login
- * Body: { username, password }
+ * Body: { username, password, _honey }
  */
 export const login = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, _honey } = req.body;
+
+    // Validación Honeypot (Trampa anti-bots)
+    // Si el campo oculto '_honey' tiene algún valor, asumimos que es un bot automatizado
+    if (_honey) {
+      console.warn(`[Seguridad] Intento de login bloqueado por Honeypot. IP: ${req.ip}`);
+      // Simulamos un error genérico o tardamos en responder para despistar al bot
+      return res.status(401).json({ success: false, message: 'Por favor, ingresa tu nombre de usuario y contraseña.' });
+    }
 
     if (!username || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Por favor, ingresa tu nombre de usuario y contraseña.'
-      });
+      return res.status(400).json({ success: false, message: 'Por favor, ingresa tu nombre de usuario y contraseña.' });
     }
 
     const trimmedUser = username.trim();
+    const user = await UserRepository.findByUsernameOrEmail(trimmedUser);
 
-    // Buscamos el usuario por su username o por su email
-    const [rows] = await pool.query(
-      `SELECT u.id, u.nombre_completo, u.username, u.email, u.password_hash, u.rol, 
-              u.sede_id, u.estado, u.ultimo_login, s.nombre AS sede_nombre, s.direccion AS sede_direccion
-       FROM usuarios u
-       LEFT JOIN sedes s ON u.sede_id = s.id
-       WHERE u.username = ? OR u.email = ?`,
-      [trimmedUser, trimmedUser]
-    );
-
-    if (rows.length === 0) {
-      return res.status(401).json({
-        success: false,
-        error_type: 'USER_NOT_FOUND',
-        message: 'Usuario no encontrado. Verifica que el nombre de usuario o correo sea correcto.'
-      });
+    if (!user) {
+      return res.status(401).json({ success: false, error_type: 'USER_NOT_FOUND', message: 'Usuario no encontrado.' });
     }
 
-    const user = rows[0];
-
-    // Validación de estado activo
     if (user.estado !== 'ACTIVO') {
-      return res.status(403).json({
-        success: false,
-        message: 'Tu cuenta de usuario está desactivada. Por favor, comunícate con el administrador.'
-      });
+      return res.status(403).json({ success: false, message: 'Tu cuenta está desactivada.' });
     }
 
-    // Comparación segura del hash de la contraseña
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        error_type: 'INVALID_PASSWORD',
-        message: 'La contraseña es incorrecta. Inténtalo nuevamente.'
-      });
+      return res.status(401).json({ success: false, error_type: 'INVALID_PASSWORD', message: 'Contraseña incorrecta.' });
     }
 
-    // Actualizamos la fecha del último inicio de sesión en MySQL
-    await pool.query('UPDATE usuarios SET ultimo_login = NOW() WHERE id = ?', [user.id]);
+    // Verificar política de datos
+    const hasAcceptedPolicy = await UserRepository.hasAcceptedPolicy(user.id, CURRENT_POLICY_VERSION);
 
-    // Generamos el Token JWT firmado
+    await UserRepository.updateLastLogin(user.id);
+
     const payload = {
-      id: user.id,
-      username: user.username,
-      rol: user.rol,
-      sede_id: user.sede_id,
-      sede_nombre: user.sede_nombre,
-      sede_direccion: user.sede_direccion,
-      nombre_completo: user.nombre_completo,
+      id: user.id, username: user.username, rol: user.rol,
+      sede_id: user.sede_id, sede_nombre: user.sede_nombre,
+      sede_direccion: user.sede_direccion, nombre_completo: user.nombre_completo,
       email: user.email
     };
 
-    const token = jwt.sign(payload, config.jwt.secret, {
-      expiresIn: config.jwt.expiresIn
-    });
+    const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+
+    // Guardamos el token en una cookie segura
+    res.cookie('token', token, cookieOptions);
 
     return res.status(200).json({
       success: true,
       message: 'Inicio de sesión exitoso.',
-      token,
-      user: {
-        id: user.id,
-        nombre_completo: user.nombre_completo,
-        username: user.username,
-        email: user.email,
-        rol: user.rol,
-        sede_id: user.sede_id,
-        sede_nombre: user.sede_nombre,
-        sede_direccion: user.sede_direccion,
-        ultimo_login: user.ultimo_login
-      }
+      requires_policy_acceptance: !hasAcceptedPolicy,
+      current_policy_version: CURRENT_POLICY_VERSION,
+      user: { ...payload, ultimo_login: new Date() }
     });
   } catch (error) {
-    console.error('[Auth Error] Error en el proceso de login:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Ocurrió un error interno en el servidor al intentar iniciar sesión.'
-    });
+    console.error('[Auth Error] Error en login:', error);
+    return res.status(500).json({ success: false, message: 'Error interno al intentar iniciar sesión.' });
   }
+};
+
+/**
+ * Cerrar sesión (Logout)
+ * POST /api/auth/logout
+ */
+export const logout = async (req, res) => {
+  // Para destruir la sesión, simplemente limpiamos la cookie 'token'
+  res.clearCookie('token', { ...cookieOptions, maxAge: 0 });
+  return res.status(200).json({
+    success: true,
+    message: 'Sesión finalizada correctamente.'
+  });
 };
 
 /**
  * Registro de nuevo usuario según cargo
  * POST /api/auth/register
- * Body: { nombre_completo, username, email, password, rol, sede_id }
  */
 export const register = async (req, res) => {
   try {
-    const { nombre_completo, username, email, password, rol, sede_id } = req.body;
+    const { nombre_completo, username, email, password, rol, sede_id, _honey } = req.body;
 
-    if (!nombre_completo || !username || !password || !rol) {
-      return res.status(400).json({
-        success: false,
-        message: 'Campos requeridos: Nombre completo, Usuario, Contraseña y Cargo (Rol).'
-      });
+    // Validación Honeypot en el registro
+    if (_honey) {
+      console.warn(`[Seguridad] Intento de registro bloqueado por Honeypot. IP: ${req.ip}`);
+      return res.status(400).json({ success: false, message: 'Solicitud inválida.' });
     }
 
-    const validRoles = ['ADMINISTRADOR', 'ENCARGADO', 'EMPLEADO'];
     const selectedRol = rol.toUpperCase();
-    if (!validRoles.includes(selectedRol)) {
-      return res.status(400).json({
-        success: false,
-        message: `Rol no válido. Debe ser uno de: ${validRoles.join(', ')}.`
-      });
-    }
 
-    // Regla de negocio de la base de datos:
-    // ENCARGADO debe tener sede_id obligatoria
-    // ADMINISTRADOR y EMPLEADO deben tener sede_id = NULL
     let finalSedeId = null;
     if (selectedRol === 'ENCARGADO') {
-      if (!sede_id) {
-        return res.status(400).json({
-          success: false,
-          message: 'Los usuarios con cargo ENCARGADO deben tener una sede asignada obligatoriamente.'
-        });
-      }
       finalSedeId = Number(sede_id);
     }
 
     const cleanUsername = username.trim();
     const cleanEmail = email ? email.trim().toLowerCase() : null;
 
-    // Verificar unicidad de username y email
-    const [existing] = await pool.query(
-      'SELECT id, username, email FROM usuarios WHERE username = ? OR (email IS NOT NULL AND email = ?)',
-      [cleanUsername, cleanEmail]
-    );
+    const existing = await UserRepository.checkExists(cleanUsername, cleanEmail);
+    if (existing.length > 0) return res.status(409).json({ success: false, message: 'El usuario o email ya existe.' });
 
-    if (existing.length > 0) {
-      const match = existing[0];
-      if (match.username.toLowerCase() === cleanUsername.toLowerCase()) {
-        return res.status(409).json({
-          success: false,
-          message: `El nombre de usuario '${cleanUsername}' ya está registrado. Elige otro.`
-        });
-      }
-      if (cleanEmail && match.email && match.email.toLowerCase() === cleanEmail.toLowerCase()) {
-        return res.status(409).json({
-          success: false,
-          message: `El correo electrónico '${cleanEmail}' ya está registrado en el sistema.`
-        });
-      }
-    }
+    const password_hash = await bcrypt.hash(password, 10);
 
-    // Encriptar contraseña con bcryptjs
-    const saltRounds = 10;
-    const password_hash = await bcrypt.hash(password, saltRounds);
+    const insertId = await UserRepository.create({
+      nombre_completo: nombre_completo.trim(), username: cleanUsername, email: cleanEmail,
+      password_hash, rol: selectedRol, sede_id: finalSedeId
+    });
 
-    // Insertar en MySQL
-    const [insertResult] = await pool.query(
-      `INSERT INTO usuarios (nombre_completo, username, email, password_hash, rol, sede_id, estado)
-       VALUES (?, ?, ?, ?, ?, ?, 'ACTIVO')`,
-      [nombre_completo.trim(), cleanUsername, cleanEmail, password_hash, selectedRol, finalSedeId]
-    );
+    const newUser = await UserRepository.findById(insertId);
 
-    // Consultar datos completos con la sede (si aplica)
-    const [newUserRows] = await pool.query(
-      `SELECT u.id, u.nombre_completo, u.username, u.email, u.rol, u.sede_id, u.estado, 
-              s.nombre AS sede_nombre, s.direccion AS sede_direccion
-       FROM usuarios u
-       LEFT JOIN sedes s ON u.sede_id = s.id
-       WHERE u.id = ?`,
-      [insertResult.insertId]
-    );
-
-    const newUser = newUserRows[0];
-
-    // Generar token JWT automático para login inmediato
     const payload = {
-      id: newUser.id,
-      username: newUser.username,
-      rol: newUser.rol,
-      sede_id: newUser.sede_id,
-      sede_nombre: newUser.sede_nombre,
-      sede_direccion: newUser.sede_direccion,
-      nombre_completo: newUser.nombre_completo,
+      id: newUser.id, username: newUser.username, rol: newUser.rol,
+      sede_id: newUser.sede_id, sede_nombre: newUser.sede_nombre,
+      sede_direccion: newUser.sede_direccion, nombre_completo: newUser.nombre_completo,
       email: newUser.email
     };
 
-    const token = jwt.sign(payload, config.jwt.secret, {
-      expiresIn: config.jwt.expiresIn
-    });
+    const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+    
+    // Iniciar sesión automáticamente tras el registro
+    res.cookie('token', token, cookieOptions);
 
     return res.status(201).json({
       success: true,
-      message: `Usuario '${newUser.username}' registrado exitosamente con cargo ${newUser.rol}.`,
-      token,
+      message: 'Usuario registrado exitosamente.',
       user: newUser
     });
   } catch (error) {
     console.error('[Register Error]:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error al registrar el nuevo usuario: ' + error.message
+    return res.status(500).json({ success: false, message: 'Error interno.' });
+  }
+};
+
+/**
+ * Aceptar la política de tratamiento de datos
+ * POST /api/auth/accept-policy
+ */
+export const acceptPolicy = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { version } = req.body;
+
+    if (!version) {
+      return res.status(400).json({ success: false, message: 'La versión de la política es requerida.' });
+    }
+
+    await UserRepository.acceptPolicy(userId, version);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Política aceptada exitosamente.'
     });
+  } catch (error) {
+    console.error('[Policy Error]:', error);
+    return res.status(500).json({ success: false, message: 'Error interno al registrar la política.' });
   }
 };
 
@@ -239,36 +196,25 @@ export const forgotPassword = async (req, res) => {
     }
 
     const clean = identifier.trim();
-    const [rows] = await pool.query(
-      'SELECT id, username, email, nombre_completo FROM usuarios WHERE username = ? OR email = ?',
-      [clean, clean]
-    );
+    const user = await UserRepository.findByUsernameOrEmail(clean);
 
-    if (rows.length === 0) {
-      // Por seguridad, informamos pero indicamos instrucciones
+    if (!user) {
       return res.status(404).json({
         success: false,
         message: 'No se encontró ninguna cuenta asociada a este usuario o correo en la base de datos.'
       });
     }
 
-    const user = rows[0];
-    // Generar código numérico de 6 dígitos para recuperación rápida
     const recoveryPin = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
 
-    await pool.query(
-      'UPDATE usuarios SET token_recuperacion = ?, token_recuperacion_expira = ? WHERE id = ?',
-      [recoveryPin, expiresAt, user.id]
-    );
+    await UserRepository.setRecoveryToken(user.id, recoveryPin, expiresAt);
 
-    // Si tuviera servicio SMTP configurado, se despacha el correo aquí.
-    // Retornamos simulación limpia para la interfaz del usuario:
     return res.status(200).json({
       success: true,
       message: `Se ha generado el código de recuperación para ${user.email || user.username}. En caso de que se te olvide, se envía al correo registrado.`,
       emailTarget: user.email || `${user.username}@grupoelectrico.com`,
-      recoveryCodePreview: recoveryPin // Se expone en el modal para pruebas directas en local
+      recoveryCodePreview: recoveryPin
     });
   } catch (error) {
     console.error('[Forgot Password Error]:', error);
@@ -295,23 +241,15 @@ export const resetPassword = async (req, res) => {
     }
 
     const clean = identifier.trim();
-    const [rows] = await pool.query(
-      `SELECT id, username, email, token_recuperacion, token_recuperacion_expira 
-       FROM usuarios 
-       WHERE (username = ? OR email = ?) AND token_recuperacion = ?`,
-      [clean, clean, pin.trim()]
-    );
+    const user = await UserRepository.findByRecoveryToken(clean, pin.trim());
 
-    if (rows.length === 0) {
+    if (!user) {
       return res.status(400).json({
         success: false,
         message: 'Código de recuperación inválido o usuario incorrecto.'
       });
     }
 
-    const user = rows[0];
-
-    // Verificar si expiró
     if (new Date(user.token_recuperacion_expira) < new Date()) {
       return res.status(400).json({
         success: false,
@@ -319,15 +257,10 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    // Hashear la nueva contraseña
     const saltRounds = 10;
     const newHash = await bcrypt.hash(newPassword, saltRounds);
 
-    // Actualizar y limpiar token
-    await pool.query(
-      'UPDATE usuarios SET password_hash = ?, token_recuperacion = NULL, token_recuperacion_expira = NULL WHERE id = ?',
-      [newHash, user.id]
-    );
+    await UserRepository.resetPasswordAndClearToken(user.id, newHash);
 
     return res.status(200).json({
       success: true,
@@ -348,9 +281,7 @@ export const resetPassword = async (req, res) => {
  */
 export const getSedesList = async (req, res) => {
   try {
-    const [sedes] = await pool.query(
-      'SELECT id, nombre, ciudad, direccion, telefono FROM sedes WHERE activo = TRUE ORDER BY id ASC'
-    );
+    const sedes = await SedeRepository.findAllActive();
     return res.status(200).json({
       success: true,
       sedes
