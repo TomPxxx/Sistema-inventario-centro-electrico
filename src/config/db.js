@@ -4,11 +4,8 @@ import { config } from './env.js';
 
 // Creamos un Pool de conexiones para PostgreSQL
 export const pool = new Pool({
-  host: config.db.host,
-  user: config.db.user,
-  password: config.db.password,
-  database: config.db.database,
-  port: config.db.port,
+  connectionString: config.db.connectionString,
+  ssl: config.db.connectionString.includes('neon.tech') ? { rejectUnauthorized: false } : false,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,

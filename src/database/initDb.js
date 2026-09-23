@@ -14,11 +14,8 @@ export const initializeDatabase = async () => {
   let client;
   try {
     client = new Client({
-      host: config.db.host,
-      user: config.db.user,
-      password: config.db.password,
-      database: config.db.database,
-      port: config.db.port,
+      connectionString: config.db.connectionString,
+      ssl: config.db.connectionString.includes('neon.tech') ? { rejectUnauthorized: false } : false
     });
     
     await client.connect();
