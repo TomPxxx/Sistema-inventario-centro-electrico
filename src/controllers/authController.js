@@ -334,3 +334,34 @@ export const handleInitDb = async (req, res) => {
     });
   }
 };
+
+/**
+ * Verificar contraseña para desbloquear pantalla (Inactividad)
+ * POST /api/auth/verify-password
+ */
+export const verifyPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Se requiere la contraseña.' });
+    }
+
+    const user = await UserRepository.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+    }
+
+    // Necesitamos el password_hash para validar. findById no lo trae, usamos el byUsername
+    const fullUser = await UserRepository.findByUsernameOrEmail(user.username);
+    
+    const isPasswordValid = await bcrypt.compare(password, fullUser.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ success: false, message: 'Contraseña incorrecta.' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Sesión desbloqueada.' });
+  } catch (error) {
+    console.error('[Verify Password Error]:', error);
+    return res.status(500).json({ success: false, message: 'Error interno.' });
+  }
+};

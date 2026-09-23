@@ -1,5 +1,6 @@
 import { pool } from '../config/db.js';
 import InventoryRepository from '../repositories/InventoryRepository.js';
+import { notificationSystem } from '../utils/NotificationObserver.js';
 
 /**
  * Obtener todos los productos con su stock y precios desglosados por sede
@@ -47,13 +48,36 @@ export const getProductsWithStock = async (req, res) => {
   }
 };
 
+export const getCategories = async (req, res) => {
+  try {
+    const categories = await InventoryRepository.getCategories();
+    return res.status(200).json({ success: true, categories });
+  } catch (error) {
+    console.error('[Inventory Error] getCategories:', error);
+    return res.status(500).json({ success: false, message: 'Error al consultar categorías: ' + error.message });
+  }
+};
+
+export const createCategory = async (req, res) => {
+  try {
+    const { nombre, descripcion } = req.body;
+    if (!nombre) return res.status(400).json({ success: false, message: 'Nombre de categoría requerido.' });
+    
+    const newCategory = await InventoryRepository.createCategory(nombre.trim(), descripcion);
+    return res.status(201).json({ success: true, message: 'Categoría creada', category: newCategory });
+  } catch (error) {
+    console.error('[Inventory Error] createCategory:', error);
+    return res.status(500).json({ success: false, message: 'Error al crear categoría: ' + error.message });
+  }
+};
+
 /**
  * Crear producto transaccional (PostgreSQL)
  */
 export const createProduct = async (req, res) => {
   const client = await pool.connect();
   try {
-    const { codigo_sku, nombre, descripcion, unidad_medida, sedesData } = req.body;
+    const { codigo_sku, nombre, descripcion, categoria_id, unidad_medida, sedesData } = req.body;
     if (!codigo_sku || !nombre) return res.status(400).json({ success: false, message: 'SKU y nombre requeridos.' });
 
     const cleanSku = codigo_sku.trim().toUpperCase();
@@ -63,9 +87,9 @@ export const createProduct = async (req, res) => {
     await client.query('BEGIN');
 
     const prodResult = await client.query(
-      `INSERT INTO productos (codigo_sku, nombre, descripcion, unidad_medida, activo)
-       VALUES ($1, $2, $3, $4, TRUE) RETURNING id`,
-      [cleanSku, nombre.trim(), descripcion ? descripcion.trim() : null, unidad_medida || 'UNIDAD']
+      `INSERT INTO productos (codigo_sku, nombre, descripcion, categoria_id, unidad_medida, activo)
+       VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
+      [cleanSku, nombre.trim(), descripcion ? descripcion.trim() : null, categoria_id || null, unidad_medida || 'UNIDAD']
     );
     const productId = prodResult.rows[0].id;
 
@@ -176,6 +200,15 @@ export const executeTransfer = async (req, res) => {
     );
 
     await client.query('COMMIT');
+    
+    // Notificar a todos los encargados y administradores
+    notificationSystem.notifyAll({
+      type: 'NUEVO_TRASLADO',
+      message: `Nuevo traslado ejecutado. ${qty} unidades movidas.`,
+      sede_origen_id,
+      sede_destino_id
+    });
+    
     return res.status(200).json({ success: true, message: 'Traslado completado.' });
 
   } catch (error) {

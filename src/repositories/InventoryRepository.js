@@ -3,12 +3,28 @@ import { pool } from '../config/db.js';
 class InventoryRepository {
   async getProducts() {
     const { rows } = await pool.query(
-      `SELECT id, codigo_sku, nombre, descripcion, unidad_medida, activo, created_at 
-       FROM productos 
-       WHERE activo = TRUE 
-       ORDER BY id ASC`
+      `SELECT p.id, p.codigo_sku, p.nombre, p.descripcion, p.categoria_id, c.nombre as categoria_nombre, p.unidad_medida, p.activo, p.created_at 
+       FROM productos p
+       LEFT JOIN categorias c ON p.categoria_id = c.id
+       WHERE p.activo = TRUE 
+       ORDER BY p.id ASC`
     );
     return rows;
+  }
+
+  async getCategories() {
+    const { rows } = await pool.query(
+      `SELECT id, nombre, descripcion FROM categorias ORDER BY id ASC`
+    );
+    return rows;
+  }
+
+  async createCategory(nombre, descripcion) {
+    const { rows } = await pool.query(
+      `INSERT INTO categorias (nombre, descripcion) VALUES ($1, $2) RETURNING *`,
+      [nombre, descripcion]
+    );
+    return rows[0];
   }
 
   async getStocks() {

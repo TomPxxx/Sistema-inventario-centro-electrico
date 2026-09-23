@@ -3,6 +3,9 @@
 -- Motor: PostgreSQL
 -- =============================================================================
 
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+
 -- 1. EXTENSIONES Y FUNCIONES BASE
 -- Función genérica para simular ON UPDATE CURRENT_TIMESTAMP de MySQL
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -60,17 +63,35 @@ CREATE TABLE usuarios (
 CREATE TRIGGER update_usuarios_updated_at BEFORE UPDATE ON usuarios FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 -- =============================================================================
--- 4. TABLA: productos
+-- 4. TABLA: categorias
+-- =============================================================================
+CREATE TABLE categorias (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    descripcion TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER update_categorias_updated_at BEFORE UPDATE ON categorias FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+-- =============================================================================
+-- 4.5. TABLA: productos
 -- =============================================================================
 CREATE TABLE productos (
     id SERIAL PRIMARY KEY,
     codigo_sku VARCHAR(50) NOT NULL UNIQUE,
     nombre VARCHAR(150) NOT NULL,
     descripcion TEXT NULL,
+    categoria_id INTEGER NULL,
     unidad_medida VARCHAR(20) NOT NULL DEFAULT 'UNIDAD',
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_productos_categoria
+        FOREIGN KEY (categoria_id) REFERENCES categorias(id)
+        ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TRIGGER update_productos_updated_at BEFORE UPDATE ON productos FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
@@ -270,20 +291,32 @@ INSERT INTO sedes (id, nombre, ciudad, direccion, telefono) VALUES
 SELECT setval('sedes_id_seq', (SELECT MAX(id) FROM sedes));
 
 INSERT INTO usuarios (id, nombre_completo, username, email, password_hash, rol, sede_id, estado) VALUES
-(1, 'Cesar Administrador Global', 'Cesar', 'cesar@grupoelectrico.com', '$2a$10$Jg4xBd9cuK99mTicKFWxE.9MKihopBbXtVPrva4PCWKYdXERl4CBO', 'ADMINISTRADOR', NULL, 'ACTIVO'),
-(2, 'María Encargada Matriz', 'encargado_matriz', 'mencargada@grupoelectrico.com', '$2a$10$Jg4xBd9cuK99mTicKFWxE.9MKihopBbXtVPrva4PCWKYdXERl4CBO', 'ENCARGADO', 1, 'ACTIVO'),
-(3, 'Juan Encargado EP3', 'encargado_ep3', 'jencargado@grupoelectrico.com', '$2a$10$Jg4xBd9cuK99mTicKFWxE.9MKihopBbXtVPrva4PCWKYdXERl4CBO', 'ENCARGADO', 3, 'ACTIVO'),
-(4, 'Pedro Operador Logístico', 'empleado1', 'poperador@grupoelectrico.com', '$2a$10$Jg4xBd9cuK99mTicKFWxE.9MKihopBbXtVPrva4PCWKYdXERl4CBO', 'EMPLEADO', NULL, 'ACTIVO');
+(1, 'Cesar Administrador Global', 'Cesar', 'cesar@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ADMINISTRADOR', NULL, 'ACTIVO'),
+(2, 'Encargado Centro Eléctrico EP', 'encargado_ep', 'ep@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ENCARGADO', 1, 'ACTIVO'),
+(3, 'Encargado Centro Eléctrico EP1', 'encargado_ep1', 'ep1@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ENCARGADO', 2, 'ACTIVO'),
+(4, 'Encargado Grupo Eléctrico EP3', 'encargado_ep3', 'ep3@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ENCARGADO', 3, 'ACTIVO'),
+(5, 'Encargado EP6 Ecoiluminación', 'encargado_ep6', 'ep6@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ENCARGADO', 4, 'ACTIVO'),
+(6, 'Corredor Logístico 1', 'corredor_1', 'corredor1@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'EMPLEADO', NULL, 'ACTIVO'),
+(7, 'Corredor Logístico 2', 'corredor_2', 'corredor2@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'EMPLEADO', NULL, 'ACTIVO');
 
 SELECT setval('usuarios_id_seq', (SELECT MAX(id) FROM usuarios));
 
-INSERT INTO productos (id, codigo_sku, nombre, descripcion, unidad_medida, activo) VALUES
-(1, 'CAB-THHN-12AWG', 'Cable Cobre THHN Calibre 12 AWG Negro', 'Cable de cobre conductor para instalaciones residenciales y comerciales', 'METRO', TRUE),
-(2, 'CAB-THHN-10AWG', 'Cable Cobre THHN Calibre 10 AWG Rojo', 'Cable conductor de alta capacidad para alimentadores', 'METRO', TRUE),
-(3, 'TUB-CONDUIT-34', 'Tubería Conduit EMT 3/4 pulg x 3m', 'Tubo metálico para canalización eléctrica', 'UNIDAD', TRUE),
-(4, 'BREAKER-1P-20A', 'Interruptor Termomagnético 1 Polo 20A', 'Breaker enchufable tipo americano', 'UNIDAD', TRUE),
-(5, 'PANEL-SOLAR-450W', 'Panel Solar Monocristalino 450W Tier 1', 'Módulo fotovoltaico', 'UNIDAD', TRUE),
-(6, 'LAM-SOLAR-ALLINONE', 'Luminaria Solar LED 100W', 'Lámpara LED con panel y batería integrada', 'UNIDAD', TRUE);
+INSERT INTO categorias (id, nombre, descripcion) VALUES
+(1, 'Cables', 'Cables de cobre, aluminio, de varios calibres y tipos'),
+(2, 'Tubería', 'Tuberías PVC, EMT, SCH40, IMC'),
+(3, 'Alambre', 'Rollos y tramos de alambre de diferentes calibres'),
+(4, 'Protecciones Eléctricas', 'Breakers, disyuntores, diferenciales'),
+(5, 'Sistemas Solares', 'Paneles, inversores, controladores');
+
+SELECT setval('categorias_id_seq', (SELECT MAX(id) FROM categorias));
+
+INSERT INTO productos (id, codigo_sku, nombre, descripcion, categoria_id, unidad_medida, activo) VALUES
+(1, 'CAB-THHN-12AWG', 'Cable Cobre THHN Calibre 12 AWG Negro', 'Cable de cobre conductor para instalaciones residenciales y comerciales', 1, 'METRO', TRUE),
+(2, 'CAB-THHN-10AWG', 'Cable Cobre THHN Calibre 10 AWG Rojo', 'Cable conductor de alta capacidad para alimentadores', 1, 'METRO', TRUE),
+(3, 'TUB-CONDUIT-34', 'Tubería Conduit EMT 3/4 pulg x 3m', 'Tubo metálico para canalización eléctrica', 2, 'UNIDAD', TRUE),
+(4, 'BREAKER-1P-20A', 'Interruptor Termomagnético 1 Polo 20A', 'Breaker enchufable tipo americano', 4, 'UNIDAD', TRUE),
+(5, 'PANEL-SOLAR-450W', 'Panel Solar Monocristalino 450W Tier 1', 'Módulo fotovoltaico', 5, 'UNIDAD', TRUE),
+(6, 'LAM-SOLAR-ALLINONE', 'Luminaria Solar LED 100W', 'Lámpara LED con panel y batería integrada', 5, 'UNIDAD', TRUE);
 
 SELECT setval('productos_id_seq', (SELECT MAX(id) FROM productos));
 
@@ -313,7 +346,7 @@ INSERT INTO solicitudes_material (
     id, producto_id, sede_solicitante_id, sede_proveedora_id, usuario_solicitante_id, 
     cantidad_solicitada, estado, motivo_solicitud
 ) VALUES (
-    1, 1, 2, 1, 4, 
+    1, 1, 2, 1, 3, 
     150.00, 'PENDIENTE', 'Cliente en tienda solicita 150 metros'
 );
 SELECT setval('solicitudes_material_id_seq', (SELECT MAX(id) FROM solicitudes_material));
@@ -332,7 +365,7 @@ INSERT INTO movimientos_inventario (
     stock_anterior, stock_posterior, precio_unitario, referencia_documento, motivo_observacion
 ) VALUES
 ('ENTRADA', 1, 1, 1, 850.50, 0.00, 850.50, 3200.00, 'INV-INICIAL-001', 'Carga inicial'),
-('ENTRADA', 5, 4, 3, 45.00, 0.00, 45.00, 650000.00, 'FAC-PROV-9982', 'Recepción de panel');
+('ENTRADA', 5, 4, 5, 45.00, 0.00, 45.00, 650000.00, 'FAC-PROV-9982', 'Recepción de panel');
 
 -- =============================================================================
 -- 10. TABLA: usuario_politicas

@@ -54,6 +54,28 @@ class DashboardRepository {
     const { rows } = await pool.query(query);
     return rows;
   }
+
+  /**
+   * Obtiene todos los movimientos exactos con fecha, hora, cantidades y sedes.
+   */
+  async getExactMovements() {
+    const query = `
+      SELECT 
+        m.id, m.tipo_movimiento, m.cantidad, m.stock_anterior, m.stock_posterior,
+        m.fecha_movimiento, 
+        p.nombre as producto_nombre, p.codigo_sku,
+        s.nombre as sede_nombre,
+        u.nombre_completo as usuario_nombre
+      FROM movimientos_inventario m
+      JOIN productos p ON m.producto_id = p.id
+      JOIN sedes s ON m.sede_id = s.id
+      JOIN usuarios u ON m.usuario_id = u.id
+      ORDER BY m.fecha_movimiento DESC
+      LIMIT 100
+    `;
+    const { rows } = await pool.query(query);
+    return rows;
+  }
 }
 
 export default new DashboardRepository();

@@ -7,11 +7,12 @@ import DashboardRepository from '../repositories/DashboardRepository.js';
  */
 export const getDashboardSummary = async (req, res) => {
   try {
-    // Ejecutar las tres consultas en paralelo para mejorar rendimiento
-    const [movementsData, topProductsData, stockDistributionData] = await Promise.all([
+    // Ejecutar las cuatro consultas en paralelo para mejorar rendimiento
+    const [movementsData, topProductsData, stockDistributionData, exactMovementsData] = await Promise.all([
       DashboardRepository.getMovementsOverTime(7),
       DashboardRepository.getTopProducts(5, 30),
-      DashboardRepository.getStockDistribution()
+      DashboardRepository.getStockDistribution(),
+      DashboardRepository.getExactMovements()
     ]);
 
     // Formatear numéricamente los resultados para enviar un JSON limpio
@@ -36,7 +37,8 @@ export const getDashboardSummary = async (req, res) => {
       dashboard: {
         movementsOverTime: movements,
         topProducts: topProducts,
-        stockDistribution: stockDistribution
+        stockDistribution: stockDistribution,
+        exactMovements: exactMovementsData
       }
     });
 

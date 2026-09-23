@@ -42,6 +42,15 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
+import fs from 'fs';
+
+app.post('/api/debug-log', (req, res) => {
+  const logStr = `[${new Date().toISOString()}] CLIENT-SIDE DEBUG LOG: ${JSON.stringify(req.body)}\n`;
+  console.log("🚨", logStr);
+  fs.appendFileSync('debug.log', logStr);
+  res.sendStatus(200);
+});
+
 // Enrutador principal de la API
 app.use('/api', apiRouter);
 

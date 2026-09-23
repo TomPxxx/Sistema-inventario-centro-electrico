@@ -8,7 +8,8 @@ import {
   getSedesList, 
   getProfile, 
   handleInitDb,
-  acceptPolicy
+  acceptPolicy,
+  verifyPassword
 } from '../controllers/authController.js';
 import { authenticateJWT } from '../middlewares/authMiddleware.js';
 import { validate } from '../middlewares/validateMiddleware.js';
@@ -28,5 +29,6 @@ router.post('/init-db', handleInitDb);
 // Rutas protegidas por JWT
 router.get('/me', authenticateJWT, getProfile);
 router.post('/accept-policy', authenticateJWT, acceptPolicy);
+router.post('/verify-password', authenticateJWT, verifyPassword);
 
 export default router;

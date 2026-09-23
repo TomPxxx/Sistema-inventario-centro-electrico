@@ -2,6 +2,7 @@ import { Router } from 'express';
 import authRoutes from './authRoutes.js';
 import inventoryRoutes from './inventoryRoutes.js';
 import dashboardRoutes from './dashboardRoutes.js';
+import notificationsRoutes from './notificationsRoutes.js';
 
 const router = Router();
 
@@ -9,6 +10,7 @@ const router = Router();
 router.use('/auth', authRoutes);
 router.use('/inventory', inventoryRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/notifications', notificationsRoutes);
 
 // Ruta base de la API
 router.get('/', (req, res) => {

@@ -5,7 +5,9 @@ import {
   executeTransfer, 
   getRecentTransfers,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  getCategories,
+  createCategory
 } from '../controllers/inventoryController.js';
 
 const router = Router();
@@ -17,5 +19,9 @@ router.put('/products/:id', updateProduct);
 router.delete('/products/:id', deleteProduct);
 router.get('/transfers', getRecentTransfers);
 router.post('/transfers', executeTransfer);
+
+// Endpoints de categorias
+router.get('/categories', getCategories);
+router.post('/categories', createCategory);
 
 export default router;
