@@ -1,9 +1,12 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import { config } from '../config/env.js';
 import { initializeDatabase } from '../database/initDb.js';
 import UserRepository from '../repositories/UserRepository.js';
 import SedeRepository from '../repositories/SedeRepository.js';
+
+const googleClient = new OAuth2Client(config.google.clientId);
 
 // Configuración de la cookie compartida
 const cookieOptions = {
@@ -23,7 +26,7 @@ const CURRENT_POLICY_VERSION = 'v1.0';
  */
 export const login = async (req, res) => {
   try {
-    const { username, password, _honey } = req.body;
+    const { username, password, _honey, recaptchaToken } = req.body;
 
     // Validación Honeypot (Trampa anti-bots)
     // Si el campo oculto '_honey' tiene algún valor, asumimos que es un bot automatizado
@@ -31,6 +34,21 @@ export const login = async (req, res) => {
       console.warn(`[Seguridad] Intento de login bloqueado por Honeypot. IP: ${req.ip}`);
       // Simulamos un error genérico o tardamos en responder para despistar al bot
       return res.status(401).json({ success: false, message: 'Por favor, ingresa tu nombre de usuario y contraseña.' });
+    }
+
+    if (!recaptchaToken) {
+      return res.status(400).json({ success: false, message: 'Falta el token de reCAPTCHA. Por favor verifica que no eres un robot.' });
+    }
+
+    if (config.recaptcha.secretKey) {
+      const recaptchaVerifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${config.recaptcha.secretKey}&response=${recaptchaToken}`;
+      const recaptchaRes = await fetch(recaptchaVerifyUrl, { method: 'POST' });
+      const recaptchaData = await recaptchaRes.json();
+
+      if (!recaptchaData.success) {
+        console.warn(`[Seguridad] Intento de login fallido por reCAPTCHA. IP: ${req.ip}`);
+        return res.status(401).json({ success: false, message: 'Validación de reCAPTCHA fallida. Intenta nuevamente.' });
+      }
     }
 
     if (!username || !password) {
@@ -84,16 +102,98 @@ export const login = async (req, res) => {
 };
 
 /**
+ * Iniciar sesión con Google (Google OAuth)
+ * POST /api/auth/google
+ */
+export const googleLogin = async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ success: false, message: 'Falta el token de Google.' });
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: config.google.clientId,
+    });
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+
+    let user = await UserRepository.findByUsernameOrEmail(email);
+
+    if (!user) {
+      // Primer login -> crear en estado PENDIENTE
+      const newUserId = await UserRepository.createGoogleUser(name, email);
+      user = await UserRepository.findById(newUserId);
+      return res.status(403).json({ success: false, status: 'PENDIENTE', message: 'Tu cuenta ha sido registrada y está pendiente de aprobación por un administrador.' });
+    }
+
+    if (user.estado === 'PENDIENTE') {
+      return res.status(403).json({ success: false, status: 'PENDIENTE', message: 'Tu cuenta está pendiente de aprobación por un administrador.' });
+    }
+
+    if (user.estado === 'RECHAZADO') {
+      return res.status(403).json({ success: false, status: 'RECHAZADO', message: 'Tu solicitud fue rechazada, contacta al administrador.' });
+    }
+
+    if (user.estado !== 'ACTIVO') {
+      return res.status(403).json({ success: false, message: 'Tu cuenta está inactiva.' });
+    }
+
+    // Si existía como LOCAL, actualizar a AMBOS (coexistencia)
+    if (user.auth_provider === 'LOCAL') {
+      await UserRepository.updateAuthProvider(user.id, 'AMBOS');
+    }
+
+    // Login exitoso
+    const hasAcceptedPolicy = await UserRepository.hasAcceptedPolicy(user.id, CURRENT_POLICY_VERSION);
+    await UserRepository.updateLastLogin(user.id);
+
+    const jwtPayload = {
+      id: user.id, username: user.username, rol: user.rol,
+      sede_id: user.sede_id, sede_nombre: user.sede_nombre,
+      sede_direccion: user.sede_direccion, nombre_completo: user.nombre_completo,
+      email: user.email
+    };
+
+    const jwtToken = jwt.sign(jwtPayload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+    res.cookie('token', jwtToken, cookieOptions);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Inicio de sesión con Google exitoso.',
+      requires_policy_acceptance: !hasAcceptedPolicy,
+      current_policy_version: CURRENT_POLICY_VERSION,
+      user: { ...jwtPayload, ultimo_login: new Date() }
+    });
+
+  } catch (error) {
+    console.error('Google Auth Error:', error);
+    return res.status(500).json({ success: false, message: 'Error de autenticación con Google.' });
+  }
+};
+
+
+/**
  * Cerrar sesión (Logout)
  * POST /api/auth/logout
  */
 export const logout = async (req, res) => {
-  // Para destruir la sesión, simplemente limpiamos la cookie 'token'
-  res.clearCookie('token', { ...cookieOptions, maxAge: 0 });
-  return res.status(200).json({
-    success: true,
-    message: 'Sesión finalizada correctamente.'
-  });
+  try {
+    const token = req.cookies.token || (req.headers.authorization ? req.headers.authorization.split(' ')[1] : null);
+    
+    if (token) {
+      await UserRepository.blacklistToken(token);
+    }
+    
+    res.clearCookie('token', { ...cookieOptions, maxAge: 0 });
+    return res.status(200).json({
+      success: true,
+      message: 'Sesión finalizada correctamente.'
+    });
+  } catch (error) {
+    console.error('[Auth Error] Error en logout:', error);
+    res.clearCookie('token', { ...cookieOptions, maxAge: 0 });
+    return res.status(500).json({ success: false, message: 'Error interno al intentar cerrar sesión.' });
+  }
 };
 
 /**
@@ -363,5 +463,62 @@ export const verifyPassword = async (req, res) => {
   } catch (error) {
     console.error('[Verify Password Error]:', error);
     return res.status(500).json({ success: false, message: 'Error interno.' });
+  }
+};
+
+/**
+ * Obtener configuración de reCAPTCHA para el frontend
+ * GET /api/auth/config/recaptcha
+ */
+export const getRecaptchaConfig = (req, res) => {
+  return res.status(200).json({
+    success: true,
+    siteKey: config.recaptcha.siteKey || ''
+  });
+};
+
+/**
+ * Obtener usuarios pendientes de aprobación
+ * GET /api/auth/pending-users
+ */
+export const getPendingUsers = async (req, res) => {
+  try {
+    const users = await UserRepository.findPendingUsers();
+    return res.status(200).json({ success: true, users });
+  } catch (error) {
+    console.error('Error fetching pending users:', error);
+    return res.status(500).json({ success: false, message: 'Error al obtener usuarios.' });
+  }
+};
+
+/**
+ * Aprobar un usuario
+ * POST /api/auth/approve
+ */
+export const approveUser = async (req, res) => {
+  try {
+    const { userId, rol, sedeId } = req.body;
+    let finalSedeId = (rol === 'ENCARGADO') ? Number(sedeId) : null;
+    
+    await UserRepository.approveUser(userId, rol, finalSedeId, req.user.id);
+    return res.status(200).json({ success: true, message: 'Usuario aprobado exitosamente.' });
+  } catch (error) {
+    console.error('Error approving user:', error);
+    return res.status(500).json({ success: false, message: 'Error al aprobar usuario.' });
+  }
+};
+
+/**
+ * Rechazar un usuario
+ * POST /api/auth/reject
+ */
+export const rejectUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    await UserRepository.rejectUser(userId, req.user.id);
+    return res.status(200).json({ success: true, message: 'Usuario rechazado.' });
+  } catch (error) {
+    console.error('Error rejecting user:', error);
+    return res.status(500).json({ success: false, message: 'Error al rechazar usuario.' });
   }
 };

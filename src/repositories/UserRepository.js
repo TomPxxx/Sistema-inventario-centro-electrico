@@ -4,7 +4,7 @@ class UserRepository {
   async findByUsernameOrEmail(identifier) {
     const query = `
       SELECT u.id, u.nombre_completo, u.username, u.email, u.password_hash, u.rol, 
-             u.sede_id, u.estado, u.ultimo_login, s.nombre AS sede_nombre, s.direccion AS sede_direccion
+             u.sede_id, u.estado, u.auth_provider, u.ultimo_login, s.nombre AS sede_nombre, s.direccion AS sede_direccion
       FROM usuarios u
       LEFT JOIN sedes s ON u.sede_id = s.id
       WHERE u.username = $1 OR u.email = $2
@@ -15,7 +15,7 @@ class UserRepository {
 
   async findById(id) {
     const query = `
-      SELECT u.id, u.nombre_completo, u.username, u.email, u.rol, u.sede_id, u.estado, 
+      SELECT u.id, u.nombre_completo, u.username, u.email, u.rol, u.sede_id, u.estado, u.auth_provider,
              s.nombre AS sede_nombre, s.direccion AS sede_direccion
       FROM usuarios u
       LEFT JOIN sedes s ON u.sede_id = s.id
@@ -37,8 +37,8 @@ class UserRepository {
 
   async create(user) {
     const query = `
-      INSERT INTO usuarios (nombre_completo, username, email, password_hash, rol, sede_id, estado)
-      VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVO')
+      INSERT INTO usuarios (nombre_completo, username, email, password_hash, rol, sede_id, estado, auth_provider)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id
     `;
     const values = [
@@ -47,10 +47,58 @@ class UserRepository {
       user.email, 
       user.password_hash, 
       user.rol, 
-      user.sede_id
+      user.sede_id,
+      user.estado || 'ACTIVO',
+      user.auth_provider || 'LOCAL'
     ];
     const result = await pool.query(query, values);
     return result.rows[0].id;
+  }
+
+  async createGoogleUser(nombre_completo, email) {
+    // Generar username desde el email temporalmente (antes del @)
+    const username = email.split('@')[0] + '_' + Math.floor(Math.random() * 1000);
+    const query = `
+      INSERT INTO usuarios (nombre_completo, username, email, password_hash, rol, sede_id, estado, auth_provider)
+      VALUES ($1, $2, $3, NULL, 'PENDIENTE', NULL, 'PENDIENTE', 'GOOGLE')
+      RETURNING id
+    `;
+    const result = await pool.query(query, [nombre_completo, username, email]);
+    return result.rows[0].id;
+  }
+
+  async updateAuthProvider(id, provider) {
+    const query = `UPDATE usuarios SET auth_provider = $1 WHERE id = $2`;
+    await pool.query(query, [provider, id]);
+  }
+
+  async findPendingUsers() {
+    const query = `
+      SELECT id, nombre_completo, username, email, created_at, auth_provider 
+      FROM usuarios 
+      WHERE estado = 'PENDIENTE'
+      ORDER BY created_at DESC
+    `;
+    const result = await pool.query(query);
+    return result.rows;
+  }
+
+  async approveUser(userId, rol, sedeId, adminAprobadorId) {
+    const query = `
+      UPDATE usuarios 
+      SET estado = 'ACTIVO', rol = $1, sede_id = $2, admin_aprobador_id = $3, fecha_aprobacion = NOW()
+      WHERE id = $4
+    `;
+    await pool.query(query, [rol, sedeId, adminAprobadorId, userId]);
+  }
+
+  async rejectUser(userId, adminAprobadorId) {
+    const query = `
+      UPDATE usuarios 
+      SET estado = 'RECHAZADO', admin_aprobador_id = $1, fecha_aprobacion = NOW()
+      WHERE id = $2
+    `;
+    await pool.query(query, [adminAprobadorId, userId]);
   }
 
   async updateLastLogin(id) {
@@ -104,6 +152,25 @@ class UserRepository {
       ON CONFLICT (usuario_id, version) DO NOTHING
     `;
     await pool.query(query, [usuarioId, version]);
+  }
+
+  // --- REVOCACIÓN DE SESIONES (BLACKLIST) ---
+
+  async blacklistToken(token) {
+    const query = `
+      INSERT INTO token_blacklist (token)
+      VALUES ($1)
+      ON CONFLICT (token) DO NOTHING
+    `;
+    await pool.query(query, [token]);
+  }
+
+  async isTokenBlacklisted(token) {
+    const query = `
+      SELECT id FROM token_blacklist WHERE token = $1
+    `;
+    const result = await pool.query(query, [token]);
+    return result.rows.length > 0;
   }
 }
 

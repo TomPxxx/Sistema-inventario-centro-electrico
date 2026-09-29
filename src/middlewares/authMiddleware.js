@@ -17,9 +17,21 @@ export const authenticateJWT = async (req, res, next) => {
   }
 
   try {
+    // 1. Verificar si el token está en la lista negra (sesión cerrada)
+    const isBlacklisted = await UserRepository.isTokenBlacklisted(token);
+    if (isBlacklisted) {
+      res.clearCookie('token', { httpOnly: true, secure: config.nodeEnv === 'production', sameSite: 'strict' });
+      return res.status(401).json({
+        success: false,
+        message: 'Tu sesión ha sido finalizada o revocada. Ingresa nuevamente.',
+        code: 'TOKEN_BLACKLISTED'
+      });
+    }
+
+    // 2. Verificar la firma del JWT
     const decoded = jwt.verify(token, config.jwt.secret);
 
-    // Verificar que el usuario siga existiendo y esté ACTIVO usando el Repositorio
+    // 3. Verificar que el usuario siga existiendo y esté ACTIVO usando el Repositorio
     const user = await UserRepository.findById(decoded.id);
 
     if (!user) {

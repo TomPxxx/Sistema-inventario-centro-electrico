@@ -11,6 +11,20 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+
+// Seguridad HTTP con Helmet (CSP desactivado para evitar conflictos con CDNs)
+app.use(helmet({ contentSecurityPolicy: false }));
+
+// Rate Limiting Global (Prevención de DDoS)
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 300, // 300 solicitudes por ventana
+  message: { success: false, message: 'Demasiadas solicitudes desde esta IP.' }
+});
+app.use('/api', globalLimiter);
+
 // Middlewares globales
 app.use(cors({
   origin: 'http://localhost:5173', // Cambiado temporalmente a un origen explícito para permitir cookies (credentials: true)

@@ -230,8 +230,86 @@ export const getRecentTransfers = async (req, res) => {
 };
 
 export const updateProduct = async (req, res) => {
-  // Simplificado para la demostración
-  return res.status(501).json({ message: 'Update product no implementado en este refactor todavía' });
+  const client = await pool.connect();
+  try {
+    const productId = req.params.id;
+    const { codigo_sku, nombre, descripcion, unidad_medida, sedesData } = req.body;
+    
+    if (!codigo_sku || !nombre) return res.status(400).json({ success: false, message: 'SKU y nombre requeridos.' });
+
+    await client.query('BEGIN');
+
+    // 1. Actualizar datos principales del producto
+    await client.query(
+      `UPDATE productos 
+       SET codigo_sku = $1, nombre = $2, descripcion = $3, unidad_medida = $4
+       WHERE id = $5`,
+      [codigo_sku.trim().toUpperCase(), nombre.trim(), descripcion ? descripcion.trim() : null, unidad_medida || 'UNIDAD', productId]
+    );
+
+    // 2. Actualizar stock y precio por cada sede
+    if (sedesData && Array.isArray(sedesData)) {
+      for (const s of sedesData) {
+        const stockActual = parseFloat(s.stock_actual) || 0;
+        const precioVenta = parseFloat(s.precio_venta) || 0;
+
+        const existingSede = await client.query(
+          `SELECT stock_actual, precio_venta FROM producto_sede WHERE producto_id = $1 AND sede_id = $2 FOR UPDATE`,
+          [productId, s.sede_id]
+        );
+
+        if (existingSede.rows.length > 0) {
+          const oldStock = parseFloat(existingSede.rows[0].stock_actual);
+          await client.query(
+            `UPDATE producto_sede 
+             SET stock_actual = $1, precio_venta = $2
+             WHERE producto_id = $3 AND sede_id = $4`,
+            [stockActual, precioVenta, productId, s.sede_id]
+          );
+
+          if (oldStock !== stockActual) {
+            const diff = stockActual - oldStock;
+            const tipoMov = diff > 0 ? 'ENTRADA' : 'SALIDA';
+            await client.query(
+              `INSERT INTO movimientos_inventario (tipo_movimiento, producto_id, sede_id, usuario_id, cantidad, stock_anterior, stock_posterior, precio_unitario, referencia_documento, motivo_observacion)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'AJUSTE-MANUAL', 'Ajuste manual desde edición de producto')`,
+              [tipoMov, productId, s.sede_id, req.user ? req.user.id : 1, Math.abs(diff), oldStock, stockActual, precioVenta]
+            );
+          }
+        } else {
+          await client.query(
+            `INSERT INTO producto_sede (producto_id, sede_id, stock_actual, stock_minimo, precio_venta, disponible_en_sede)
+             VALUES ($1, $2, $3, 5, $4, TRUE)`,
+            [productId, s.sede_id, stockActual, precioVenta]
+          );
+
+          if (stockActual > 0) {
+             await client.query(
+              `INSERT INTO movimientos_inventario (tipo_movimiento, producto_id, sede_id, usuario_id, cantidad, stock_anterior, stock_posterior, precio_unitario, referencia_documento, motivo_observacion)
+               VALUES ('ENTRADA', $1, $2, $3, $4, 0.00, $5, $6, 'ALTA-EDICION', 'Stock inicial al editar')`,
+              [productId, s.sede_id, req.user ? req.user.id : 1, stockActual, stockActual, precioVenta]
+            );
+          }
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    
+    // Notificar actualización general de inventario
+    notificationSystem.notifyAll({
+      type: 'NUEVO_TRASLADO', // Reutilizamos el evento para recargar tablas
+      message: `El producto ${nombre} ha sido actualizado.`
+    });
+
+    return res.status(200).json({ success: true, message: 'Producto actualizado exitosamente.' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('[Update Product Error]:', error);
+    return res.status(500).json({ success: false, message: 'Error interno: ' + error.message });
+  } finally {
+    client.release();
+  }
 };
 
 export const deleteProduct = async (req, res) => {

@@ -40,10 +40,13 @@ CREATE TABLE usuarios (
     nombre_completo VARCHAR(150) NOT NULL,
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NULL,
     rol VARCHAR(50) NOT NULL CHECK (rol IN ('ADMINISTRADOR', 'ENCARGADO', 'EMPLEADO', 'PENDIENTE')),
     sede_id INTEGER NULL,
-    estado VARCHAR(50) NOT NULL DEFAULT 'ACTIVO' CHECK (estado IN ('ACTIVO', 'INACTIVO')),
+    estado VARCHAR(50) NOT NULL DEFAULT 'ACTIVO' CHECK (estado IN ('ACTIVO', 'INACTIVO', 'PENDIENTE', 'RECHAZADO')),
+    auth_provider VARCHAR(50) NOT NULL DEFAULT 'LOCAL' CHECK (auth_provider IN ('LOCAL', 'GOOGLE', 'AMBOS')),
+    fecha_aprobacion TIMESTAMP NULL,
+    admin_aprobador_id INTEGER NULL,
     ultimo_login TIMESTAMP NULL,
     token_recuperacion VARCHAR(64) NULL,
     token_recuperacion_expira TIMESTAMP NULL,
@@ -53,6 +56,10 @@ CREATE TABLE usuarios (
     CONSTRAINT fk_usuarios_sede
         FOREIGN KEY (sede_id) REFERENCES sedes(id)
         ON DELETE RESTRICT ON UPDATE RESTRICT,
+
+    CONSTRAINT fk_usuarios_admin_aprobador
+        FOREIGN KEY (admin_aprobador_id) REFERENCES usuarios(id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
 
     CONSTRAINT chk_usuario_sede_por_rol CHECK (
         (rol = 'ENCARGADO' AND sede_id IS NOT NULL) OR
@@ -279,7 +286,19 @@ CREATE INDEX idx_movimientos_sede_fecha ON movimientos_inventario (sede_id, fech
 CREATE INDEX idx_movimientos_producto ON movimientos_inventario (producto_id);
 
 -- =============================================================================
--- 9. DATOS SEMILLA (SEED DATA)
+-- 9. TABLA: token_blacklist
+-- =============================================================================
+CREATE TABLE token_blacklist (
+    id SERIAL PRIMARY KEY,
+    token TEXT NOT NULL UNIQUE,
+    revoked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NULL
+);
+
+CREATE INDEX idx_token_blacklist_token ON token_blacklist (token);
+
+-- =============================================================================
+-- 10. DATOS SEMILLA (SEED DATA)
 -- =============================================================================
 
 INSERT INTO sedes (id, nombre, ciudad, direccion, telefono) VALUES

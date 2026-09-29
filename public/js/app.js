@@ -5,38 +5,108 @@
 
 const API_BASE = '/api';
 
+// Interceptor global para fetch
+const originalFetch = window.fetch;
+window.fetch = async function(...args) {
+  const response = await originalFetch.apply(this, args);
+  
+  if (response.status === 401) {
+    // Solo interceptamos respuestas JSON
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const clonedResponse = response.clone();
+      clonedResponse.json().then(data => {
+        if (data.code === 'TOKEN_BLACKLISTED' || data.code === 'TOKEN_EXPIRED') {
+          // Destruimos la sesión localmente
+          sessionStorage.removeItem('token_inventario_ce');
+          currentUser = null;
+          currentToken = null;
+          document.getElementById('appSection').classList.add('hidden');
+          document.getElementById('authSection').classList.remove('hidden');
+          
+          showAuthAlert(data.message, 'error');
+        }
+      }).catch(e => console.error('Error parseando 401 JSON', e));
+    }
+  }
+  return response;
+};
+
 let currentUser = null;
 let currentToken = null;
 let liveProducts = []; // Almacena los productos reales traídos de MySQL
 let liveCategories = []; // Categorías del inventario
 
-let expectedLoginCaptcha = 0;
+let recaptchaWidgetId = null;
 
-function generateLoginCaptcha() {
-  const el = document.getElementById('loginCaptchaQuestion');
-  const input = document.getElementById('loginCaptchaAnswer');
-  if (el && input) {
-    const num1 = Math.floor(Math.random() * 10) + 1;
-    const num2 = Math.floor(Math.random() * 10) + 1;
-    expectedLoginCaptcha = num1 + num2;
-    el.textContent = `${num1} + ${num2}`;
-    input.value = '';
+async function loadRecaptcha() {
+  try {
+    const res = await fetch(`${API_BASE}/auth/config/recaptcha`);
+    const data = await res.json();
+    if (data.success && data.siteKey) {
+      const initCaptcha = () => {
+        if (typeof grecaptcha !== 'undefined' && grecaptcha.render) {
+          recaptchaWidgetId = grecaptcha.render('google-recaptcha-container', {
+            'sitekey': data.siteKey,
+            'theme': document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+          });
+        } else {
+          setTimeout(initCaptcha, 100);
+        }
+      };
+      initCaptcha();
+    }
+  } catch(e) {
+    console.error('Error loading recaptcha config', e);
   }
 }
+// Cargar el widget al inicializar la aplicación
+loadRecaptcha();
 
 let inactivityTimer = null;
+let logoutInterval = null;
 const INACTIVITY_LIMIT = 2 * 60 * 1000; // 2 minutos en ms
+const LOGOUT_LIMIT = 2 * 60; // 2 minutos en segundos
 
 function resetInactivityTimer() {
   if (!currentUser) return; // Solo si está logueado
   if (inactivityTimer) clearTimeout(inactivityTimer);
+  if (logoutInterval) clearInterval(logoutInterval);
   
   inactivityTimer = setTimeout(() => {
     // Bloquear pantalla
     document.getElementById('inactivityModal').classList.remove('hidden');
     document.getElementById('unlockPassword').value = '';
     document.getElementById('unlockPassword').focus();
+    startLogoutTimer();
   }, INACTIVITY_LIMIT);
+}
+
+function startLogoutTimer() {
+  const container = document.getElementById('countdownContainer');
+  const countdownEl = document.getElementById('inactivityCountdown');
+  if (container) container.classList.remove('hidden');
+  
+  let remainingTime = LOGOUT_LIMIT;
+  
+  const updateDisplay = () => {
+    const minutes = Math.floor(remainingTime / 60).toString().padStart(2, '0');
+    const seconds = (remainingTime % 60).toString().padStart(2, '0');
+    if (countdownEl) countdownEl.textContent = `${minutes}:${seconds}`;
+  };
+  
+  updateDisplay();
+  
+  logoutInterval = setInterval(() => {
+    remainingTime--;
+    updateDisplay();
+    if (remainingTime <= 0) {
+      clearInterval(logoutInterval);
+      document.getElementById('inactivityModal').classList.add('hidden');
+      if (container) container.classList.add('hidden');
+      handleLogout();
+    }
+  }, 1000);
 }
 
 let eventSource = null;
@@ -117,6 +187,9 @@ async function handleUnlockSubmit(e) {
 
     if (res.ok) {
       document.getElementById('inactivityModal').classList.add('hidden');
+      const container = document.getElementById('countdownContainer');
+      if (container) container.classList.add('hidden');
+      if (logoutInterval) clearInterval(logoutInterval);
       resetInactivityTimer();
     } else {
       alert('Contraseña incorrecta');
@@ -203,6 +276,7 @@ function hideAuthAlert() {
 async function checkDatabaseHealth() {
   const dot = document.getElementById('dbDot');
   const text = document.getElementById('dbStatusText');
+  if (!dot || !text) return;
 
   try {
     const res = await fetch(`${API_BASE}/health`);
@@ -263,7 +337,9 @@ async function handleLoginSubmit(e) {
   const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value;
   const honey = document.getElementById('loginHoney') ? document.getElementById('loginHoney').value : '';
-  const captchaAnswer = document.getElementById('loginCaptchaAnswer').value;
+  const recaptchaToken = (typeof grecaptcha !== 'undefined' && recaptchaWidgetId !== null) 
+    ? grecaptcha.getResponse(recaptchaWidgetId) 
+    : null;
   
   const btn = document.getElementById('btnLoginSubmit');
   const btnText = document.getElementById('btnLoginText');
@@ -273,9 +349,8 @@ async function handleLoginSubmit(e) {
     return;
   }
 
-  if (parseInt(captchaAnswer) !== expectedLoginCaptcha) {
-    showAuthAlert('Validación de seguridad incorrecta (CAPTCHA). Intenta de nuevo.');
-    generateLoginCaptcha();
+  if (!recaptchaToken) {
+    showAuthAlert('Por favor, marca la casilla de seguridad (No soy un robot).');
     return;
   }
 
@@ -286,7 +361,7 @@ async function handleLoginSubmit(e) {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, _honey: honey })
+      body: JSON.stringify({ username, password, _honey: honey, recaptchaToken })
     });
 
     const data = await res.json();
@@ -295,7 +370,9 @@ async function handleLoginSubmit(e) {
       showAuthAlert(data.message || 'Credenciales inválidas.');
       btn.disabled = false;
       btnText.textContent = 'Autenticar y Abrir Panel del Software';
-      generateLoginCaptcha();
+      if (typeof grecaptcha !== 'undefined' && recaptchaWidgetId !== null) {
+        grecaptcha.reset(recaptchaWidgetId);
+      }
       return;
     }
 
@@ -323,7 +400,64 @@ async function handleLoginSubmit(e) {
     showAuthAlert('Error al comunicar con el servidor backend.');
     btn.disabled = false;
     btnText.textContent = 'Autenticar y Abrir Panel del Software';
-    generateLoginCaptcha();
+    if (typeof grecaptcha !== 'undefined' && recaptchaWidgetId !== null) {
+      grecaptcha.reset(recaptchaWidgetId);
+    }
+  }
+}
+
+async function handleGoogleLogin(response) {
+  hideAuthAlert();
+  if (!response || !response.credential) {
+    showAuthAlert('Error al autenticar con Google.');
+    return;
+  }
+
+  const btnText = document.getElementById('btnLoginText');
+  if (btnText) btnText.textContent = 'Verificando con Google...';
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: response.credential })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (res.status === 403 && data.status === 'PENDIENTE') {
+        showAuthAlert('Tu cuenta está pendiente de aprobación por un administrador. No puedes ingresar aún.', 'warning');
+      } else if (res.status === 403 && data.status === 'RECHAZADO') {
+        showAuthAlert('Tu solicitud fue rechazada por el administrador.', 'error');
+      } else {
+        showAuthAlert(data.message || 'Error al autenticar con Google.', 'error');
+      }
+      if (btnText) btnText.textContent = 'Autenticar y Abrir Panel del Software';
+      return;
+    }
+
+    currentUser = data.user;
+    currentToken = data.token;
+    resetInactivityTimer();
+    connectNotifications();
+
+    if (btnText) btnText.textContent = 'Sincronizando vistas...';
+    
+    setTimeout(() => {
+      if (btnText) btnText.textContent = 'Autenticar y Abrir Panel del Software';
+      if (data.requires_policy_acceptance) {
+        document.getElementById('policyVersionDisplay').textContent = data.current_policy_version || 'v1.0';
+        document.getElementById('policyModal').classList.remove('hidden');
+      } else {
+        launchSoftwareView(data.user);
+      }
+    }, 400);
+
+  } catch (error) {
+    console.error('Error Google Login:', error);
+    showAuthAlert('Error de conexión con el servidor.');
+    if (btnText) btnText.textContent = 'Autenticar y Abrir Panel del Software';
   }
 }
 
@@ -606,6 +740,8 @@ function renderActiveView() {
   document.getElementById('viewEncargado').classList.add('hidden');
   document.getElementById('viewEmpleado').classList.add('hidden');
 
+  document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+
   if (currentUser.rol === 'ADMINISTRADOR') {
     renderAdminView();
   } else if (currentUser.rol === 'ENCARGADO') {
@@ -642,6 +778,8 @@ function filterAdminSearch(query) {
 function renderAdminView() {
   const container = document.getElementById('viewAdmin');
   container.classList.remove('hidden');
+
+  document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
 
   const tableHead = document.getElementById('adminInventoryTableHead');
   const tableBody = document.getElementById('adminInventoryTableBody');
@@ -1255,7 +1393,13 @@ document.getElementById('modalTransferProduct')?.addEventListener('change', upda
 // 9. CIERRE DE SESIÓN Y VERIFICACIÓN
 // =============================================================================
 
-function handleLogout() {
+async function handleLogout() {
+  try {
+    await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+  } catch (err) {
+    console.error('Error al notificar al servidor sobre el cierre de sesión:', err);
+  }
+
   sessionStorage.removeItem('token_inventario_ce');
   currentUser = null;
   currentToken = null;
@@ -1263,7 +1407,7 @@ function handleLogout() {
   document.getElementById('appSection').classList.add('hidden');
   document.getElementById('authSection').classList.remove('hidden');
 
-  showAuthAlert('Has cerrado la sesión correctamente.', 'success');
+  showAuthAlert('Has cerrado la sesión de forma segura.', 'success');
 }
 
 async function checkSavedSession() {
@@ -1442,3 +1586,262 @@ function renderExactMovements(movements) {
     `;
   });
 }
+
+// =============================================================================
+// 10. EXPORTACIÓN DE REPORTES (EXCEL, PDF, CSV)
+// =============================================================================
+
+window.exportReport = async function(type) {
+  try {
+    const res = await fetch(`${API_BASE}/dashboard/summary`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    const data = await res.json();
+    if (!res.ok || !data.dashboard || !data.dashboard.exactMovements) {
+      alert('Error obteniendo datos para el reporte');
+      return;
+    }
+    
+    const movements = data.dashboard.exactMovements;
+    
+    // Preparar la data estructural
+    const exportData = movements.map(m => ({
+      Fecha: new Date(m.fecha_movimiento).toLocaleString(),
+      Tipo: m.tipo_movimiento,
+      Producto: m.producto_nombre,
+      SKU: m.codigo_sku,
+      Cantidad: m.cantidad,
+      Stock_Anterior: m.stock_anterior,
+      Stock_Posterior: m.stock_posterior,
+      Sede: m.sede_nombre,
+      Usuario: m.usuario_nombre
+    }));
+
+    if (type === 'excel') {
+      if (typeof XLSX === 'undefined') return alert('Librería XLSX no cargada');
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Movimientos");
+      XLSX.writeFile(workbook, "Reporte_Inventario.xlsx");
+      
+    } else if (type === 'pdf') {
+      if (!window.jspdf) return alert('Librería jsPDF no cargada');
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('landscape');
+      
+      doc.setFontSize(14);
+      doc.text("Reporte de Movimientos de Inventario - Grupo Eléctrico", 14, 15);
+      
+      const tableColumn = ["Fecha", "Tipo", "Producto", "SKU", "Cant.", "Stk Ant->Post", "Sede", "Usuario"];
+      const tableRows = [];
+
+      movements.forEach(m => {
+        tableRows.push([
+          new Date(m.fecha_movimiento).toLocaleString(),
+          m.tipo_movimiento,
+          m.producto_nombre,
+          m.codigo_sku,
+          m.cantidad.toString(),
+          `${m.stock_anterior} -> ${m.stock_posterior}`,
+          m.sede_nombre,
+          m.usuario_nombre
+        ]);
+      });
+
+      doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 22,
+        styles: { fontSize: 8, font: 'helvetica' },
+        headStyles: { fillColor: [0, 166, 81] }, // Verde corporativo
+        theme: 'striped'
+      });
+      
+      doc.save("Reporte_Inventario.pdf");
+      
+    } else if (type === 'csv') {
+      if (typeof XLSX === 'undefined') return alert('Librería XLSX no cargada');
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
+      
+      const blob = new Blob([csvOutput], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "Reporte_Inventario.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  } catch (err) {
+    console.error('Error exportando reporte', err);
+    alert('Error al generar el reporte. Verifica la conexión con el servidor.');
+  }
+};
+
+// =============================================================================
+// 11. GOOGLE OAUTH Y APROBACIONES DE USUARIOS
+// =============================================================================
+
+window.handleGoogleLogin = async function(response) {
+  const token = response.credential;
+  try {
+    const btnText = document.getElementById('btnLoginText');
+    if(btnText) btnText.innerText = 'Autenticando con Google...';
+    
+    const res = await fetch(`${API_BASE}/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok && data.success) {
+      if (data.requires_policy_acceptance) {
+        pendingPolicyVersion = data.current_policy_version;
+        showAuthAlert('Debes aceptar la política de datos antes de continuar.', 'info');
+        openPolicyModal();
+      } else {
+        showAuthAlert(data.message, 'success');
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    } else {
+      if (data.status === 'PENDIENTE') {
+        showAuthAlert(data.message, 'warning');
+      } else if (data.status === 'RECHAZADO') {
+        showAuthAlert(data.message, 'error');
+      } else {
+        showAuthAlert(data.message || 'Error de autenticación con Google', 'error');
+      }
+      if(btnText) btnText.innerText = 'Autenticar y Abrir Panel del Software';
+    }
+  } catch (error) {
+    console.error('Error con Google login:', error);
+    showAuthAlert('No se pudo conectar con el servidor', 'error');
+    if(document.getElementById('btnLoginText')) document.getElementById('btnLoginText').innerText = 'Autenticar y Abrir Panel del Software';
+  }
+};
+
+window.loadPendingUsers = async function() {
+  if (!currentUser || currentUser.rol !== 'ADMINISTRADOR') return;
+  try {
+    const res = await fetch(`${API_BASE}/auth/pending-users`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    const data = await res.json();
+    if (data.success) {
+      renderPendingUsers(data.users);
+    }
+  } catch(e) {
+    console.error(e);
+  }
+};
+
+window.renderPendingUsers = function(users) {
+  const tbody = document.getElementById('pendingUsersTbody');
+  if (!tbody) return;
+  
+  if (users.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-outline text-sm">No hay solicitudes pendientes.</td></tr>';
+    document.getElementById('badgePendingCount').classList.add('hidden');
+    return;
+  }
+  
+  document.getElementById('badgePendingCount').innerText = users.length;
+  document.getElementById('badgePendingCount').classList.remove('hidden');
+
+  tbody.innerHTML = '';
+  users.forEach(u => {
+    tbody.innerHTML += `
+      <tr class="border-b border-outline-variant/20 hover:bg-surface-container-high transition-colors">
+        <td class="py-2 px-3 text-sm">${u.nombre_completo}</td>
+        <td class="py-2 px-3 text-sm text-outline">${u.email}</td>
+        <td class="py-2 px-3 text-xs font-mono">${new Date(u.created_at).toLocaleDateString()}</td>
+        <td class="py-2 px-3">
+          <select id="roleSelect_${u.id}" class="bg-surface-container-low border border-outline-variant rounded p-1 text-xs text-on-surface" onchange="toggleSedeSelect(${u.id})">
+            <option value="EMPLEADO">Empleado</option>
+            <option value="ENCARGADO">Encargado</option>
+            <option value="ADMINISTRADOR">Administrador</option>
+          </select>
+          <select id="sedeSelect_${u.id}" class="bg-surface-container-low border border-outline-variant rounded p-1 text-xs text-on-surface hidden mt-1">
+            <!-- Llenar con sedes activas -->
+          </select>
+        </td>
+        <td class="py-2 px-3 text-right">
+          <button onclick="approveUser(${u.id})" class="text-primary hover:text-primary-container p-1"><span class="material-symbols-outlined text-[18px]">check_circle</span></button>
+          <button onclick="rejectUser(${u.id})" class="text-error hover:text-error-container p-1"><span class="material-symbols-outlined text-[18px]">cancel</span></button>
+        </td>
+      </tr>
+    `;
+    fillSedesSelect(`sedeSelect_${u.id}`);
+  });
+};
+
+window.toggleSedeSelect = function(id) {
+  const rol = document.getElementById(`roleSelect_${id}`).value;
+  const sedeSelect = document.getElementById(`sedeSelect_${id}`);
+  if (rol === 'ENCARGADO') {
+    sedeSelect.classList.remove('hidden');
+  } else {
+    sedeSelect.classList.add('hidden');
+  }
+};
+
+window.fillSedesSelect = async function(selectId) {
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+  if(window.activeSedes && window.activeSedes.length > 0) {
+    sel.innerHTML = window.activeSedes.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
+  } else {
+    try {
+      const res = await fetch(`${API_BASE}/auth/sedes`);
+      const data = await res.json();
+      if(data.success) {
+        window.activeSedes = data.sedes;
+        sel.innerHTML = data.sedes.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
+      }
+    } catch(e) {}
+  }
+};
+
+window.approveUser = async function(id) {
+  const rol = document.getElementById(`roleSelect_${id}`).value;
+  const sedeId = document.getElementById(`sedeSelect_${id}`).value;
+  
+  if (!confirm('¿Aprobar este usuario con el rol de ' + rol + '?')) return;
+  
+  try {
+    const res = await fetch(`${API_BASE}/auth/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+      body: JSON.stringify({ userId: id, rol, sedeId })
+    });
+    const data = await res.json();
+    if(data.success) {
+      alert('Usuario aprobado.');
+      loadPendingUsers();
+    } else {
+      alert(data.message);
+    }
+  } catch(e) { console.error(e); }
+};
+
+window.rejectUser = async function(id) {
+  if (!confirm('¿Estás seguro de rechazar esta solicitud de acceso?')) return;
+  try {
+    const res = await fetch(`${API_BASE}/auth/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+      body: JSON.stringify({ userId: id })
+    });
+    const data = await res.json();
+    if(data.success) {
+      alert('Solicitud rechazada.');
+      loadPendingUsers();
+    } else {
+      alert(data.message);
+    }
+  } catch(e) { console.error(e); }
+};
+

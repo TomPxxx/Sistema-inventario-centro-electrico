@@ -10,5 +10,13 @@ export const config = {
   jwt: {
     secret: process.env.JWT_SECRET || 'jwt_default_secret_key_ce',
     expiresIn: process.env.JWT_EXPIRES_IN || '12h',
+  },
+  recaptcha: {
+    secretKey: process.env.RECAPTCHA_SECRET_KEY,
+    siteKey: process.env.RECAPTCHA_SITE_KEY,
+  },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   }
 };
