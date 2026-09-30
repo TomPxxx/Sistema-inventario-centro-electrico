@@ -23,6 +23,15 @@ const globalLimiter = rateLimit({
   max: 300, // 300 solicitudes por ventana
   message: { success: false, message: 'Demasiadas solicitudes desde esta IP.' }
 });
+
+// Forzar HTTPS en producción
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https' && !req.secure) {
+    return res.redirect(`https://${req.hostname}${req.url}`);
+  }
+  next();
+});
+
 app.use('/api', globalLimiter);
 
 // Middlewares globales

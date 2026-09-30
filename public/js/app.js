@@ -5,6 +5,23 @@
 
 const API_BASE = '/api';
 
+// PWA: Registrar Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(reg => console.log('ServiceWorker registrado con éxito:', reg.scope))
+      .catch(err => console.error('Error registrando ServiceWorker:', err));
+  });
+}
+
+// PWA: Indicador Offline
+window.addEventListener('online', () => {
+  showAuthAlert('Conexión restaurada. Sincronizando datos pendientes...', 'success');
+  if (currentUser) loadRealInventory();
+});
+window.addEventListener('offline', () => {
+  showAuthAlert('Sin conexión a Internet. Modo Offline Activado.', 'error');
+});
 // Interceptor global para fetch
 const originalFetch = window.fetch;
 window.fetch = async function(...args) {
@@ -21,6 +38,12 @@ window.fetch = async function(...args) {
           sessionStorage.removeItem('token_inventario_ce');
           currentUser = null;
           currentToken = null;
+          
+          // PWA: Limpiar caché de la API por seguridad (RBAC)
+          if ('caches' in window) {
+            caches.delete('inventario-api-v1').catch(console.error);
+          }
+
           document.getElementById('appSection').classList.add('hidden');
           document.getElementById('authSection').classList.remove('hidden');
           
