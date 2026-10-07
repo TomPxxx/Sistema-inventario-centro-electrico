@@ -1198,9 +1198,13 @@
       <form id="executeTransferForm" onsubmit="handleExecuteTransferSubmit(event)" class="space-y-3 font-mono text-xs">
         <div>
           <label class="text-outline uppercase block mb-1">Producto a Mover</label>
-          <select id="modalTransferProduct" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40">
-            <!-- Se poblará dinámicamente con los productos reales de la BD -->
-          </select>
+          <div class="relative w-full">
+            <input type="text" id="modalTransferProductSearch" autocomplete="off" placeholder="Buscar producto por nombre o SKU..." class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40 focus:border-primary focus:outline-none" oninput="filterTransferProducts()" onfocus="showTransferProductsDropdown()" onblur="hideTransferProductsDropdown()"/>
+            <input type="hidden" id="modalTransferProduct" required />
+            <ul id="modalTransferProductList" class="absolute z-10 w-full bg-surface-container border border-outline-variant/40 rounded-b mt-1 max-h-48 overflow-y-auto hidden shadow-xl text-on-surface text-left">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">

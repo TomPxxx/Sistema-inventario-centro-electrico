@@ -1630,17 +1630,55 @@ document.getElementById('btnConfirmDeleteProduct')?.addEventListener('click', as
 // =============================================================================
 
 function populateTransferModalProducts() {
-  const select = document.getElementById('modalTransferProduct');
-  if (!select) return;
+  const ul = document.getElementById('modalTransferProductList');
+  if (!ul) return;
 
-  select.innerHTML = '';
+  ul.innerHTML = '';
   liveProducts.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = `${p.nombre} (SKU: ${p.codigo_sku})`;
-    select.appendChild(opt);
+    const li = document.createElement('li');
+    li.className = 'p-2 cursor-pointer hover:bg-surface-container-highest transition-colors text-xs border-b border-outline-variant/20 last:border-0 font-sans';
+    li.textContent = `${p.nombre} (SKU: ${p.codigo_sku})`;
+    li.dataset.id = p.id;
+    li.dataset.name = p.nombre;
+    li.dataset.sku = p.codigo_sku;
+    
+    li.onmousedown = () => selectTransferProduct(p.id, p.nombre, p.codigo_sku);
+    
+    ul.appendChild(li);
   });
 
+  updateTransferAvailabilityHint();
+}
+
+window.filterTransferProducts = function() {
+  const input = document.getElementById('modalTransferProductSearch');
+  const filter = input.value.toLowerCase();
+  const ul = document.getElementById('modalTransferProductList');
+  const li = ul.getElementsByTagName('li');
+  for (let i = 0; i < li.length; i++) {
+    const text = li[i].textContent || li[i].innerText;
+    if (text.toLowerCase().indexOf(filter) > -1) {
+      li[i].style.display = "";
+    } else {
+      li[i].style.display = "none";
+    }
+  }
+}
+
+window.showTransferProductsDropdown = function() {
+  document.getElementById('modalTransferProductList').classList.remove('hidden');
+}
+
+window.hideTransferProductsDropdown = function() {
+  setTimeout(() => {
+    document.getElementById('modalTransferProductList').classList.add('hidden');
+  }, 150);
+}
+
+window.selectTransferProduct = function(id, name, sku) {
+  document.getElementById('modalTransferProduct').value = id;
+  document.getElementById('modalTransferProductSearch').value = `${name} (SKU: ${sku})`;
+  document.getElementById('modalTransferProductList').classList.add('hidden');
   updateTransferAvailabilityHint();
 }
 
@@ -1670,9 +1708,15 @@ function toggleQuickTransferModal() {
 
 function openTransferForProduct(productId, sku, destId = null, origId = null) {
   toggleQuickTransferModal();
-  const selectProd = document.getElementById('modalTransferProduct');
-  if (selectProd) {
-    selectProd.value = productId;
+  const hiddenProd = document.getElementById('modalTransferProduct');
+  const searchProd = document.getElementById('modalTransferProductSearch');
+  
+  if (hiddenProd && searchProd) {
+    const prod = liveProducts.find(p => p.id === productId);
+    if (prod) {
+      hiddenProd.value = productId;
+      searchProd.value = `${prod.nombre} (SKU: ${prod.codigo_sku})`;
+    }
   }
   
   const selectOrig = document.getElementById('modalTransferOrigin');
