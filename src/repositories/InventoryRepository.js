@@ -3,7 +3,7 @@ import { pool } from '../config/db.js';
 class InventoryRepository {
   async getProducts() {
     const { rows } = await pool.query(
-      `SELECT p.id, p.codigo_sku, p.nombre, p.descripcion, p.categoria_id, c.nombre as categoria_nombre, p.unidad_medida, p.activo, p.created_at 
+      `SELECT p.id, p.codigo_sku, p.nombre, p.descripcion, p.categoria_id, c.nombre as categoria_nombre, p.unidad_medida, p.imagen_url, p.activo, p.created_at 
        FROM productos p
        LEFT JOIN categorias c ON p.categoria_id = c.id
        WHERE p.activo = TRUE 
@@ -14,15 +14,15 @@ class InventoryRepository {
 
   async getCategories() {
     const { rows } = await pool.query(
-      `SELECT id, nombre, descripcion FROM categorias ORDER BY id ASC`
+      `SELECT id, nombre, descripcion, imagen_url FROM categorias ORDER BY id ASC`
     );
     return rows;
   }
 
-  async createCategory(nombre, descripcion) {
+  async createCategory(nombre, descripcion, imagen_url) {
     const { rows } = await pool.query(
-      `INSERT INTO categorias (nombre, descripcion) VALUES ($1, $2) RETURNING *`,
-      [nombre, descripcion]
+      `INSERT INTO categorias (nombre, descripcion, imagen_url) VALUES ($1, $2, $3) RETURNING *`,
+      [nombre, descripcion, imagen_url || null]
     );
     return rows[0];
   }

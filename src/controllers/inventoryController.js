@@ -60,10 +60,10 @@ export const getCategories = async (req, res) => {
 
 export const createCategory = async (req, res) => {
   try {
-    const { nombre, descripcion } = req.body;
+    const { nombre, descripcion, imagen_url } = req.body;
     if (!nombre) return res.status(400).json({ success: false, message: 'Nombre de categoría requerido.' });
     
-    const newCategory = await InventoryRepository.createCategory(nombre.trim(), descripcion);
+    const newCategory = await InventoryRepository.createCategory(nombre.trim(), descripcion, imagen_url);
     return res.status(201).json({ success: true, message: 'Categoría creada', category: newCategory });
   } catch (error) {
     console.error('[Inventory Error] createCategory:', error);
@@ -77,7 +77,7 @@ export const createCategory = async (req, res) => {
 export const createProduct = async (req, res) => {
   const client = await pool.connect();
   try {
-    const { codigo_sku, nombre, descripcion, categoria_id, unidad_medida, sedesData } = req.body;
+    const { codigo_sku, nombre, descripcion, categoria_id, unidad_medida, sedesData, imagen_url } = req.body;
     if (!codigo_sku || !nombre) return res.status(400).json({ success: false, message: 'SKU y nombre requeridos.' });
 
     const cleanSku = codigo_sku.trim().toUpperCase();
@@ -87,9 +87,9 @@ export const createProduct = async (req, res) => {
     await client.query('BEGIN');
 
     const prodResult = await client.query(
-      `INSERT INTO productos (codigo_sku, nombre, descripcion, categoria_id, unidad_medida, activo)
-       VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
-      [cleanSku, nombre.trim(), descripcion ? descripcion.trim() : null, categoria_id || null, unidad_medida || 'UNIDAD']
+      `INSERT INTO productos (codigo_sku, nombre, descripcion, categoria_id, unidad_medida, imagen_url, activo)
+       VALUES ($1, $2, $3, $4, $5, $6, TRUE) RETURNING id`,
+      [cleanSku, nombre.trim(), descripcion ? descripcion.trim() : null, categoria_id || null, unidad_medida || 'UNIDAD', imagen_url || null]
     );
     const productId = prodResult.rows[0].id;
 
@@ -141,6 +141,12 @@ export const executeTransfer = async (req, res) => {
 
     const qty = parseFloat(cantidad);
     if (sede_origen_id === sede_destino_id || qty <= 0) return res.status(400).json({ success: false, message: 'Sedes iguales o cantidad inválida.' });
+
+    if (req.user && req.user.rol === 'ENCARGADO') {
+      if (Number(sede_origen_id) !== req.user.sede_id) {
+        return res.status(403).json({ success: false, message: 'Restricción de rol: Solo puedes enviar mercancía desde tu sede asignada.' });
+      }
+    }
 
     await client.query('BEGIN');
 
@@ -201,7 +207,13 @@ export const executeTransfer = async (req, res) => {
 
     await client.query('COMMIT');
     
-    // Notificar a todos los encargados y administradores
+    // Notificar a todos los encargados y administradores usando Socket.IO
+    if (req.app.get('io')) {
+      const io = req.app.get('io');
+      io.emit('traslado_nuevo', { cantidad: qty, producto: 'SKU-' + producto_id });
+      io.emit('stock_actualizado', { from: sede_origen_id, to: sede_destino_id });
+    }
+    
     notificationSystem.notifyAll({
       type: 'NUEVO_TRASLADO',
       message: `Nuevo traslado ejecutado. ${qty} unidades movidas.`,
@@ -233,7 +245,7 @@ export const updateProduct = async (req, res) => {
   const client = await pool.connect();
   try {
     const productId = req.params.id;
-    const { codigo_sku, nombre, descripcion, unidad_medida, sedesData } = req.body;
+    const { codigo_sku, nombre, descripcion, unidad_medida, sedesData, imagen_url } = req.body;
     
     if (!codigo_sku || !nombre) return res.status(400).json({ success: false, message: 'SKU y nombre requeridos.' });
 
@@ -242,9 +254,9 @@ export const updateProduct = async (req, res) => {
     // 1. Actualizar datos principales del producto
     await client.query(
       `UPDATE productos 
-       SET codigo_sku = $1, nombre = $2, descripcion = $3, unidad_medida = $4
-       WHERE id = $5`,
-      [codigo_sku.trim().toUpperCase(), nombre.trim(), descripcion ? descripcion.trim() : null, unidad_medida || 'UNIDAD', productId]
+       SET codigo_sku = $1, nombre = $2, descripcion = $3, unidad_medida = $4, imagen_url = $5
+       WHERE id = $6`,
+      [codigo_sku.trim().toUpperCase(), nombre.trim(), descripcion ? descripcion.trim() : null, unidad_medida || 'UNIDAD', imagen_url || null, productId]
     );
 
     // 2. Actualizar stock y precio por cada sede
@@ -297,10 +309,10 @@ export const updateProduct = async (req, res) => {
     await client.query('COMMIT');
     
     // Notificar actualización general de inventario
-    notificationSystem.notifyAll({
-      type: 'NUEVO_TRASLADO', // Reutilizamos el evento para recargar tablas
-      message: `El producto ${nombre} ha sido actualizado.`
-    });
+    if (req.app.get('io')) {
+      const io = req.app.get('io');
+      io.emit('stock_actualizado', { type: 'PRODUCTO_EDITADO', message: `El producto ${nombre} ha sido actualizado.` });
+    }
 
     return res.status(200).json({ success: true, message: 'Producto actualizado exitosamente.' });
   } catch (error) {

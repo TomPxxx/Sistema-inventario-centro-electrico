@@ -2539,3 +2539,74 @@ window.submitNewProduct = async function() {
     btn.textContent = 'Guardar Producto';
   }
 };
+
+// =============================================================================
+// BACKUP Y RESTAURACION DE BASE DE DATOS (ADMINISTRADOR)
+// =============================================================================
+window.downloadBackup = async function() {
+  if (!confirm('Deseas descargar una copia de seguridad SQL de toda la base de datos?')) return;
+  try {
+    const res = await fetch(`${API_BASE}/backup/download`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${currentToken}` 
+      }
+    });
+    
+    if (!res.ok) {
+      showToast('Error al descargar backup', 'error');
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "backup_inventario.sql";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+    showToast('Copia de seguridad descargada', 'success');
+  } catch(e) {
+    console.error(e);
+    showToast('Error de red al intentar descargar', 'error');
+  }
+};
+
+window.restoreBackup = async function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (!confirm('PELIGRO! Restaurar una copia de seguridad REEMPLAZARA todos los datos actuales y es irreversible. Estas completamente seguro?')) {
+    event.target.value = '';
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('backupFile', file);
+
+  try {
+    showToast('Restaurando base de datos...', 'info');
+    const res = await fetch(`${API_BASE}/backup/restore`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${currentToken}` 
+      },
+      body: formData
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      showToast('Base de datos restaurada correctamente', 'success');
+      setTimeout(() => window.location.reload(), 2000);
+    } else {
+      showToast(data.message || 'Error al restaurar backup', 'error');
+    }
+  } catch(e) {
+    console.error(e);
+    showToast('Falla en la red al restaurar', 'error');
+  } finally {
+    event.target.value = '';
+  }
+};

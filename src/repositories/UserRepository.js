@@ -15,7 +15,7 @@ class UserRepository {
 
   async findById(id) {
     const query = `
-      SELECT u.id, u.nombre_completo, u.username, u.email, u.rol, u.sede_id, u.estado, u.auth_provider,
+      SELECT u.id, u.nombre_completo, u.username, u.email, u.rol, u.sede_id, u.estado, u.auth_provider, u.current_session_token,
              s.nombre AS sede_nombre, s.direccion AS sede_direccion
       FROM usuarios u
       LEFT JOIN sedes s ON u.sede_id = s.id
@@ -104,6 +104,17 @@ class UserRepository {
   async updateLastLogin(id) {
     const query = `UPDATE usuarios SET ultimo_login = NOW() WHERE id = $1`;
     await pool.query(query, [id]);
+  }
+
+  async updateSessionToken(id, sessionToken) {
+    const query = `UPDATE usuarios SET current_session_token = $1 WHERE id = $2`;
+    await pool.query(query, [sessionToken, id]);
+  }
+
+  async getSessionToken(id) {
+    const query = `SELECT current_session_token FROM usuarios WHERE id = $1`;
+    const result = await pool.query(query, [id]);
+    return result.rows[0]?.current_session_token;
   }
 
   async setRecoveryToken(id, token, expiresAt) {

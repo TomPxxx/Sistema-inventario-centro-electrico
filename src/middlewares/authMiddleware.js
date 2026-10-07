@@ -41,6 +41,15 @@ export const authenticateJWT = async (req, res, next) => {
       });
     }
 
+    if (user.current_session_token && decoded.sessionToken && user.current_session_token !== decoded.sessionToken) {
+      res.clearCookie('token', { httpOnly: true, secure: config.nodeEnv === 'production', sameSite: 'strict' });
+      return res.status(401).json({
+        success: false,
+        message: 'Tu sesión ha sido finalizada porque iniciaste sesión en otro dispositivo o navegador.',
+        code: 'SESSION_INVALIDATED'
+      });
+    }
+
     if (user.estado !== 'ACTIVO') {
       return res.status(403).json({
         success: false,

@@ -50,6 +50,7 @@ CREATE TABLE usuarios (
     ultimo_login TIMESTAMP NULL,
     token_recuperacion VARCHAR(64) NULL,
     token_recuperacion_expira TIMESTAMP NULL,
+    current_session_token VARCHAR(255) NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -310,7 +311,7 @@ INSERT INTO sedes (id, nombre, ciudad, direccion, telefono) VALUES
 SELECT setval('sedes_id_seq', (SELECT MAX(id) FROM sedes));
 
 INSERT INTO usuarios (id, nombre_completo, username, email, password_hash, rol, sede_id, estado) VALUES
-(1, 'Cesar Administrador Global', 'Cesar', 'cesar@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ADMINISTRADOR', NULL, 'ACTIVO'),
+(1, 'Tomás Administrador Global', 'tomas_admin', 'tomas0822palacios@gmail.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ADMINISTRADOR', NULL, 'ACTIVO'),
 (2, 'Encargado Centro Eléctrico EP', 'encargado_ep', 'ep@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ENCARGADO', 1, 'ACTIVO'),
 (3, 'Encargado Centro Eléctrico EP1', 'encargado_ep1', 'ep1@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ENCARGADO', 2, 'ACTIVO'),
 (4, 'Encargado Grupo Eléctrico EP3', 'encargado_ep3', 'ep3@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ENCARGADO', 3, 'ACTIVO'),
@@ -401,4 +402,60 @@ CREATE TABLE usuario_politicas (
         
     CONSTRAINT uk_usuario_version UNIQUE (usuario_id, version)
 );
+
+-- =============================================================================
+-- 11. TABLA: recepciones_mercancia
+-- =============================================================================
+CREATE TABLE recepciones_mercancia (
+    id SERIAL PRIMARY KEY,
+    sede_receptora_id INTEGER NOT NULL,
+    encargado_id INTEGER NOT NULL,
+    empleado_id INTEGER NULL,
+    administrador_id INTEGER NULL,
+    estado VARCHAR(50) NOT NULL DEFAULT 'PENDIENTE_CONTEO' CHECK (estado IN ('PENDIENTE_CONTEO', 'CONTABILIZADO', 'DISTRIBUIDO', 'CANCELADO')),
+    observaciones TEXT NULL,
+    fecha_recepcion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_recepciones_sede
+        FOREIGN KEY (sede_receptora_id) REFERENCES sedes(id)
+        ON DELETE RESTRICT ON UPDATE RESTRICT,
+        
+    CONSTRAINT fk_recepciones_encargado
+        FOREIGN KEY (encargado_id) REFERENCES usuarios(id)
+        ON DELETE RESTRICT ON UPDATE RESTRICT,
+        
+    CONSTRAINT fk_recepciones_empleado
+        FOREIGN KEY (empleado_id) REFERENCES usuarios(id)
+        ON DELETE RESTRICT ON UPDATE RESTRICT,
+        
+    CONSTRAINT fk_recepciones_administrador
+        FOREIGN KEY (administrador_id) REFERENCES usuarios(id)
+        ON DELETE RESTRICT ON UPDATE RESTRICT
+);
+
+CREATE TRIGGER update_recepciones_mercancia_updated_at BEFORE UPDATE ON recepciones_mercancia FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE INDEX idx_recepciones_estado ON recepciones_mercancia (estado);
+CREATE INDEX idx_recepciones_sede ON recepciones_mercancia (sede_receptora_id);
+
+-- =============================================================================
+-- 12. TABLA: recepcion_productos
+-- =============================================================================
+CREATE TABLE recepcion_productos (
+    id SERIAL PRIMARY KEY,
+    recepcion_id INTEGER NOT NULL,
+    codigo_sku VARCHAR(50) NOT NULL,
+    cantidad_recibida DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_recepcion_productos_recepcion
+        FOREIGN KEY (recepcion_id) REFERENCES recepciones_mercancia(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+        
+    CONSTRAINT chk_recepcion_cantidad CHECK (cantidad_recibida > 0.00)
+);
+
+CREATE TRIGGER update_recepcion_productos_updated_at BEFORE UPDATE ON recepcion_productos FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 

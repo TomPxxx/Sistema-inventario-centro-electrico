@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html class="dark" lang="es">
 <head>
   <meta charset="utf-8"/>
@@ -790,7 +790,17 @@
                 <h3 class="font-headline font-semibold text-sm text-on-surface">CatÃ¡logo y Existencias</h3>
               </div>
               <div class="flex items-center gap-2">
-                <button type="button" onclick="openNewProductModal()" class="text-xs font-mono px-3 py-1.5 rounded bg-primary hover:bg-emerald-400 text-on-primary flex items-center gap-1 transition-colors shadow-sm font-bold">
+                <button type="button" onclick="downloadBackup()" class="text-xs font-mono px-3 py-1.5 rounded bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/40 text-on-surface flex items-center gap-1 transition-colors" title="Exportar Copia de Seguridad SQL">
+                  <span class="material-symbols-outlined text-sm">download</span>
+                  <span>Backup</span>
+                </button>
+                <input type="file" id="restoreBackupFile" accept=".sql" class="hidden" onchange="restoreBackup(event)" />
+                <button type="button" onclick="document.getElementById('restoreBackupFile').click()" class="text-xs font-mono px-3 py-1.5 rounded bg-error/20 hover:bg-error/30 text-error border border-error/50 flex items-center gap-1 transition-colors" title="Restaurar Copia de Seguridad (Peligro: Reemplaza datos)">
+                  <span class="material-symbols-outlined text-sm">upload</span>
+                  <span>Restaurar</span>
+                </button>
+
+                <button type="button" onclick="openNewProductModal()" class="text-xs font-mono px-3 py-1.5 rounded bg-primary hover:bg-emerald-400 text-on-primary flex items-center gap-1 transition-colors shadow-sm font-bold ml-2">
                   <span class="material-symbols-outlined text-sm">add</span>
                   <span>Nueva Entrada</span>
                 </button>

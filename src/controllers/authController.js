@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { config } from '../config/env.js';
 import { initializeDatabase } from '../database/initDb.js';
@@ -36,11 +37,11 @@ export const login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Por favor, ingresa tu nombre de usuario y contraseña.' });
     }
 
-    if (!recaptchaToken) {
-      return res.status(400).json({ success: false, message: 'Falta el token de reCAPTCHA. Por favor verifica que no eres un robot.' });
-    }
-
     if (config.recaptcha.secretKey) {
+      if (!recaptchaToken) {
+        return res.status(400).json({ success: false, message: 'Falta el token de reCAPTCHA. Por favor verifica que no eres un robot.' });
+      }
+
       const recaptchaVerifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${config.recaptcha.secretKey}&response=${recaptchaToken}`;
       const recaptchaRes = await fetch(recaptchaVerifyUrl, { method: 'POST' });
       const recaptchaData = await recaptchaRes.json();
@@ -80,8 +81,11 @@ export const login = async (req, res) => {
       id: user.id, username: user.username, rol: user.rol,
       sede_id: user.sede_id, sede_nombre: user.sede_nombre,
       sede_direccion: user.sede_direccion, nombre_completo: user.nombre_completo,
-      email: user.email
+      email: user.email,
+      sessionToken: crypto.randomUUID()
     };
+
+    await UserRepository.updateSessionToken(user.id, payload.sessionToken);
 
     const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
 
@@ -151,8 +155,11 @@ export const googleLogin = async (req, res) => {
       id: user.id, username: user.username, rol: user.rol,
       sede_id: user.sede_id, sede_nombre: user.sede_nombre,
       sede_direccion: user.sede_direccion, nombre_completo: user.nombre_completo,
-      email: user.email
+      email: user.email,
+      sessionToken: crypto.randomUUID()
     };
+
+    await UserRepository.updateSessionToken(user.id, jwtPayload.sessionToken);
 
     const jwtToken = jwt.sign(jwtPayload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
     res.cookie('token', jwtToken, cookieOptions);
@@ -236,8 +243,11 @@ export const register = async (req, res) => {
       id: newUser.id, username: newUser.username, rol: newUser.rol,
       sede_id: newUser.sede_id, sede_nombre: newUser.sede_nombre,
       sede_direccion: newUser.sede_direccion, nombre_completo: newUser.nombre_completo,
-      email: newUser.email
+      email: newUser.email,
+      sessionToken: crypto.randomUUID()
     };
+
+    await UserRepository.updateSessionToken(newUser.id, payload.sessionToken);
 
     const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
     
@@ -473,7 +483,8 @@ export const verifyPassword = async (req, res) => {
 export const getRecaptchaConfig = (req, res) => {
   return res.status(200).json({
     success: true,
-    siteKey: config.recaptcha.siteKey || ''
+    siteKey: config.recaptcha.siteKey || '',
+    googleClientId: config.google.clientId || ''
   });
 };
 
