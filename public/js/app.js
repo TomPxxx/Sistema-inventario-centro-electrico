@@ -772,15 +772,18 @@ async function loadRealInventory() {
 
     if (res.ok && data.products) {
       liveProducts = data.products;
-      if (catRes.ok && catData.categories) {
-        liveCategories = catData.categories;
-        populateCategoriesSelect();
-      }
-      renderActiveView();
-      populateTransferModalProducts();
     }
+    
+    if (catRes.ok && catData.categories) {
+      liveCategories = catData.categories;
+      populateCategoriesSelect();
+    }
+    
+    renderActiveView();
+    populateTransferModalProducts();
   } catch (err) {
     console.error('Error cargando inventario real:', err);
+    renderActiveView();
   }
 }
 
@@ -1353,11 +1356,11 @@ async function loadEmployeeTransfers() {
           <div class="font-bold text-on-surface text-xs">${t.producto_nombre} (${t.cantidad} un.)</div>
           <div class="flex items-center justify-between text-on-surface-variant text-[11px]">
             <span>Origen: <strong class="text-secondary">${t.origen_nombre}</strong></span>
-            <span>➜</span>
+            <span>&rarr;</span>
             <span>Destino: <strong class="text-primary">${t.destino_nombre}</strong></span>
           </div>
           <div class="text-[10px] text-outline pt-1 border-t border-outline-variant/20">
-            ${t.observaciones || 'Entrega entre sedes'} · ${new Date(t.created_at).toLocaleString()}
+            ${t.observaciones || 'Entrega entre sedes'} - ${new Date(t.created_at).toLocaleString()}
           </div>
         `;
         list.appendChild(item);
