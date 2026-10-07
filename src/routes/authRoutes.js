@@ -23,9 +23,9 @@ import { registerSchema } from '../validators/authValidator.js';
 import rateLimit from 'express-rate-limit';
 
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
+  windowMs: 3 * 60 * 1000, // 3 minutos
   max: 10, // Máximo 10 intentos por IP
-  message: { success: false, message: 'Demasiados intentos de autenticación, intente en 15 minutos.' }
+  message: { success: false, message: 'Demasiados intentos de autenticación, intente en 3 minutos.' }
 });
 
 const router = Router();

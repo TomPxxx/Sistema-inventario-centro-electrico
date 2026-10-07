@@ -25,6 +25,16 @@ window.addEventListener('offline', () => {
 // Interceptor global para fetch
 const originalFetch = window.fetch;
 window.fetch = async function(...args) {
+  let [resource, fetchConfig] = args;
+  if (typeof resource === 'string' && resource.startsWith('/api') && typeof currentToken !== 'undefined' && currentToken) {
+    fetchConfig = fetchConfig || {};
+    fetchConfig.headers = fetchConfig.headers || {};
+    if (!fetchConfig.headers['Authorization'] && !fetchConfig.headers.Authorization) {
+      fetchConfig.headers['Authorization'] = `Bearer ${currentToken}`;
+    }
+    args = [resource, fetchConfig];
+  }
+
   const response = await originalFetch.apply(this, args);
   
   if (response.status === 401) {
@@ -59,6 +69,75 @@ let currentUser = null;
 let currentToken = null;
 let liveProducts = []; // Almacena los productos reales traídos de MySQL
 let liveCategories = []; // Categorías del inventario
+let globalSocket = null;
+
+function initSocketConnection() {
+  if (globalSocket) return;
+  if (typeof io === 'undefined') return;
+
+  globalSocket = io();
+
+  globalSocket.on('connect', () => {
+    console.log('[Socket.io] Conectado exitosamente con ID:', globalSocket.id);
+    if (currentUser && currentUser.sede_id) {
+      globalSocket.emit('join_sede', currentUser.sede_id);
+    }
+  });
+
+  globalSocket.on('recepcion_creada', (data) => {
+    if (!currentUser) return;
+    if (currentUser.rol === 'EMPLEADO' || currentUser.rol === 'ADMINISTRADOR') {
+      showToast(`Nueva tarea de conteo asignada (Ref: ${data.id})`, 'info');
+      if (currentUser.rol === 'EMPLEADO') loadEmpleadoRecepciones();
+      if (currentUser.rol === 'ADMINISTRADOR') {
+        const modal = document.getElementById('adminRecepcionesModal');
+        if (modal && !modal.classList.contains('hidden')) loadAdminRecepciones();
+      }
+    }
+  });
+
+  globalSocket.on('recepcion_contabilizada', (data) => {
+    if (!currentUser) return;
+    if (currentUser.rol === 'ADMINISTRADOR' || currentUser.rol === 'ENCARGADO') {
+      showToast(`Conteo finalizado para recepción #${data.id}`, 'success');
+      if (currentUser.rol === 'ADMINISTRADOR') {
+        const modal = document.getElementById('adminRecepcionesModal');
+        if (modal && !modal.classList.contains('hidden')) loadAdminRecepciones();
+      }
+    }
+  });
+
+  globalSocket.on('stock_actualizado', (data) => {
+    if (!currentUser) return;
+    if (currentUser.rol === 'ADMINISTRADOR' || currentUser.rol === 'ENCARGADO') {
+      showNotificationToast('🔔 Se ha detectado un movimiento. Inventario actualizado en tiempo real.');
+      loadRealInventory();
+    }
+  });
+
+  globalSocket.on('traslado_nuevo', (data) => {
+    if (!currentUser) return;
+    if (currentUser.rol === 'EMPLEADO' || currentUser.rol === 'ADMINISTRADOR') {
+      showToast(`Nuevo traslado registrado de ${data.producto}`, 'info');
+      if (currentUser.rol === 'EMPLEADO') loadEmployeeTransfers();
+      // Si el modal de admin está abierto
+      if (currentUser.rol === 'ADMINISTRADOR') loadRecentTransfers();
+    }
+  });
+}
+
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-2xl z-[100] text-white font-bold transition-all transform translate-y-0 opacity-100 ${type === 'success' ? 'bg-emerald-500' : 'bg-sky-500'}`;
+  toast.innerHTML = `<div class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">${type === 'success' ? 'check_circle' : 'info'}</span><span>${message}</span></div>`;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.replace('translate-y-0', 'translate-y-10');
+    toast.classList.replace('opacity-100', 'opacity-0');
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
 
 let recaptchaWidgetId = null;
 
@@ -66,25 +145,54 @@ async function loadRecaptcha() {
   try {
     const res = await fetch(`${API_BASE}/auth/config/recaptcha`);
     const data = await res.json();
-    if (data.success && data.siteKey) {
-      const initCaptcha = () => {
-        if (typeof grecaptcha !== 'undefined' && grecaptcha.render) {
-          recaptchaWidgetId = grecaptcha.render('google-recaptcha-container', {
-            'sitekey': data.siteKey,
-            'theme': document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-          });
-        } else {
-          setTimeout(initCaptcha, 100);
-        }
-      };
-      initCaptcha();
+    if (data.success) {
+      if (data.siteKey) {
+        const initCaptcha = () => {
+          if (typeof grecaptcha !== 'undefined' && grecaptcha.render) {
+            recaptchaWidgetId = grecaptcha.render('google-recaptcha-container', {
+              'sitekey': data.siteKey,
+              'theme': document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+            });
+          } else {
+            setTimeout(initCaptcha, 100);
+          }
+        };
+        initCaptcha();
+      }
+
+      if (data.googleClientId) {
+        const initGoogle = () => {
+          if (typeof google !== 'undefined' && google.accounts) {
+            google.accounts.id.initialize({
+              client_id: data.googleClientId,
+              callback: handleGoogleLogin,
+              context: 'signin',
+              ux_mode: 'popup'
+            });
+            google.accounts.id.renderButton(
+              document.getElementById("googleBtnContainer"),
+              { theme: "outline", size: "large", type: "standard", shape: "rectangular", text: "signin_with" }
+            );
+          } else {
+            setTimeout(initGoogle, 100);
+          }
+        };
+        initGoogle();
+      }
     }
   } catch(e) {
-    console.error('Error loading recaptcha config', e);
+    console.error('Error loading auth config', e);
   }
 }
 // Cargar el widget al inicializar la aplicación
 loadRecaptcha();
+
+window.addEventListener('load', () => {
+  const userField = document.getElementById('loginUsername');
+  const passField = document.getElementById('loginPassword');
+  if (userField) userField.value = '';
+  if (passField) passField.value = '';
+});
 
 let inactivityTimer = null;
 let logoutInterval = null;
@@ -135,29 +243,7 @@ function startLogoutTimer() {
 let eventSource = null;
 
 function connectNotifications() {
-  if (eventSource) eventSource.close();
-  
-  // El backend usa cookies (httpOnly), EventSource las envía si activamos withCredentials
-  eventSource = new EventSource(`${API_BASE}/notifications/stream`, { withCredentials: true });
-  
-  eventSource.onmessage = function(event) {
-    try {
-      const data = JSON.parse(event.data);
-      if (data.type === 'CONNECTED') return; // Ignorar el primer mensaje
-
-      if (data.type === 'NUEVO_TRASLADO') {
-        showNotificationToast(data.message || 'Se ha registrado un nuevo movimiento de inventario.');
-        // Refrescar inventario si estamos en vista principal
-        if (typeof loadRealInventory === 'function') {
-          loadRealInventory();
-        }
-      } else {
-        showNotificationToast(data.message);
-      }
-    } catch (e) {
-      console.error('Error procesando notificación SSE:', e);
-    }
-  };
+  initSocketConnection();
 }
 
 function showNotificationToast(msg) {
@@ -372,7 +458,7 @@ async function handleLoginSubmit(e) {
     return;
   }
 
-  if (!recaptchaToken) {
+  if (recaptchaWidgetId !== null && !recaptchaToken) {
     showAuthAlert('Por favor, marca la casilla de seguridad (No soy un robot).');
     return;
   }
@@ -707,26 +793,71 @@ function populateCategoriesSelect() {
   });
 }
 
-async function promptCreateCategory() {
-  const nombre = prompt('Nombre de la nueva categoría (Ej: Tubería):');
+async function uploadImage(fileInputId) {
+  const input = document.getElementById(fileInputId);
+  if (!input || !input.files || input.files.length === 0) return null;
+  
+  const file = input.files[0];
+  const formData = new FormData();
+  formData.append('image', file);
+  
+  try {
+    const res = await fetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return data.imagen_url;
+    } else {
+      alert('Error subiendo imagen: ' + data.message);
+      return null;
+    }
+  } catch (e) {
+    console.error('Error uploading:', e);
+    return null;
+  }
+}
+
+function promptCreateCategory() {
+  document.getElementById('createCategoryModal').classList.remove('hidden');
+}
+
+function closeCreateCategoryModal() {
+  document.getElementById('createCategoryModal').classList.add('hidden');
+}
+
+async function handleCreateCategorySubmit(e) {
+  e.preventDefault();
+  const nombre = document.getElementById('newCategoryName').value.trim();
   if (!nombre) return;
-  const descripcion = prompt('Descripción (Opcional):') || '';
+  
+  const btn = document.getElementById('btnSubmitNewCategory');
+  btn.disabled = true;
+  btn.textContent = 'Subiendo...';
+  
+  const imagen_url = await uploadImage('newCategoryImage');
   
   try {
     const res = await fetch(`${API_BASE}/inventory/categories`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, descripcion })
+      body: JSON.stringify({ nombre, descripcion: '', imagen_url })
     });
     const data = await res.json();
     if (res.ok) {
       showAuthAlert('Categoría creada exitosamente', 'success');
+      closeCreateCategoryModal();
+      document.getElementById('createCategoryForm').reset();
       loadRealInventory();
     } else {
       alert('Error: ' + data.message);
     }
   } catch (e) {
     alert('Error al crear categoría');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-outlined text-base">save</span><span>Guardar Categoría</span>';
   }
 }
 
@@ -776,6 +907,7 @@ function renderActiveView() {
 
 let currentAdminSedeFilter = 'ALL';
 let currentAdminSearchFilter = '';
+let currentAdminCategoryFilter = null;
 
 function filterAdminTable(sedeId) {
   currentAdminSedeFilter = sedeId;
@@ -797,6 +929,11 @@ function filterAdminSearch(query) {
   renderAdminView();
 }
 
+function filterAdminCategory(categoryId) {
+  currentAdminCategoryFilter = categoryId;
+  renderAdminView();
+}
+
 // --- VISTA 1: ADMINISTRADOR (CESAR) ---
 function renderAdminView() {
   const container = document.getElementById('viewAdmin');
@@ -806,14 +943,95 @@ function renderAdminView() {
 
   const tableHead = document.getElementById('adminInventoryTableHead');
   const tableBody = document.getElementById('adminInventoryTableBody');
+  const tableContainer = document.getElementById('adminInventoryTableContainer');
+  const categoriesGrid = document.getElementById('adminCategoriesGrid');
+  const btnBack = document.getElementById('btnAdminBackToCategories');
+  
   tableBody.innerHTML = '';
+  categoriesGrid.innerHTML = '';
 
-  const filteredProducts = (liveProducts || []).filter(p => {
+  // Modo Galería de Categorías
+  if (currentAdminSearchFilter === '' && currentAdminCategoryFilter === null) {
+    tableContainer.classList.add('hidden');
+    categoriesGrid.classList.remove('hidden');
+    btnBack.classList.add('hidden');
+    
+    // Contar productos por categoría
+    const catCounts = {};
+    liveProducts.forEach(p => {
+      const cid = p.categoria_id || 'uncategorized';
+      if (!catCounts[cid]) catCounts[cid] = 0;
+      catCounts[cid]++;
+    });
+
+    // Renderizar categorías
+    if (liveCategories && liveCategories.length > 0) {
+      liveCategories.forEach(cat => {
+        const count = catCounts[cat.id] || 0;
+        
+        const imgHtml = cat.imagen_url 
+          ? `<img src="${cat.imagen_url}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+             <div class="w-full h-full bg-surface-container-highest items-center justify-center hidden">
+               <span class="material-symbols-outlined text-4xl text-outline">category</span>
+             </div>`
+          : `<div class="w-full h-full bg-surface-container-highest flex items-center justify-center">
+               <span class="material-symbols-outlined text-4xl text-outline">category</span>
+             </div>`;
+        
+        categoriesGrid.innerHTML += `
+          <div onclick="filterAdminCategory(${cat.id})" class="cursor-pointer group relative overflow-hidden rounded-xl bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:shadow-lg transition-all">
+            <div class="aspect-video w-full bg-surface-container-highest overflow-hidden relative">
+              ${imgHtml}
+            </div>
+            <div class="p-3">
+              <h4 class="font-headline font-semibold text-sm text-on-surface truncate">${cat.nombre}</h4>
+              <p class="text-[10px] text-outline mt-0.5">${count} producto(s)</p>
+            </div>
+          </div>
+        `;
+      });
+    }
+    
+    // Categoría "Sin Categoría"
+    if (catCounts['uncategorized'] > 0) {
+      categoriesGrid.innerHTML += `
+        <div onclick="filterAdminCategory('uncategorized')" class="cursor-pointer group relative overflow-hidden rounded-xl bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:shadow-lg transition-all">
+          <div class="aspect-video w-full bg-surface-container-highest overflow-hidden flex items-center justify-center">
+             <span class="material-symbols-outlined text-4xl text-outline">category</span>
+          </div>
+          <div class="p-3">
+            <h4 class="font-headline font-semibold text-sm text-on-surface truncate">Sin Categoría</h4>
+            <p class="text-[10px] text-outline mt-0.5">${catCounts['uncategorized']} producto(s)</p>
+          </div>
+        </div>
+      `;
+    }
+    
+    return;
+  }
+
+  // Modo Tabla de Productos
+  tableContainer.classList.remove('hidden');
+  categoriesGrid.classList.add('hidden');
+  
+  if (currentAdminSearchFilter === '' && currentAdminCategoryFilter !== null) {
+    btnBack.classList.remove('hidden');
+  } else {
+    btnBack.classList.add('hidden');
+  }
+
+  let filteredProducts = (liveProducts || []).filter(p => {
     const q = currentAdminSearchFilter;
     const n = (p.nombre || '').toLowerCase();
     const s = (p.codigo_sku || '').toLowerCase();
     const c = (p.categoria_nombre || '').toLowerCase();
-    return n.includes(q) || s.includes(q) || c.includes(q);
+    const matchesSearch = n.includes(q) || s.includes(q) || c.includes(q);
+    
+    if (currentAdminCategoryFilter !== null && q === '') {
+      if (currentAdminCategoryFilter === 'uncategorized') return !p.categoria_id && matchesSearch;
+      return p.categoria_id === currentAdminCategoryFilter && matchesSearch;
+    }
+    return matchesSearch;
   });
 
   if (filteredProducts.length === 0) {
@@ -936,9 +1154,15 @@ function renderAdminView() {
 
 // --- VISTA 2: ENCARGADO DE SEDE ---
 let currentEncargadoSearchFilter = '';
+let currentEncargadoCategoryFilter = null;
 
 function filterEncargadoSearch(query) {
   currentEncargadoSearchFilter = query.toLowerCase();
+  renderEncargadoView();
+}
+
+function filterEncargadoCategory(categoryId) {
+  currentEncargadoCategoryFilter = categoryId;
   renderEncargadoView();
 }
 
@@ -957,20 +1181,103 @@ function renderEncargadoView() {
     if (sedeId === 2) {
       sedeImgEl.src = './assets/images/sede-ep1.png';
       sedeImgEl.classList.remove('hidden');
+    } else if (sedeId === 3) {
+      sedeImgEl.src = './assets/images/sede-ep3.png';
+      sedeImgEl.classList.remove('hidden');
+    } else if (sedeId === 4) {
+      sedeImgEl.src = './assets/images/sede-ep6.png';
+      sedeImgEl.classList.remove('hidden');
     } else {
       sedeImgEl.classList.add('hidden');
     }
   }
 
   const tableBody = document.getElementById('encargadoInventoryTableBody');
+  const tableContainer = document.getElementById('encargadoInventoryTableContainer');
+  const categoriesGrid = document.getElementById('encargadoCategoriesGrid');
+  const btnBack = document.getElementById('btnEncargadoBackToCategories');
+
   tableBody.innerHTML = '';
+  categoriesGrid.innerHTML = '';
+
+  // Modo Galería de Categorías para Encargado
+  if (currentEncargadoSearchFilter === '' && currentEncargadoCategoryFilter === null) {
+    tableContainer.classList.add('hidden');
+    categoriesGrid.classList.remove('hidden');
+    btnBack.classList.add('hidden');
+    
+    const catCounts = {};
+    liveProducts.forEach(p => {
+      const cid = p.categoria_id || 'uncategorized';
+      if (!catCounts[cid]) catCounts[cid] = 0;
+      catCounts[cid]++;
+    });
+
+    if (liveCategories && liveCategories.length > 0) {
+      liveCategories.forEach(cat => {
+        const count = catCounts[cat.id] || 0;
+        
+        const imgHtml = cat.imagen_url 
+          ? `<img src="${cat.imagen_url}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+             <div class="w-full h-full bg-surface-container-highest items-center justify-center hidden">
+               <span class="material-symbols-outlined text-4xl text-outline">category</span>
+             </div>`
+          : `<div class="w-full h-full bg-surface-container-highest flex items-center justify-center">
+               <span class="material-symbols-outlined text-4xl text-outline">category</span>
+             </div>`;
+        
+        categoriesGrid.innerHTML += `
+          <div onclick="filterEncargadoCategory(${cat.id})" class="cursor-pointer group relative overflow-hidden rounded-xl bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:shadow-lg transition-all">
+            <div class="aspect-video w-full bg-surface-container-highest overflow-hidden relative">
+              ${imgHtml}
+            </div>
+            <div class="p-3">
+              <h4 class="font-headline font-semibold text-sm text-on-surface truncate">${cat.nombre}</h4>
+              <p class="text-[10px] text-outline mt-0.5">${count} producto(s)</p>
+            </div>
+          </div>
+        `;
+      });
+    }
+    
+    if (catCounts['uncategorized'] > 0) {
+      categoriesGrid.innerHTML += `
+        <div onclick="filterEncargadoCategory('uncategorized')" class="cursor-pointer group relative overflow-hidden rounded-xl bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:shadow-lg transition-all">
+          <div class="aspect-video w-full bg-surface-container-highest overflow-hidden flex items-center justify-center">
+             <span class="material-symbols-outlined text-4xl text-outline">category</span>
+          </div>
+          <div class="p-3">
+            <h4 class="font-headline font-semibold text-sm text-on-surface truncate">Sin Categoría</h4>
+            <p class="text-[10px] text-outline mt-0.5">${catCounts['uncategorized']} producto(s)</p>
+          </div>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  // Modo Tabla para Encargado
+  tableContainer.classList.remove('hidden');
+  categoriesGrid.classList.add('hidden');
+  
+  if (currentEncargadoSearchFilter === '' && currentEncargadoCategoryFilter !== null) {
+    btnBack.classList.remove('hidden');
+  } else {
+    btnBack.classList.add('hidden');
+  }
 
   const filteredProducts = (liveProducts || []).filter(p => {
     const q = currentEncargadoSearchFilter;
     const n = (p.nombre || '').toLowerCase();
     const s = (p.codigo_sku || '').toLowerCase();
     const c = (p.categoria_nombre || '').toLowerCase();
-    return n.includes(q) || s.includes(q) || c.includes(q);
+    const matchesSearch = n.includes(q) || s.includes(q) || c.includes(q);
+    
+    if (currentEncargadoCategoryFilter !== null && q === '') {
+      if (currentEncargadoCategoryFilter === 'uncategorized') return !p.categoria_id && matchesSearch;
+      return p.categoria_id === currentEncargadoCategoryFilter && matchesSearch;
+    }
+    return matchesSearch;
   });
 
   if (filteredProducts.length === 0) {
@@ -1004,9 +1311,8 @@ function renderEncargadoView() {
         <td class="py-3 px-4 font-semibold text-on-surface">${p.nombre}</td>
         <td class="py-3 px-4 font-mono font-bold text-on-surface">$${precio.toLocaleString()}</td>
         <td class="py-3 px-4 font-mono font-bold ${isLow ? 'text-error' : 'text-primary'}">${isLow ? alertIcon : ''} ${stock} ${p.unidad_medida}</td>
-        <td class="py-3 px-4 text-right">
-          <button type="button" onclick="openTransferForProduct(${p.id}, '${p.codigo_sku}', ${sedeId})" class="px-2.5 py-1 bg-primary text-on-primary font-mono text-[11px] font-bold rounded shadow-sm hover:bg-emerald-400 transition-colors">
-            Pedir a Otra Sede
+          <button type="button" onclick="openTransferForProduct(${p.id}, '${p.codigo_sku}', null, ${sedeId})" class="px-2.5 py-1 bg-secondary text-on-secondary font-mono text-[11px] font-bold rounded shadow-sm hover:bg-yellow-400 transition-colors">
+            Enviar a Otra Sede
           </button>
         </td>
       `;
@@ -1022,6 +1328,7 @@ function renderEmpleadoView() {
 
   // Cargar historial de traslados entre sedes
   loadEmployeeTransfers();
+  loadEmpleadoRecepciones();
   handleQuickPriceSearch('');
 }
 
@@ -1147,6 +1454,9 @@ async function handleCreateProductSubmit(e) {
 
   const btn = document.getElementById('btnSubmitNewProduct');
   btn.disabled = true;
+  btn.textContent = 'Subiendo imagen...';
+  
+  let imagen_url = await uploadImage('newProdImage');
   btn.textContent = 'Guardando en Base de Datos MySQL...';
 
   try {
@@ -1159,6 +1469,7 @@ async function handleCreateProductSubmit(e) {
         descripcion: desc,
         categoria_id: categoryId ? parseInt(categoryId) : null,
         unidad_medida: unit,
+        imagen_url,
         sedesData
       })
     });
@@ -1230,6 +1541,16 @@ async function handleEditProductSubmit(e) {
 
   const btn = document.getElementById('btnSubmitEditProduct');
   btn.disabled = true;
+  btn.textContent = 'Subiendo imagen...';
+
+  let imagen_url = await uploadImage('editProdImage');
+  if (!imagen_url) {
+    const oldProduct = liveProducts.find(p => p.id === parseInt(id));
+    if (oldProduct && oldProduct.imagen_url) {
+      imagen_url = oldProduct.imagen_url;
+    }
+  }
+
   btn.textContent = 'Actualizando en BD...';
 
   try {
@@ -1241,6 +1562,7 @@ async function handleEditProductSubmit(e) {
         nombre: name,
         descripcion: desc,
         unidad_medida: unit,
+        imagen_url,
         sedesData
       })
     });
@@ -1346,12 +1668,34 @@ function toggleQuickTransferModal() {
   updateTransferAvailabilityHint();
 }
 
-function openTransferForProduct(productId, sku, destId = null) {
+function openTransferForProduct(productId, sku, destId = null, origId = null) {
   toggleQuickTransferModal();
   const selectProd = document.getElementById('modalTransferProduct');
   if (selectProd) {
     selectProd.value = productId;
   }
+  
+  const selectOrig = document.getElementById('modalTransferOrigin');
+  if (selectOrig) {
+    if (currentUser && currentUser.rol === 'ENCARGADO') {
+      selectOrig.value = currentUser.sede_id;
+      for (let i = 0; i < selectOrig.options.length; i++) {
+        if (Number(selectOrig.options[i].value) !== currentUser.sede_id) {
+          selectOrig.options[i].disabled = true;
+        } else {
+          selectOrig.options[i].disabled = false;
+        }
+      }
+    } else {
+      for (let i = 0; i < selectOrig.options.length; i++) {
+        selectOrig.options[i].disabled = false;
+      }
+      if (origId) {
+        selectOrig.value = origId;
+      }
+    }
+  }
+
   if (destId) {
     document.getElementById('modalTransferDest').value = destId;
   }
@@ -1396,14 +1740,15 @@ async function handleExecuteTransferSubmit(e) {
       return;
     }
 
-    alert(`✓ Traslado completado en tiempo real:\n\n• ${qty} unidades transferidas con éxito.\n• Origen ahora tiene: ${data.transfer.nuevo_stock_origen} un.\n• Destino ahora tiene: ${data.transfer.nuevo_stock_destino} un.`);
+    alert(`✓ Traslado completado en tiempo real:\n\n• ${qty} unidades transferidas con éxito.`);
     toggleQuickTransferModal();
 
     // Recargar inventario en tiempo real para ver el cambio inmediato en la tabla
     await loadRealInventory();
 
   } catch (err) {
-    alert('Error al ejecutar el traslado.');
+    console.error(err);
+    alert('Error de conexión o de lectura al ejecutar el traslado.');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Confirmar Traslado en Base de Datos';
@@ -1411,6 +1756,279 @@ async function handleExecuteTransferSubmit(e) {
 }
 
 document.getElementById('modalTransferProduct')?.addEventListener('change', updateTransferAvailabilityHint);
+
+// =============================================================================
+// 8.5 RECEPCION DE MERCANCIAS (ENCARGADO -> EMPLEADO -> ADMIN)
+// =============================================================================
+
+// --- ENCARGADO ---
+async function openCreateRecepcionModal() {
+  document.getElementById('createRecepcionModal').classList.remove('hidden');
+  document.getElementById('recObservaciones').value = '';
+  
+  const select = document.getElementById('recEmpleadoAsignado');
+  select.innerHTML = '<option value="">Cargando empleados...</option>';
+  try {
+    const res = await fetch(`${API_BASE}/recepciones/empleados`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+    const data = await res.json();
+    if (res.ok) {
+      select.innerHTML = '<option value="">Seleccione un empleado...</option>';
+      data.empleados.forEach(emp => {
+        select.innerHTML += `<option value="${emp.id}">${emp.nombre_completo} (@${emp.username})</option>`;
+      });
+    }
+  } catch (err) {
+    select.innerHTML = '<option value="">Error cargando empleados</option>';
+  }
+}
+
+function closeCreateRecepcionModal() {
+  document.getElementById('createRecepcionModal').classList.add('hidden');
+}
+
+async function handleCreateRecepcionSubmit(e) {
+  e.preventDefault();
+  const empleado_id = document.getElementById('recEmpleadoAsignado').value;
+  const observaciones = document.getElementById('recObservaciones').value.trim();
+
+  if (!empleado_id) {
+    alert('Debes seleccionar un empleado.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/recepciones`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+      body: JSON.stringify({ empleado_id, observaciones })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('Tarea de conteo creada y asignada al empleado exitosamente.');
+      closeCreateRecepcionModal();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  } catch (err) {
+    alert('Error al crear la recepción.');
+  }
+}
+
+// --- EMPLEADO ---
+async function loadEmpleadoRecepciones() {
+  const list = document.getElementById('employeeRecepcionesList');
+  if (!list) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/recepciones`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+    const data = await res.json();
+    if (res.ok && data.recepciones) {
+      list.innerHTML = '';
+      const pending = data.recepciones.filter(r => r.estado === 'PENDIENTE_CONTEO' && r.empleado_id === currentUser.id);
+      if (pending.length > 0) {
+        pending.forEach(r => {
+          const div = document.createElement('div');
+          div.className = 'p-3 bg-surface-container-low rounded-lg border border-outline-variant/30 flex justify-between items-center';
+          div.innerHTML = `
+            <div>
+              <span class="font-bold text-tertiary">Rec. #${r.id}</span>
+              <div class="text-[10px] text-outline">${new Date(r.created_at).toLocaleString()}</div>
+              <div class="text-[11px] text-on-surface-variant">${r.observaciones || 'Sin observaciones'}</div>
+            </div>
+            <button onclick="openConteoRecepcionModal(${r.id})" class="px-3 py-1.5 bg-tertiary text-on-primary font-bold rounded-lg hover:bg-sky-400 text-xs shadow-md transition-colors">Contar</button>
+          `;
+          list.appendChild(div);
+        });
+      } else {
+        list.innerHTML = `<div class="p-3 text-center text-outline">No tienes tareas de conteo pendientes.</div>`;
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+let activeConteoRecepcionId = null;
+let currentConteoItems = [];
+
+function openConteoRecepcionModal(id) {
+  activeConteoRecepcionId = id;
+  currentConteoItems = [];
+  renderConteoList();
+  document.getElementById('conteoCodigoSku').value = '';
+  document.getElementById('conteoCantidad').value = '1';
+  document.getElementById('conteoRecepcionModal').classList.remove('hidden');
+}
+
+function closeConteoRecepcionModal() {
+  activeConteoRecepcionId = null;
+  document.getElementById('conteoRecepcionModal').classList.add('hidden');
+}
+
+function addProductoToConteo() {
+  const inputSku = document.getElementById('conteoCodigoSku');
+  const inputQty = document.getElementById('conteoCantidad');
+  const sku = inputSku.value.trim().toUpperCase();
+  const qty = parseFloat(inputQty.value);
+
+  if (!sku || qty <= 0 || isNaN(qty)) return;
+
+  const product = liveProducts.find(p => p.codigo_sku.toUpperCase() === sku);
+  if (!product) {
+    alert('SKU no encontrado en la base de datos.');
+    return;
+  }
+
+  const existing = currentConteoItems.find(i => i.producto_id === product.id);
+  if (existing) {
+    existing.cantidad_recibida += qty;
+  } else {
+    currentConteoItems.push({
+      producto_id: product.id,
+      sku: product.codigo_sku,
+      nombre: product.nombre,
+      cantidad_recibida: qty
+    });
+  }
+
+  renderConteoList();
+  inputSku.value = '';
+  inputQty.value = '1';
+  inputSku.focus();
+}
+
+function removeProductoFromConteo(productId) {
+  currentConteoItems = currentConteoItems.filter(i => i.producto_id !== productId);
+  renderConteoList();
+}
+
+function renderConteoList() {
+  const tbody = document.getElementById('conteoListBody');
+  tbody.innerHTML = '';
+  currentConteoItems.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-outline-variant/20';
+    tr.innerHTML = `
+      <td class="py-1 px-2">
+        <span class="font-bold text-on-surface block">${item.sku}</span>
+        <span class="text-[10px] text-outline truncate block max-w-[150px]">${item.nombre}</span>
+      </td>
+      <td class="py-1 px-2 text-right font-bold text-primary">${item.cantidad_recibida}</td>
+      <td class="py-1 px-2 text-center">
+        <button onclick="removeProductoFromConteo(${item.producto_id})" class="text-error hover:text-red-400 transition-colors">
+          <span class="material-symbols-outlined text-[14px]">delete</span>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function submitConteo() {
+  if (currentConteoItems.length === 0) {
+    alert('No has agregado ningún producto al conteo.');
+    return;
+  }
+
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    const res = await fetch(`${API_BASE}/recepciones/${activeConteoRecepcionId}/conteo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+      body: JSON.stringify({ items: currentConteoItems })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('Conteo enviado exitosamente. En espera de distribución por el administrador.');
+      closeConteoRecepcionModal();
+      loadEmpleadoRecepciones();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  } catch (err) {
+    alert('Error enviando conteo');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Finalizar Conteo y Enviar';
+  }
+}
+
+// --- ADMINISTRADOR ---
+function openAdminRecepcionesModal() {
+  document.getElementById('adminRecepcionesModal').classList.remove('hidden');
+  loadAdminRecepciones();
+}
+
+function closeAdminRecepcionesModal() {
+  document.getElementById('adminRecepcionesModal').classList.add('hidden');
+}
+
+async function loadAdminRecepciones() {
+  const tbody = document.getElementById('adminRecepcionesTbody');
+  tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-outline text-sm">Cargando recepciones...</td></tr>';
+  
+  try {
+    const res = await fetch(`${API_BASE}/recepciones`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+    const data = await res.json();
+    if (res.ok) {
+      tbody.innerHTML = '';
+      if (data.recepciones.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-outline text-sm">No hay recepciones registradas.</td></tr>';
+        return;
+      }
+      data.recepciones.forEach(r => {
+        const isContabilizado = r.estado === 'CONTABILIZADO';
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-outline-variant/30 hover:bg-surface-container-high/50 transition-colors text-on-surface';
+        tr.innerHTML = `
+          <td class="py-2 px-3 font-bold">${r.sede_nombre}</td>
+          <td class="py-2 px-3">
+            <div class="text-[10px] text-outline">Enc: ${r.encargado_nombre || 'N/A'}</div>
+            <div class="text-[10px] text-primary">Emp: ${r.empleado_nombre || 'N/A'}</div>
+          </td>
+          <td class="py-2 px-3 text-[10px]">${new Date(r.created_at).toLocaleString()}</td>
+          <td class="py-2 px-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+              r.estado === 'PENDIENTE_CONTEO' ? 'bg-orange-500/20 text-orange-400' :
+              r.estado === 'CONTABILIZADO' ? 'bg-primary/20 text-primary' :
+              'bg-surface-container-highest text-outline'
+            }">${r.estado.replace('_', ' ')}</span>
+          </td>
+          <td class="py-2 px-3 text-right">
+            ${isContabilizado ? `<button onclick="handleAdminDistribuir(${r.id})" class="px-3 py-1 bg-tertiary hover:bg-sky-400 text-white text-xs font-bold rounded shadow transition-colors">Distribuir</button>` : `<span class="text-[10px] text-outline">N/A</span>`}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-error text-sm">Error cargando recepciones.</td></tr>';
+  }
+}
+
+async function handleAdminDistribuir(recepcionId) {
+  if (!confirm('¿Estás seguro de distribuir esta mercancía contabilizada al inventario físico de la sede? Esto actualizará el stock disponible de forma irreversible.')) return;
+  
+  try {
+    const res = await fetch(`${API_BASE}/recepciones/${recepcionId}/distribuir`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('Mercancía distribuida exitosamente al inventario.');
+      loadAdminRecepciones();
+      loadRealInventory();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  } catch (err) {
+    alert('Error en distribución.');
+  }
+}
 
 // =============================================================================
 // 9. CIERRE DE SESIÓN Y VERIFICACIÓN
@@ -1457,10 +2075,22 @@ async function checkSavedSession() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  generateLoginCaptcha();
   checkDatabaseHealth();
   checkSavedSession();
   checkPolicies();
+});
+
+// Auto-refrescar datos en vivo cuando se vuelve a abrir/despertar la app (Multi-dispositivo)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && currentUser) {
+    if (currentUser.rol === 'ADMINISTRADOR') {
+      loadRealInventory();
+      loadRecentTransfers();
+      loadAdminDashboardData();
+    } else if (currentUser.rol === 'ENCARGADO') {
+      loadEncargadoInventory();
+    }
+  }
 });
 
 // =============================================================================
@@ -1706,45 +2336,7 @@ window.exportReport = async function(type) {
 // 11. GOOGLE OAUTH Y APROBACIONES DE USUARIOS
 // =============================================================================
 
-window.handleGoogleLogin = async function(response) {
-  const token = response.credential;
-  try {
-    const btnText = document.getElementById('btnLoginText');
-    if(btnText) btnText.innerText = 'Autenticando con Google...';
-    
-    const res = await fetch(`${API_BASE}/auth/google`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
-    });
-    
-    const data = await res.json();
-    
-    if (res.ok && data.success) {
-      if (data.requires_policy_acceptance) {
-        pendingPolicyVersion = data.current_policy_version;
-        showAuthAlert('Debes aceptar la política de datos antes de continuar.', 'info');
-        openPolicyModal();
-      } else {
-        showAuthAlert(data.message, 'success');
-        setTimeout(() => window.location.reload(), 1000);
-      }
-    } else {
-      if (data.status === 'PENDIENTE') {
-        showAuthAlert(data.message, 'warning');
-      } else if (data.status === 'RECHAZADO') {
-        showAuthAlert(data.message, 'error');
-      } else {
-        showAuthAlert(data.message || 'Error de autenticación con Google', 'error');
-      }
-      if(btnText) btnText.innerText = 'Autenticar y Abrir Panel del Software';
-    }
-  } catch (error) {
-    console.error('Error con Google login:', error);
-    showAuthAlert('No se pudo conectar con el servidor', 'error');
-    if(document.getElementById('btnLoginText')) document.getElementById('btnLoginText').innerText = 'Autenticar y Abrir Panel del Software';
-  }
-};
+// Handler de google manejado arriba en la sección 3.
 
 window.loadPendingUsers = async function() {
   if (!currentUser || currentUser.rol !== 'ADMINISTRADOR') return;
@@ -1868,3 +2460,82 @@ window.rejectUser = async function(id) {
   } catch(e) { console.error(e); }
 };
 
+
+// =============================================================================
+// MODAL: NUEVA ENTRADA (ADMINISTRADOR)
+// =============================================================================
+window.openNewProductModal = function() {
+  document.getElementById('newProductModal').classList.remove('hidden');
+};
+
+window.closeNewProductModal = function() {
+  document.getElementById('newProductModal').classList.add('hidden');
+  document.getElementById('newProductSku').value = '';
+  document.getElementById('newProductName').value = '';
+  document.getElementById('newProductCategory').value = '';
+  document.getElementById('newProductUnit').value = '';
+  document.getElementById('newProductPrice').value = '';
+  document.getElementById('newProductStock').value = '0';
+  document.getElementById('btnSubmitNewProduct').disabled = false;
+  document.getElementById('btnSubmitNewProduct').textContent = 'Guardar Producto';
+};
+
+window.submitNewProduct = async function() {
+  const btn = document.getElementById('btnSubmitNewProduct');
+  const sku = document.getElementById('newProductSku').value.trim();
+  const name = document.getElementById('newProductName').value.trim();
+  const unit = document.getElementById('newProductUnit').value.trim();
+  const price = parseFloat(document.getElementById('newProductPrice').value) || 0;
+  const initialSede = document.getElementById('newProductSede').value;
+  const initialStock = parseFloat(document.getElementById('newProductStock').value) || 0;
+
+  if (!sku || !name) {
+    showToast('El SKU y Nombre son obligatorios', 'error');
+    return;
+  }
+
+  // Preparamos los datos de sedes (solo la sede inicial tendr stock y precio)
+  const sedesData = [1, 2, 3, 4].map(id => ({
+    sede_id: id,
+    stock_actual: Number(id) === Number(initialSede) ? initialStock : 0,
+    stock_minimo: 5,
+    precio_venta: Number(id) === Number(initialSede) ? price : 0
+  }));
+
+  const payload = {
+    codigo_sku: sku,
+    nombre: name,
+    categoria_id: null,
+    unidad_medida: unit || 'UNIDAD',
+    sedesData: sedesData
+  };
+
+  try {
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    const res = await fetch(`${API_BASE}/inventory/products`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}` 
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      showToast('Producto y entrada registrados', 'success');
+      closeNewProductModal();
+      loadRealInventory();
+    } else {
+      showToast(data.message || 'Error al guardar', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Guardar Producto';
+    }
+  } catch(e) {
+    console.error(e);
+    showToast('Falla en la red al guardar', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Guardar Producto';
+  }
+};

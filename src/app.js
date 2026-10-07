@@ -15,12 +15,19 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
 // Seguridad HTTP con Helmet (CSP desactivado para evitar conflictos con CDNs)
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({ 
+  contentSecurityPolicy: false,
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  crossOriginEmbedderPolicy: false
+}));
 
-// Rate Limiting Global (Prevención de DDoS)
+// Confiar en proxies para evitar bloqueos por misma IP (Localtunnel, Nginx, NAT)
+app.set('trust proxy', 1);
+
+// Rate Limiting Global (Prevención de DDoS adaptada a multi-dispositivos)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 300, // 300 solicitudes por ventana
+  max: 1500, // 1500 solicitudes por ventana para soportar múltiples cajeros simultáneos
   message: { success: false, message: 'Demasiadas solicitudes desde esta IP.' }
 });
 
