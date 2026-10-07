@@ -8,7 +8,7 @@ export const pool = new Pool({
   ssl: config.db.connectionString.includes('neon.tech') ? { rejectUnauthorized: false } : false,
   max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
 });
 
 // En PostgreSQL, pg devuelve tipos numéricos (DECIMAL) como strings por defecto
