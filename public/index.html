@@ -282,7 +282,7 @@
 
   </style>
 </head>
-<body class="bg-surface-container-lowestán selection:bg-primary selection:text-on-primary relative">
+<body class="bg-surface-container-lowest text-on-surface antialiased min-h-screen flex flex-col justify-between selection:bg-primary selection:text-on-primary relative">
   <script>
     window.onerror = function(msg, url, lineNo, columnNo, error) {
       fetch('/api/debug-log', {
@@ -360,7 +360,7 @@
             </div>
           </div>
 
-          <!-- FORMULARIO 1: INICIO DE sesión -->
+          <!-- FORMULARIO 1: INICIO DE SESIÃ“N -->
           <form id="loginForm" class="space-y-4" onsubmit="handleLoginSubmit(event)" autocomplete="off">
             <!-- Honeypot captcha (anti-bot) -->
             <div style="opacity: 0; position: absolute; top: -9999px; left: -9999px;">
@@ -458,7 +458,7 @@
                 </label>
                 <div class="relative flex items-center">
                   <span class="material-symbols-outlined text-outline absolute left-3 text-[18px] pointer-events-none">mail</span>
-                  <input class="w-full bg-surface-container-low text-on-surface text-xs pl-10 pr-3 py-2 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary shadow-inner" id="regEmail" placeholder="andres@grupoEléctrico.com" required type="email"/>
+                  <input class="w-full bg-surface-container-low text-on-surface text-xs pl-10 pr-3 py-2 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary shadow-inner" id="regEmail" placeholder="andres@grupoelectrico.com" required type="email"/>
                 </div>
               </div>
             </div>
@@ -506,7 +506,7 @@
                   <option value="1">Centro Eléctrico EP (Crr 20 # 12-30)</option>
                   <option value="2">Centro Eléctrico EP1 (Crr 20 # 12-04)</option>
                   <option value="3">Grupo Eléctrico EP3 (Crr 20 # 12-10)</option>
-                  <option value="4">EP6 Ecoiluminación>
+                  <option value="4">EP6 Ecoiluminación (Crr 19 # 12-51)</option>
                 </select>
               </div>
             </div>
@@ -536,7 +536,7 @@
           </div>
           <div class="flex items-center gap-2 px-3 py-2 bg-surface-container-low rounded-lg border border-outline-variant/30 shadow-sm">
             <img src="./assets/images/sede-ep6.png" class="w-6 h-6 rounded object-cover" alt="EP6" onerror="this.style.display='none'">
-            <span class="font-bold">EP6 Ecoiluminación>
+            <span class="font-bold">EP6 Ecoiluminación</span>
           </div>
         </div>
 
@@ -562,9 +562,9 @@
         </div>
       </div>
       <div class="text-sm text-on-surface-variant space-y-4 max-h-64 overflow-y-auto pr-2">
-        <p>Al acceder al Sistema de Inventario Multi-Sede dEléctrico, aceptas nuestras políticas de uso y privacidad.</p>
-        <p>1. <strong>Uso de Cookies:</strong> Este sistema utiliza cookies estrictamente necesarias para mantener tu sesiónly).</p>
-        <p>2. <strong>Tratamiento de Datos:</strong> La informacióntario y precios.</p>
+        <p>Al acceder al Sistema de Inventario Multi-Sede del Grupo Eléctrico, aceptas nuestras polÃ­ticas de uso y privacidad.</p>
+        <p>1. <strong>Uso de Cookies:</strong> Este sistema utiliza cookies estrictamente necesarias para mantener tu sesión de usuario segura y prevenir accesos no autorizados (Cookies HttpOnly).</p>
+        <p>2. <strong>Tratamiento de Datos:</strong> La información registrada en este sistema es confidencial y propiedad exclusiva del Grupo Eléctrico. Se prohÃ­be la distribución no autorizada de datos de inventario y precios.</p>
         <p>3. <strong>Seguridad y Captchas Invisibles:</strong> El sistema utiliza validaciones de seguridad avanzadas y captchas pasivos. Todo intento de acceso sospechoso será registrado y bloqueóado automáticamente.</p>
       </div>
       <div class="flex items-center gap-3 pt-4 border-t border-outline-variant/30">
@@ -662,7 +662,7 @@
               </g>
               <path d="M240 70 L170 150 L210 150 L150 240 L250 130 L210 130 Z" fill="var(--secondary)" stroke="var(--surface-container-lowest)" stroke-width="10" stroke-linejoin="round"/>
             </svg>
-            <text x="90" y="42" font-family="'Space Grotesk', sans-serif" font-weight="800" font-size="28" fill="currentColor" letter-spacing="-0.5">GRUPO <tspan fill="var(--primary)">Eléctrico</tspan></text>
+            <text x="90" y="42" font-family="'Space Grotesk', sans-serif" font-weight="800" font-size="28" fill="currentColor" letter-spacing="-0.5">GRUPO <tspan fill="var(--primary)">ELÃ‰CTRICO</tspan></text>
             <text x="90" y="65" font-family="'Inter', sans-serif" font-weight="700" font-size="12" fill="currentColor" letter-spacing="1">SOFTWARE DE INVENTARIO</text>
           </svg>
         </div>
@@ -698,7 +698,7 @@
           <span id="themeIcon" class="material-symbols-outlined text-[18px]">light_mode</span>
         </button>
 
-        <button type="button" onclick="handleLogout()" class="px-2.5 py-1.5 bg-surface-container hover:bg-error-container hover:text-on-error text-outline rounded-lg border border-outline-variant/80 text-xs font-mono transition-colors flex items-center gap-1" title="Cerrar sesión">
+        <button type="button" onclick="handleLogout()" class="px-2.5 py-1.5 bg-surface-container hover:bg-error-container hover:text-on-error text-outline rounded-lg border border-outline-variant/80 text-xs font-mono transition-colors flex items-center gap-1" title="Cerrar Sesión">
           <span class="material-symbols-outlined text-[16px]">logout</span>
           <span class="hidden sm:inline">Salir</span>
         </button>
@@ -770,7 +770,7 @@
           <div class="flex justify-between py-0.5"><span>Centro Eléctrico EP</span><span class="text-primary font-bold">OK</span></div>
           <div class="flex justify-between py-0.5"><span>Centro Eléctrico EP1</span><span class="text-secondary font-bold">OK</span></div>
           <div class="flex justify-between py-0.5"><span>Grupo Eléctrico EP3</span><span class="text-primary font-bold">OK</span></div>
-          <div class="flex justify-between py-0.5"><span>EP6 Ecoiluminación></div>
+          <div class="flex justify-between py-0.5"><span>EP6 Ecoiluminación</span><span class="text-yellow-400 font-bold">OK</span></div>
         </div>
       </div>
     </aside>
@@ -814,7 +814,7 @@
             <div class="p-4 border-b border-outline-variant/30 flex flex-col gap-4">
               <!-- Buscador de Productos -->
               <div class="relative w-full max-w-lg flex items-center gap-2">
-                <button type="button" id="btnAdminBackToCategorías">
+                <button type="button" id="btnAdminBackToCategories" onclick="filterAdminCategory(null)" class="hidden px-2.5 py-2.5 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg border border-outline-variant/40 transition-colors" title="Volver a CategorÃ­as">
                   <span class="material-symbols-outlined text-[18px] align-middle">arrow_back</span>
                 </button>
                 <div class="relative w-full">
@@ -842,8 +842,8 @@
               </div>
             </div>
 
-            <!-- GalerÃ­a de Categoríal) -->
-            <div id="adminCategoríap-5 hidden">
+            <!-- GalerÃ­a de CategorÃ­as (Nueva Vista Principal) -->
+            <div id="adminCategoriesGrid" class="p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 hidden">
               <!-- Se cargará desde MySQL con renderAdminView() -->
             </div>
 
@@ -879,7 +879,7 @@
                 <img id="encargadoSedeImg" src="" class="w-12 h-12 rounded-lg object-cover shadow-sm hidden" alt="Sede">
                 <div>
                   <h1 class="font-headline font-semibold text-xl text-on-surface" id="encargadoSedeTitle">Sede Asignada</h1>
-                  <p class="text-sm text-on-surface-variant mt-1">Gestán local.</p>
+                  <p class="text-sm text-on-surface-variant mt-1">Gestión de almacén local.</p>
                 </div>
               </div>
             </div>
@@ -905,7 +905,7 @@
             <div class="p-4 border-b border-outline-variant/30 flex flex-col gap-4">
               <!-- Buscador de Productos -->
               <div class="relative w-full max-w-lg flex items-center gap-2">
-                <button type="button" id="btnEncargadoBackToCategorías">
+                <button type="button" id="btnEncargadoBackToCategories" onclick="filterEncargadoCategory(null)" class="hidden px-2.5 py-2.5 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg border border-outline-variant/40 transition-colors" title="Volver a CategorÃ­as">
                   <span class="material-symbols-outlined text-[18px] align-middle">arrow_back</span>
                 </button>
                 <div class="relative w-full">
@@ -915,8 +915,8 @@
               </div>
             </div>
 
-            <!-- GalerÃ­a de Categoríado -->
-            <div id="encargadoCategoríap-5 hidden">
+            <!-- GalerÃ­a de CategorÃ­as Encargado -->
+            <div id="encargadoCategoriesGrid" class="p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5 hidden">
               <!-- Se cargará desde MySQL con loadEncargadoInventory() -->
             </div>
 
@@ -941,7 +941,7 @@
         </div>
 
         <!-- =================================================================== -->
-        <!-- VISTA 3: EMPLEADO / OPERADOR (SIN REFERENCIAS A VEHÍCULOS) -->
+        <!-- VISTA 3: EMPLEADO / OPERADOR (SIN REFERENCIAS A VEHÃCULOS) -->
         <!-- =================================================================== -->
         <div id="viewEmpleado" class="space-y-6 hidden">
           <div class="bg-surface-container border border-outline-variant/40 p-5 rounded-xl shadow-sm">
@@ -1044,12 +1044,12 @@
             <input id="newProdName" required placeholder="Ej: Cable Cobre THHN Calibre 14 AWG" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40 font-sans"/>
           </div>
           <div>
-            <label class="text-outline uppercase block mb-1">Categoríabel>
+            <label class="text-outline uppercase block mb-1">CategorÃ­a</label>
             <div class="flex gap-1">
-              <select id="newProdCategoríant/40">
-                <option value="">-- Sin Categoría --</option>
+              <select id="newProdCategory" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40">
+                <option value="">-- Sin categorÃ­a --</option>
               </select>
-              <button type="button" onclick="promptCreateCategoría">
+              <button type="button" onclick="promptCreateCategory()" class="bg-primary/20 text-primary p-2 rounded hover:bg-primary/30" title="Nueva CategorÃ­a">
                 <span class="material-symbols-outlined text-sm">add</span>
               </button>
             </div>
@@ -1101,7 +1101,7 @@
 
             <!-- Sede 4 -->
             <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
-              <span class="text-yellow-400 font-bold">4. EP6 Ecoiluminación>
+              <span class="text-yellow-400 font-bold">4. EP6 Ecoiluminación</span>
               <div class="grid grid-cols-2 gap-1.5">
                 <input id="stock_sede_4" type="number" min="0" placeholder="Stock: 20" value="20" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
                 <input id="precio_sede_4" type="number" step="0.01" min="0" placeholder="Precio $: 3600" value="3600" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
@@ -1148,8 +1148,8 @@
           <input id="newProductName" type="text" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40" placeholder="Cable de Cobre 10 AWG" />
         </div>
         <div>
-          <label class="text-secondary uppercase block mb-1">Categoríabel>
-          <input id="newProductCategoríables y Conductores" />
+          <label class="text-secondary uppercase block mb-1">CategorÃ­a</label>
+          <input id="newProductCategory" type="text" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40" placeholder="Cables y Conductores" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -1167,7 +1167,7 @@
             <option value="1">Centro Eléctrico EP</option>
             <option value="2">Centro Eléctrico EP1</option>
             <option value="3">Grupo Eléctrico EP3</option>
-            <option value="4">EP6 Ecoiluminación>
+            <option value="4">EP6 Ecoiluminación</option>
           </select>
         </div>
         <div>
@@ -1214,16 +1214,16 @@
               <option value="1">Centro Eléctrico EP</option>
               <option value="2">Centro Eléctrico EP1</option>
               <option value="3">Grupo Eléctrico EP3</option>
-              <option value="4">EP6 Ecoiluminación>
+              <option value="4">EP6 Ecoiluminación</option>
             </select>
           </div>
           <div>
             <label class="text-secondary uppercase block mb-1">Sede Destino (Entra)</label>
             <select id="modalTransferDest" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40">
-              <option value="2" sEléctrico EP1</option>
+              <option value="2" selected>Centro Eléctrico EP1</option>
               <option value="1">Centro Eléctrico EP</option>
               <option value="3">Grupo Eléctrico EP3</option>
-              <option value="4">EP6 Ecoiluminación>
+              <option value="4">EP6 Ecoiluminación</option>
             </select>
           </div>
         </div>
@@ -1252,33 +1252,33 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: CREAR CategoríaDMIN) -->
+  <!-- MODAL: CREAR CATEGORIA (ADMIN) -->
   <!-- ========================================================================= -->
-  <div id="createCategoríackdrop-blur-sm flex items-center justify-center p-4">
+  <div id="createCategoryModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="w-full max-w-sm bg-surface-container rounded-xl p-6 border border-outline-variant/60 shadow-2xl space-y-4">
       <div class="flex items-center justify-between border-b border-outline-variant/30 pb-3">
         <div class="flex items-center gap-2 text-primary">
-          <span class="material-symbols-outlined">Categorían>
-          <h3 class="font-headline font-bold text-base text-on-surface">Nueva Categoría</h3>
+          <span class="material-symbols-outlined">category</span>
+          <h3 class="font-headline font-bold text-base text-on-surface">Nueva CategorÃ­a</h3>
         </div>
-        <button type="button" onclick="closeCreateCategoríace">
+        <button type="button" onclick="closeCreateCategoryModal()" class="text-outline hover:text-on-surface">
           <span class="material-symbols-outlined text-lg">close</span>
         </button>
       </div>
 
-      <form id="createCategoríace-y-3 font-mono text-xs">
+      <form id="createCategoryForm" onsubmit="handleCreateCategorySubmit(event)" class="space-y-3 font-mono text-xs">
         <div>
           <label class="text-outline uppercase block mb-1">Nombre *</label>
-          <input id="newCategoríant/40"/>
+          <input id="newCategoryName" required class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40"/>
         </div>
         <div>
           <label class="text-outline uppercase block mb-1">Imagen (Opcional)</label>
-          <input id="newCategoríary/90"/>
+          <input id="newCategoryImage" type="file" accept="image/*" class="w-full bg-surface-container-low text-on-surface p-1.5 rounded border border-outline-variant/40 font-sans text-[10px] file:mr-2 file:py-1 file:px-2 file:border-0 file:rounded file:text-xs file:font-semibold file:bg-primary file:text-on-primary hover:file:bg-primary/90"/>
         </div>
         <div class="pt-2">
-          <button id="btnSubmitNewCategoríap-2 custom-glow">
+          <button id="btnSubmitNewCategory" type="submit" class="w-full py-3 bg-primary hover:bg-emerald-400 text-on-primary font-headline font-bold text-xs uppercase rounded-lg transition-colors flex items-center justify-center gap-2 custom-glow">
             <span class="material-symbols-outlined text-base">save</span>
-            <span>Guardar Categorían>
+            <span>Guardar CategorÃ­a</span>
           </button>
         </div>
       </form>
@@ -1368,7 +1368,7 @@
 
             <!-- Sede 4 -->
             <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
-              <span class="text-yellow-400 font-bold">4. EP6 Ecoiluminación>
+              <span class="text-yellow-400 font-bold">4. EP6 Ecoiluminación</span>
               <div class="grid grid-cols-2 gap-1.5">
                 <input id="edit_stock_sede_4" type="number" min="0" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
                 <input id="edit_precio_sede_4" type="number" step="0.01" min="0" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
@@ -1388,7 +1388,7 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: CONFIRMAR ELIMINACIÓN -->
+  <!-- MODAL: CONFIRMAR ELIMINACIÃ“N -->
   <!-- ========================================================================= -->
   <div id="deleteProductModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="w-full max-w-sm bg-surface-container rounded-xl p-6 border border-error/60 shadow-2xl space-y-4 text-center">
@@ -1396,7 +1396,7 @@
         <span class="material-symbols-outlined text-2xl">warning</span>
       </div>
       <h3 class="font-headline font-bold text-lg text-on-surface">Â¿Eliminar Producto?</h3>
-      <p class="text-sm text-on-surface-variant font-sans">están todas las sedes.</p>
+      <p class="text-sm text-on-surface-variant font-sans">Esta acción no se puede deshacer. Se eliminarán sus precios y existencias en todas las sedes.</p>
       
       <div class="flex items-center gap-3 pt-4">
         <button type="button" onclick="closeDeleteProductModal()" class="flex-1 py-2 bg-surface-container-low hover:bg-surface-container-high text-on-surface rounded-lg transition-colors text-sm font-bold">
@@ -1435,8 +1435,8 @@
   <div id="inactivityModal" class="fixed inset-0 bg-surface/95 z-[70] hidden flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-surface-container rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-outline-variant/30 flex flex-col items-center">
       <span class="material-symbols-outlined text-4xl text-primary mb-2">lock</span>
-      <h2 class="text-xl font-headline font-bold text-on-surface mb-1">sesión Bloqueada</h2>
-      <p class="text-sm text-outline mb-4 text-center">Por seguridad, la sesiónde lo dejaste.</p>
+      <h2 class="text-xl font-headline font-bold text-on-surface mb-1">Sesión Bloqueada</h2>
+      <p class="text-sm text-outline mb-4 text-center">Por seguridad, la sesión se bloqueóó tras 2 minutos de inactividad. Ingresa tu contraseña para continuar donde lo dejaste.</p>
       
       <div id="countdownContainer" class="text-error font-mono font-bold text-lg mb-4 hidden bg-error/10 px-4 py-2 rounded-lg border border-error/20 flex items-center gap-2">
         <span class="material-symbols-outlined text-xl">timer</span>
@@ -1446,7 +1446,7 @@
       <form id="unlockForm" onsubmit="handleUnlockSubmit(event)" class="w-full space-y-4">
         <input type="password" id="unlockPassword" required placeholder="Contraseña" class="w-full bg-surface-container-low text-on-surface p-2.5 rounded border border-outline-variant/40 focus:border-primary focus:outline-none"/>
         <button type="submit" id="btnUnlock" class="w-full py-2.5 bg-primary text-on-primary rounded-lg font-bold shadow-md hover:shadow-lg transition-all text-sm">
-          Desbloqueóar sesión
+          Desbloqueóar Sesión
         </button>
       </form>
     </div>
@@ -1455,7 +1455,7 @@
   <!-- Banner de Cookies -->
   <div id="cookieBanner" class="fixed bottom-0 left-0 right-0 bg-surface-container-high border-t border-outline-variant/30 p-4 z-50 transform translate-y-full transition-transform duration-500 flex flex-col sm:flex-row items-center justify-between gap-4">
     <div class="text-sm text-on-surface">
-      <span class="font-bold">Uso de Cookies:</span> Utilizamos cookies para garantizar el correcto funcionamiento del sistema y mantener su sesiónuar, acepta su uso.
+      <span class="font-bold">Uso de Cookies:</span> Utilizamos cookies para garantizar el correcto funcionamiento del sistema y mantener su sesión segura. Al continuar, acepta su uso.
     </div>
     <button onclick="acceptCookies()" class="shrink-0 bg-primary text-on-primary px-6 py-2 rounded-lg font-bold text-sm shadow-md hover:shadow-lg transition-all">
       Aceptar y Continuar
@@ -1560,7 +1560,7 @@
   <!-- MODAL: POLÃTICA DE DATOS ISO 27001 (SINGLETON) -->
   <!-- ========================================================================= -->
   <div id="dataPolicyModal" class="fixed inset-0 z-[200] hidden flex-col items-center justify-center bg-[#04110e]/90 backdrop-blur-md p-4 transition-opacity">
-    <div class="w-full max-w-2xl bg-surface-container-lowestán flex flex-col max-h-[90vh]">
+    <div class="w-full max-w-2xl bg-surface-container-lowest border border-primary/30 rounded-2xl shadow-[0_0_40px_rgba(74,222,128,0.15)] overflow-hidden flex flex-col max-h-[90vh]">
       <div class="bg-primary/10 px-6 py-4 border-b border-primary/20 flex items-center gap-3">
         <span class="material-symbols-outlined text-primary text-3xl">gavel</span>
         <div>
@@ -1569,16 +1569,16 @@
         </div>
       </div>
       <div class="p-6 overflow-y-auto space-y-4 text-sm text-on-surface-variant font-sans">
-        <p>Bienvenido al Sistema de Inventario Multi-Sede de <strong>Centro Eléctrico</strong>. El acceso y uso de están sujetos a estrictas políticas de seguridad de la informacióng>.</p>
+        <p>Bienvenido al Sistema de Inventario Multi-Sede de <strong>Centro Eléctrico</strong>. El acceso y uso de esta plataforma están sujetos a estrictas polÃ­ticas de seguridad de la información conforme a los estándares <strong>ISO/IEC 27001</strong>.</p>
         <div class="bg-surface-container-low p-4 rounded-lg border border-outline-variant/40 space-y-3">
           <h3 class="font-bold text-on-surface text-sm">Cláusulas Principales:</h3>
           <ul class="list-disc pl-5 space-y-2 text-xs">
-            <li><strong>Confidencialidad:</strong> Toda la informaciónalizada.</li>
-            <li><strong>Trazabilidad:</strong> Cada movimiento, inicio de sesióneypot activo).</li>
+            <li><strong>Confidencialidad:</strong> Toda la información sobre inventarios, precios y traslados es estrictamente confidencial. La divulgación no autorizada será penalizada.</li>
+            <li><strong>Trazabilidad:</strong> Cada movimiento, inicio de sesión y modificación en el inventario maestro queda registrado con un sello de tiempo inalterable y vinculado a su identidad (Honeypot activo).</li>
             <li><strong>Uso Exclusivo:</strong> El acceso a esta plataforma es intransferible y está reservado exclusivamente para fines operativos autorizados por la gerencia global.</li>
           </ul>
         </div>
-        <p class="text-xs">Al continuar, usted reconoce haber leÃ­do, entendido y aceptado las políticas de seguridad de la información establecidas por la compañÃ­a.</p>
+        <p class="text-xs">Al continuar, usted reconoce haber leÃ­do, entendido y aceptado las polÃ­ticas de seguridad de la información establecidas por la compañÃ­a.</p>
       </div>
       <div class="p-4 bg-surface-container-low border-t border-outline-variant/30 flex justify-end">
         <button type="button" onclick="acceptDataPolicy()" class="px-6 py-2.5 bg-primary hover:bg-emerald-400 text-on-primary font-bold text-sm rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 custom-glow active:scale-95">
@@ -1600,7 +1600,7 @@
           <div>
             <h3 class="font-headline font-bold text-on-surface text-sm mb-1">Aviso sobre el Uso de Cookies</h3>
             <p class="text-xs text-on-surface-variant max-w-3xl">
-              Utilizamos cookies técnicas y de sesióndo este software, aceptas su uso.
+              Utilizamos cookies técnicas y de sesión (como el token JWT) para garantizar la seguridad de tu acceso y el correcto funcionamiento de los filtros multiplataforma. No compartimos datos con terceros. Al continuar utilizando este software, aceptas su uso.
             </p>
           </div>
         </div>
@@ -1612,7 +1612,7 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: Gestán DE SOLICITUDES DE ACCESO -->
+  <!-- MODAL: GESTIÃ“N DE SOLICITUDES DE ACCESO -->
   <!-- ========================================================================= -->
   <div id="pendingUsersModal" class="hidden fixed inset-0 z-[80] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
     <div class="w-full max-w-4xl bg-surface-container border border-outline-variant/40 rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
@@ -1759,7 +1759,7 @@
   </script>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="./js/app.js?v=5"></script>
+  <script src="./js/app.js?v=6"></script>
   <!-- Registro PWA Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
@@ -1776,4 +1776,3 @@
   </script>
 </body>
 </html>
-
