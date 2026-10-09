@@ -67,8 +67,8 @@ window.fetch = async function(...args) {
 
 let currentUser = null;
 let currentToken = null;
-let liveProducts = []; // Almacena los productos reales traídos de MySQL
-let liveCategories = []; // Categorías del inventario
+let liveProducts = []; 
+let liveCategories = []; 
 let globalSocket = null;
 
 function initSocketConnection() {
@@ -140,13 +140,20 @@ function showToast(message, type = 'info') {
 
 
 let recaptchaWidgetId = null;
+let fallbackData = null;
+let useFallbackCaptcha = false;
 
 async function loadRecaptcha() {
   try {
     const res = await fetch(`${API_BASE}/auth/config/recaptcha`);
     const data = await res.json();
     if (data.success) {
+      if (data.fallbackToken && data.fallbackChallenge) {
+        fallbackData = { challenge: data.fallbackChallenge, token: data.fallbackToken };
+      }
+
       if (data.siteKey) {
+        let attempts = 0;
         const initCaptcha = () => {
           if (typeof grecaptcha !== 'undefined' && grecaptcha.render) {
             recaptchaWidgetId = grecaptcha.render('google-recaptcha-container', {
@@ -154,7 +161,24 @@ async function loadRecaptcha() {
               'theme': document.documentElement.classList.contains('dark') ? 'dark' : 'light'
             });
           } else {
-            setTimeout(initCaptcha, 100);
+            attempts++;
+            if (attempts > 30) { // Timeout after 3 seconds
+               console.warn("ReCAPTCHA falló al cargar. Activando modo seguro offline (Math Fallback).");
+               useFallbackCaptcha = true;
+               
+               const container = document.getElementById('google-recaptcha-container');
+               container.innerHTML = `
+                 <div class="flex items-center justify-between bg-surface-container-low border border-primary/30 p-2 rounded w-full max-w-sm">
+                   <span class="text-xs font-mono text-on-surface-variant flex items-center gap-1">
+                     <span class="material-symbols-outlined text-[16px] text-primary">security</span>
+                     Resuelve: <strong class="text-on-surface ml-1">${data.fallbackChallenge} = </strong>
+                   </span>
+                   <input type="number" id="mathCaptchaInput" class="w-16 bg-surface-container text-center text-xs p-1.5 border border-outline-variant/40 rounded focus:border-primary focus:outline-none" required placeholder="?" />
+                 </div>
+               `;
+            } else {
+               setTimeout(initCaptcha, 100);
+            }
           }
         };
         initCaptcha();
@@ -196,7 +220,7 @@ window.addEventListener('load', () => {
 
 let inactivityTimer = null;
 let logoutInterval = null;
-const INACTIVITY_LIMIT = 2 * 60 * 1000; // 2 minutos en ms
+const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutos en ms
 const LOGOUT_LIMIT = 2 * 60; // 2 minutos en segundos
 
 function resetInactivityTimer() {
@@ -446,23 +470,33 @@ async function handleLoginSubmit(e) {
   const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value;
   const honey = document.getElementById('loginHoney') ? document.getElementById('loginHoney').value : '';
-  const recaptchaToken = (typeof grecaptcha !== 'undefined' && recaptchaWidgetId !== null) 
-    ? grecaptcha.getResponse(recaptchaWidgetId) 
-    : null;
-  
-  const btn = document.getElementById('btnLoginSubmit');
-  const btnText = document.getElementById('btnLoginText');
+  let recaptchaToken = null;
+  if (useFallbackCaptcha) {
+    const mathAnswer = document.getElementById('mathCaptchaInput').value.trim();
+    if (!mathAnswer) {
+      showAuthAlert('Por favor, resuelve el reto matemático de seguridad.');
+      return;
+    }
+    recaptchaToken = `math:${mathAnswer}:${fallbackData.token}`;
+  } else {
+    recaptchaToken = (typeof grecaptcha !== 'undefined' && recaptchaWidgetId !== null) 
+      ? grecaptcha.getResponse(recaptchaWidgetId) 
+      : null;
+    
+    if (recaptchaWidgetId !== null && !recaptchaToken) {
+      showAuthAlert('Por favor, marca la casilla de seguridad (No soy un robot).');
+      return;
+    }
+  }
 
+  const btnText = document.getElementById('btnLoginText');
+  
   if (!username || !password) {
     showAuthAlert('Ingresa tu usuario y contraseña.');
     return;
   }
 
-  if (recaptchaWidgetId !== null && !recaptchaToken) {
-    showAuthAlert('Por favor, marca la casilla de seguridad (No soy un robot).');
-    return;
-  }
-
+  const btn = document.getElementById('btnLoginSubmit');
   btn.disabled = true;
   btnText.textContent = 'Autenticando en Grupo Eléctrico...';
 
@@ -1058,7 +1092,10 @@ function renderAdminView() {
       </tr>
     `;
 
-    filteredProducts.forEach(p => {
+    const totalMatches = filteredProducts.length;
+    const paginatedProducts = filteredProducts.slice(0, 50);
+
+    paginatedProducts.forEach(p => {
       const s1 = p.sedes[1] ? p.sedes[1].stock_actual : 0;
       const s2 = p.sedes[2] ? p.sedes[2].stock_actual : 0;
       const s3 = p.sedes[3] ? p.sedes[3].stock_actual : 0;
@@ -1100,6 +1137,10 @@ function renderAdminView() {
       `;
       tableBody.appendChild(row);
     });
+
+    if (totalMatches > 50) {
+      tableBody.innerHTML += `<tr><td colspan="8" class="p-3 text-center text-xs text-outline font-bold bg-surface-container-lowest">Mostrando 50 de ${totalMatches} resultados. Usa el buscador para encontrar ms.</td></tr>`;
+    }
   } else {
     tableHead.innerHTML = `
       <tr class="bg-surface-container-lowest border-b border-outline-variant/40 font-mono text-[11px] uppercase tracking-wider text-outline">
@@ -1123,7 +1164,10 @@ function renderAdminView() {
       catRow.innerHTML = `<td colspan="5" class="bg-surface-container-low py-2 px-4 font-headline font-bold text-primary text-xs uppercase tracking-widest border-b border-outline-variant/30">${cat}</td>`;
       tableBody.appendChild(catRow);
 
-      grouped[cat].forEach(p => {
+      const itemsInCat = grouped[cat];
+      const paginatedItems = itemsInCat.slice(0, 50);
+
+      paginatedItems.forEach(p => {
         const sedeInfo = p.sedes[currentAdminSedeFilter] || { stock_actual: 0, stock_minimo: 0, precio_venta: 0 };
         const s_actual = sedeInfo.stock_actual;
         const s_min = sedeInfo.stock_minimo;
@@ -1151,6 +1195,10 @@ function renderAdminView() {
         `;
         tableBody.appendChild(row);
       });
+
+      if (itemsInCat.length > 50) {
+        tableBody.innerHTML += `<tr><td colspan="5" class="p-2 text-center text-[10px] text-outline italic">Mostrando 50 de ${itemsInCat.length} en ${cat}. Utiliza la barra de búsqueda para ver más.</td></tr>`;
+      }
     });
   }
 }
@@ -1300,7 +1348,10 @@ function renderEncargadoView() {
     catRow.innerHTML = `<td colspan="5" class="bg-surface-container-low py-2 px-4 font-headline font-bold text-primary text-xs uppercase tracking-widest border-b border-outline-variant/30">${cat}</td>`;
     tableBody.appendChild(catRow);
 
-    grouped[cat].forEach(p => {
+    const itemsInCat = grouped[cat];
+    const paginatedItems = itemsInCat.slice(0, 50);
+
+    paginatedItems.forEach(p => {
       const sedeInfo = p.sedes[sedeId] || { stock_actual: 0, precio_venta: 0, stock_minimo: 0 };
       const stock = sedeInfo.stock_actual;
       const precio = sedeInfo.precio_venta;
@@ -1314,6 +1365,7 @@ function renderEncargadoView() {
         <td class="py-3 px-4 font-semibold text-on-surface">${p.nombre}</td>
         <td class="py-3 px-4 font-mono font-bold text-on-surface">$${precio.toLocaleString()}</td>
         <td class="py-3 px-4 font-mono font-bold ${isLow ? 'text-error' : 'text-primary'}">${isLow ? alertIcon : ''} ${stock} ${p.unidad_medida}</td>
+        <td class="py-3 px-4 text-right">
           <button type="button" onclick="openTransferForProduct(${p.id}, '${p.codigo_sku}', null, ${sedeId})" class="px-2.5 py-1 bg-secondary text-on-secondary font-mono text-[11px] font-bold rounded shadow-sm hover:bg-yellow-400 transition-colors">
             Enviar a Otra Sede
           </button>
@@ -1321,6 +1373,10 @@ function renderEncargadoView() {
       `;
       tableBody.appendChild(row);
     });
+
+    if (itemsInCat.length > 50) {
+      tableBody.innerHTML += `<tr><td colspan="5" class="p-2 text-center text-[10px] text-outline italic">Mostrando 50 de ${itemsInCat.length} en ${cat}. Utiliza la barra de búsqueda para ver más.</td></tr>`;
+    }
   });
 }
 
@@ -1632,12 +1688,17 @@ document.getElementById('btnConfirmDeleteProduct')?.addEventListener('click', as
 // 8. TRASLADOS EN TIEMPO REAL ENTRE SEDES (CAMBIO EN VIVO EN LA BD)
 // =============================================================================
 
-function populateTransferModalProducts() {
+function renderTransferProductList(productsToShow) {
   const ul = document.getElementById('modalTransferProductList');
   if (!ul) return;
-
   ul.innerHTML = '';
-  liveProducts.forEach(p => {
+  
+  if (productsToShow.length === 0) {
+    ul.innerHTML = '<li class="p-2 text-xs text-outline text-center">No hay coincidencias</li>';
+    return;
+  }
+
+  productsToShow.forEach(p => {
     const li = document.createElement('li');
     li.className = 'p-2 cursor-pointer hover:bg-surface-container-highest transition-colors text-xs border-b border-outline-variant/20 last:border-0 font-sans';
     li.textContent = `${p.nombre} (SKU: ${p.codigo_sku})`;
@@ -1646,27 +1707,28 @@ function populateTransferModalProducts() {
     li.dataset.sku = p.codigo_sku;
     
     li.onmousedown = () => selectTransferProduct(p.id, p.nombre, p.codigo_sku);
-    
     ul.appendChild(li);
   });
+}
 
+function populateTransferModalProducts() {
+  // Render solo los primeros 30 para no saturar el DOM (UX Refactor para 1000+ productos)
+  const initialProducts = liveProducts.slice(0, 30);
+  renderTransferProductList(initialProducts);
   updateTransferAvailabilityHint();
 }
 
 window.filterTransferProducts = function() {
   const input = document.getElementById('modalTransferProductSearch');
   const filter = input.value.toLowerCase();
-  const ul = document.getElementById('modalTransferProductList');
-  const li = ul.getElementsByTagName('li');
-  for (let i = 0; i < li.length; i++) {
-    const text = li[i].textContent || li[i].innerText;
-    if (text.toLowerCase().indexOf(filter) > -1) {
-      li[i].style.display = "";
-    } else {
-      li[i].style.display = "none";
-    }
-  }
-}
+  
+  // Buscar en memoria y no en el DOM
+  const filtered = liveProducts.filter(p => 
+    p.nombre.toLowerCase().includes(filter) || p.codigo_sku.toLowerCase().includes(filter)
+  ).slice(0, 30); // Limitar a 30 resultados para velocidad
+
+  renderTransferProductList(filtered);
+};
 
 window.showTransferProductsDropdown = function() {
   document.getElementById('modalTransferProductList').classList.remove('hidden');
@@ -1985,7 +2047,12 @@ async function submitConteo() {
     const res = await fetch(`${API_BASE}/recepciones/${activeConteoRecepcionId}/conteo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
-      body: JSON.stringify({ items: currentConteoItems })
+      body: JSON.stringify({
+        productos: currentConteoItems.map(i => ({
+          codigo_sku: i.sku,
+          cantidad_recibida: i.cantidad_recibida
+        }))
+      })
     });
     const data = await res.json();
     if (res.ok) {
@@ -1993,7 +2060,7 @@ async function submitConteo() {
       closeConteoRecepcionModal();
       loadEmpleadoRecepciones();
     } else {
-      alert('Error: ' + data.message);
+      alert('Error: ' + (data.error || data.message || 'No se pudo enviar el conteo'));
     }
   } catch (err) {
     alert('Error enviando conteo');

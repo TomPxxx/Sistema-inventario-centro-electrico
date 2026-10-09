@@ -1,5 +1,6 @@
 import { pool } from '../config/db.js';
 import InventoryRepository from '../repositories/InventoryRepository.js';
+import AuditRepository from '../repositories/AuditRepository.js';
 import { notificationSystem } from '../utils/NotificationObserver.js';
 
 /**
@@ -119,6 +120,9 @@ export const createProduct = async (req, res) => {
     }
 
     await client.query('COMMIT');
+    if (req.user) {
+      await AuditRepository.logAction(req.user.id, req.user.username, 'CREAR_PRODUCTO', `Creó el producto ${cleanSku} - ${nombre}`, req.ip);
+    }
     return res.status(201).json({ success: true, message: 'Producto creado exitosamente.', productId });
 
   } catch (error) {
@@ -207,6 +211,10 @@ export const executeTransfer = async (req, res) => {
 
     await client.query('COMMIT');
     
+    if (req.user) {
+      await AuditRepository.logAction(req.user.id, req.user.username, 'TRASLADO', `Trasladó ${qty} un. de SKU-${producto_id} de Sede ${sede_origen_id} a Sede ${sede_destino_id}`, req.ip);
+    }
+
     // Notificar a todos los encargados y administradores usando Socket.IO
     if (req.app.get('io')) {
       const io = req.app.get('io');
@@ -308,6 +316,10 @@ export const updateProduct = async (req, res) => {
 
     await client.query('COMMIT');
     
+    if (req.user) {
+      await AuditRepository.logAction(req.user.id, req.user.username, 'EDITAR_PRODUCTO', `Editó el producto ID ${productId} - ${nombre}`, req.ip);
+    }
+
     // Notificar actualización general de inventario
     if (req.app.get('io')) {
       const io = req.app.get('io');
@@ -328,6 +340,9 @@ export const deleteProduct = async (req, res) => {
   try {
     const success = await InventoryRepository.deactivateProduct(req.params.id);
     if (!success) return res.status(404).json({ success: false, message: 'Producto no encontrado.' });
+    if (req.user) {
+      await AuditRepository.logAction(req.user.id, req.user.username, 'ELIMINAR_PRODUCTO', `Desactivó el producto ID ${req.params.id}`, req.ip);
+    }
     return res.status(200).json({ success: true, message: 'Producto desactivado.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error al desactivar el producto.' });

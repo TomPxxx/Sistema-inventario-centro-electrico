@@ -1,4 +1,5 @@
 import RecepcionRepository from '../repositories/RecepcionRepository.js';
+import AuditRepository from '../repositories/AuditRepository.js';
 export const crearRecepcion = async (req, res) => {
   try {
     const encargadoId = req.user.id;
@@ -15,6 +16,10 @@ export const crearRecepcion = async (req, res) => {
       empleado_id,
       observaciones
     );
+
+    if (req.user) {
+      await AuditRepository.logAction(req.user.id, req.user.username, 'RECEPCION', `Creó recepción ID ${nuevaRecepcion.id} asignada a empleado ID ${empleado_id}`, req.ip);
+    }
 
     res.status(201).json({
       message: 'Recepción creada y asignada exitosamente',
@@ -76,6 +81,10 @@ export const registrarProductos = async (req, res) => {
 
     await RecepcionRepository.addProductosToRecepcion(id, productos);
     const recepcionActualizada = await RecepcionRepository.updateEstadoRecepcion(id, 'CONTABILIZADO');
+
+    if (req.user) {
+      await AuditRepository.logAction(req.user.id, req.user.username, 'CONTEO_MERCANCIA', `Contabilizó la recepción ID ${id}`, req.ip);
+    }
 
     res.json({
       message: 'Productos registrados y recepción contabilizada exitosamente',

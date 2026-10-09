@@ -4,3 +4,17 @@ node_modules/
 .DS_Store
 dist/
 build/
+
+# Datos privados y scripts temporales de depuracion
+*.xlsx
+query_*.cjs
+query_*.js
+check_*.cjs
+fix_encoding*.cjs
+fix_encoding*.js
+fix_js_encoding.cjs
+inspect_excel.cjs
+list_tables.cjs
+test_dom.cjs
+test_hash.js
+create_audit.cjs

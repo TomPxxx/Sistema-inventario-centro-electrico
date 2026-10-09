@@ -6,6 +6,7 @@ import { config } from '../config/env.js';
 import { initializeDatabase } from '../database/initDb.js';
 import UserRepository from '../repositories/UserRepository.js';
 import SedeRepository from '../repositories/SedeRepository.js';
+import AuditRepository from '../repositories/AuditRepository.js';
 
 const googleClient = new OAuth2Client(config.google.clientId);
 
@@ -39,16 +40,42 @@ export const login = async (req, res) => {
 
     if (config.recaptcha.secretKey) {
       if (!recaptchaToken) {
-        return res.status(400).json({ success: false, message: 'Falta el token de reCAPTCHA. Por favor verifica que no eres un robot.' });
+        return res.status(400).json({ success: false, message: 'Falta validación de seguridad. Por favor verifica que no eres un robot.' });
       }
 
-      const recaptchaVerifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${config.recaptcha.secretKey}&response=${recaptchaToken}`;
-      const recaptchaRes = await fetch(recaptchaVerifyUrl, { method: 'POST' });
-      const recaptchaData = await recaptchaRes.json();
+      if (recaptchaToken.startsWith('math:')) {
+        const parts = recaptchaToken.substring(5).split(':');
+        if (parts.length === 2) {
+          const userAnswer = parts[0];
+          const tokenData = parts[1];
+          
+          const [payload, signature] = tokenData.split('.');
+          const expectedSignature = crypto.createHmac('sha256', config.jwt.secret).update(payload).digest('hex');
+          
+          if (signature !== expectedSignature) {
+            return res.status(401).json({ success: false, message: 'Reto matemático inválido (Firma incorrecta).' });
+          }
+          
+          const [correctAnswer, ts] = payload.split('-');
+          if (Date.now() - parseInt(ts) > 5 * 60 * 1000) {
+            return res.status(401).json({ success: false, message: 'El reto matemático ha expirado. Recarga la página.' });
+          }
+          
+          if (userAnswer !== correctAnswer) {
+            return res.status(401).json({ success: false, message: 'Respuesta matemática incorrecta.' });
+          }
+        } else {
+          return res.status(400).json({ success: false, message: 'Formato de reto inválido.' });
+        }
+      } else {
+        const recaptchaVerifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${config.recaptcha.secretKey}&response=${recaptchaToken}`;
+        const recaptchaRes = await fetch(recaptchaVerifyUrl, { method: 'POST' });
+        const recaptchaData = await recaptchaRes.json();
 
-      if (!recaptchaData.success) {
-        console.warn(`[Seguridad] Intento de login fallido por reCAPTCHA. IP: ${req.ip}`);
-        return res.status(401).json({ success: false, message: 'Validación de reCAPTCHA fallida. Intenta nuevamente.' });
+        if (!recaptchaData.success) {
+          console.warn(`[Seguridad] Intento de login fallido por reCAPTCHA. IP: ${req.ip}`);
+          return res.status(401).json({ success: false, message: 'Validación de reCAPTCHA fallida. Intenta nuevamente.' });
+        }
       }
     }
 
@@ -91,6 +118,8 @@ export const login = async (req, res) => {
 
     // Guardamos el token en una cookie segura
     res.cookie('token', token, cookieOptions);
+
+    await AuditRepository.logAction(user.id, user.username, 'LOGIN', 'Inicio de sesión exitoso', req.ip);
 
     return res.status(200).json({
       success: true,
@@ -188,6 +217,10 @@ export const logout = async (req, res) => {
     const token = req.cookies.token || (req.headers.authorization ? req.headers.authorization.split(' ')[1] : null);
     
     if (token) {
+      try {
+        const decoded = jwt.verify(token, config.jwt.secret);
+        await AuditRepository.logAction(decoded.id, decoded.username, 'LOGOUT', 'Cierre de sesión', req.ip);
+      } catch(e) {} // Ignore invalid tokens during logout
       await UserRepository.blacklistToken(token);
     }
     
@@ -481,10 +514,22 @@ export const verifyPassword = async (req, res) => {
  * GET /api/auth/config/recaptcha
  */
 export const getRecaptchaConfig = (req, res) => {
+  const num1 = Math.floor(Math.random() * 10) + 1;
+  const num2 = Math.floor(Math.random() * 10) + 1;
+  const answer = num1 + num2;
+  const timestamp = Date.now();
+  
+  const mathPayload = `${answer}-${timestamp}`;
+  const mathSignature = crypto.createHmac('sha256', config.jwt.secret).update(mathPayload).digest('hex');
+  const fallbackChallenge = `${num1} + ${num2}`;
+  const fallbackToken = `${mathPayload}.${mathSignature}`;
+
   return res.status(200).json({
     success: true,
     siteKey: config.recaptcha.siteKey || '',
-    googleClientId: config.google.clientId || ''
+    googleClientId: config.google.clientId || '',
+    fallbackChallenge,
+    fallbackToken
   });
 };
 
@@ -512,6 +557,7 @@ export const approveUser = async (req, res) => {
     let finalSedeId = (rol === 'ENCARGADO') ? Number(sedeId) : null;
     
     await UserRepository.approveUser(userId, rol, finalSedeId, req.user.id);
+    await AuditRepository.logAction(req.user.id, req.user.username, 'APROBAR_USUARIO', `Aprobó al usuario ID ${userId} con rol ${rol}`, req.ip);
     return res.status(200).json({ success: true, message: 'Usuario aprobado exitosamente.' });
   } catch (error) {
     console.error('Error approving user:', error);
@@ -527,9 +573,21 @@ export const rejectUser = async (req, res) => {
   try {
     const { userId } = req.body;
     await UserRepository.rejectUser(userId, req.user.id);
+    await AuditRepository.logAction(req.user.id, req.user.username, 'RECHAZAR_USUARIO', `Rechazó al usuario ID ${userId}`, req.ip);
     return res.status(200).json({ success: true, message: 'Usuario rechazado.' });
   } catch (error) {
     console.error('Error rejecting user:', error);
     return res.status(500).json({ success: false, message: 'Error al rechazar usuario.' });
+  }
+};
+
+export const getAuditLogs = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 100;
+    const logs = await AuditRepository.getLogs(limit);
+    res.status(200).json({ success: true, data: logs });
+  } catch (error) {
+    console.error('Error fetching audit logs:', error);
+    res.status(500).json({ success: false, message: 'Error fetching logs' });
   }
 };

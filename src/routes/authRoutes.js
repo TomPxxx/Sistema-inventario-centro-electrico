@@ -14,7 +14,8 @@ import {
   googleLogin,
   getPendingUsers,
   approveUser,
-  rejectUser
+  rejectUser,
+  getAuditLogs
 } from '../controllers/authController.js';
 import { authenticateJWT } from '../middlewares/authMiddleware.js';
 import { authorizeRoles } from '../middlewares/roleMiddleware.js';
@@ -50,5 +51,8 @@ router.post('/verify-password', authenticateJWT, verifyPassword);
 router.get('/pending-users', authenticateJWT, authorizeRoles('ADMINISTRADOR'), getPendingUsers);
 router.post('/approve', authenticateJWT, authorizeRoles('ADMINISTRADOR'), approveUser);
 router.post('/reject', authenticateJWT, authorizeRoles('ADMINISTRADOR'), rejectUser);
+
+// Ruta para ver logs de auditoría
+router.get('/audit-logs', authenticateJWT, authorizeRoles('ADMINISTRADOR'), getAuditLogs);
 
 export default router;
