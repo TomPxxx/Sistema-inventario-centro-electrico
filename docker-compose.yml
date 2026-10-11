@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:15
+    container_name: inventario_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Tomas1022352347
+      POSTGRES_DB: inventario_electrico_ce
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker-init:/docker-entrypoint-initdb.d:ro
+      - ./backups:/backups
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: inventario_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@grupoelectrico.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    restart: unless-stopped
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
+  pgadmin_data:

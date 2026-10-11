@@ -3,6 +3,7 @@ import { config } from './src/config/env.js';
 import { testConnection } from './src/config/db.js';
 import http from 'http';
 import { Server } from 'socket.io';
+import { initBackupScheduler } from './src/services/backupScheduler.js';
 
 const PORT = config.port;
 
@@ -54,6 +55,9 @@ const startServer = async () => {
     console.log(`   - Init DB: POST http://localhost:${PORT}/api/auth/init-db`);
     console.log(`   - Health:  GET  http://localhost:${PORT}/api/health`);
     console.log('====================================================');
+    
+    // Iniciar servicio de respaldos automáticos
+    initBackupScheduler();
   });
 };
 

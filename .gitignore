@@ -18,3 +18,6 @@ list_tables.cjs
 test_dom.cjs
 test_hash.js
 create_audit.cjs
+backups/*.sql
+!backups/.gitkeep
+

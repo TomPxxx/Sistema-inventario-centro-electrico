@@ -253,18 +253,28 @@ export const updateProduct = async (req, res) => {
   const client = await pool.connect();
   try {
     const productId = req.params.id;
-    const { codigo_sku, nombre, descripcion, unidad_medida, sedesData, imagen_url } = req.body;
+    const { codigo_sku, nombre, descripcion, unidad_medida, sedesData, imagen_url, categoria_id, marca } = req.body;
     
     if (!codigo_sku || !nombre) return res.status(400).json({ success: false, message: 'SKU y nombre requeridos.' });
 
     await client.query('BEGIN');
 
-    // 1. Actualizar datos principales del producto
+    // 1. Actualizar datos principales del producto (incluyendo categoria_id y marca)
     await client.query(
       `UPDATE productos 
-       SET codigo_sku = $1, nombre = $2, descripcion = $3, unidad_medida = $4, imagen_url = $5
-       WHERE id = $6`,
-      [codigo_sku.trim().toUpperCase(), nombre.trim(), descripcion ? descripcion.trim() : null, unidad_medida || 'UNIDAD', imagen_url || null, productId]
+       SET codigo_sku = $1, nombre = $2, descripcion = $3, unidad_medida = $4, imagen_url = $5,
+           categoria_id = $6, marca = $7
+       WHERE id = $8`,
+      [
+        codigo_sku.trim().toUpperCase(), 
+        nombre.trim(), 
+        descripcion ? descripcion.trim() : null, 
+        unidad_medida || 'UNIDAD', 
+        imagen_url || null, 
+        categoria_id ? Number(categoria_id) : null,
+        marca ? marca.trim() : null,
+        productId
+      ]
     );
 
     // 2. Actualizar stock y precio por cada sede

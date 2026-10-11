@@ -322,11 +322,18 @@ INSERT INTO usuarios (id, nombre_completo, username, email, password_hash, rol, 
 SELECT setval('usuarios_id_seq', (SELECT MAX(id) FROM usuarios));
 
 INSERT INTO categorias (id, nombre, descripcion) VALUES
-(1, 'Cables', 'Cables de cobre, aluminio, de varios calibres y tipos'),
-(2, 'Tubería', 'Tuberías PVC, EMT, SCH40, IMC'),
-(3, 'Alambre', 'Rollos y tramos de alambre de diferentes calibres'),
-(4, 'Protecciones Eléctricas', 'Breakers, disyuntores, diferenciales'),
-(5, 'Sistemas Solares', 'Paneles, inversores, controladores');
+(1, 'Cables y Conductores', 'Cables eléctricos, alambres, duplex, encauchetados y cordones'),
+(2, 'Tubería y Canalización', 'Tubería EMT, IMC, PVC, canaletas, curvas, uniones y terminales de tubería'),
+(3, 'Iluminación', 'Bombillos, lámparas, paneles LED, reflectores, tubos LED y balastros'),
+(4, 'Protecciones Eléctricas', 'Breakers, tacos, totalizadores, fusibles, guardamotores y relés térmicos'),
+(5, 'Sistemas Solares', 'Paneles solares, inversores, controladores y accesorios solares'),
+(6, 'Dispositivos y Mecanismos', 'Interruptores, tomacorrientes, clavijas, pulsadores, timbres y placas'),
+(7, 'Cajas y Tableros', 'Cajas 5800, 4x4, 2x4, octogonales, tableros de distribución y gabinetes'),
+(8, 'Automatización y Control', 'Contactores, temporizadores, sensores, transformadores y arrancadores'),
+(9, 'Herrajes y Redes Eléctricas', 'Aisladores, grapas, varillas puesta a tierra, templetes y herrajería aérea'),
+(10, 'Herramientas y Medición', 'Alicates, destornilladores, pinzas, multímetros, probadores y sondas'),
+(11, 'Fijación y Consumibles', 'Cintas aislantes, amarras plásticas, tornillos, chazos, soldadura y marquillas'),
+(12, 'Varios y Telecomunicaciones', 'Cables de red, patch cords, conectores RJ45, adaptadores y varios');
 
 SELECT setval('categorias_id_seq', (SELECT MAX(id) FROM categorias));
 
@@ -446,6 +453,9 @@ CREATE TABLE recepcion_productos (
     id SERIAL PRIMARY KEY,
     recepcion_id INTEGER NOT NULL,
     codigo_sku VARCHAR(50) NOT NULL,
+    nombre_producto VARCHAR(255) NULL,
+    marca VARCHAR(100) NULL,
+    producto_id INTEGER NULL,
     cantidad_recibida DECIMAL(10,2) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -453,9 +463,33 @@ CREATE TABLE recepcion_productos (
     CONSTRAINT fk_recepcion_productos_recepcion
         FOREIGN KEY (recepcion_id) REFERENCES recepciones_mercancia(id)
         ON DELETE CASCADE ON UPDATE CASCADE,
+
+    CONSTRAINT fk_recepcion_productos_producto
+        FOREIGN KEY (producto_id) REFERENCES productos(id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
         
     CONSTRAINT chk_recepcion_cantidad CHECK (cantidad_recibida > 0.00)
 );
 
 CREATE TRIGGER update_recepcion_productos_updated_at BEFORE UPDATE ON recepcion_productos FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
+-- =============================================================================
+-- 13. TABLA: audit_logs (Vigilancia y Auditoría del Sistema)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER NULL,
+    username VARCHAR(100) NOT NULL DEFAULT 'SISTEMA',
+    accion VARCHAR(100) NOT NULL,
+    detalles TEXT NULL,
+    ip_address VARCHAR(50) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_audit_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_usuario ON audit_logs(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_accion ON audit_logs(accion);

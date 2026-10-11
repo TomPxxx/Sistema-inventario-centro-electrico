@@ -6,8 +6,8 @@ import UserRepository from '../repositories/UserRepository.js';
  * Middleware para validar el token JWT en las peticiones que requieren autenticación.
  */
 export const authenticateJWT = async (req, res, next) => {
-  // Ahora el token vendrá de la cookie httpOnly (Fase 2)
-  const token = req.cookies?.token;
+  // El token puede venir de la cookie httpOnly o del header Authorization Bearer
+  const token = req.cookies?.token || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
 
   if (!token) {
     return res.status(401).json({

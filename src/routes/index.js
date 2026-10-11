@@ -6,6 +6,7 @@ import notificationsRoutes from './notificationsRoutes.js';
 import recepcionRoutes from './recepcionRoutes.js';
 import uploadRoutes from './uploadRoutes.js';
 import backupRoutes from './backupRoutes.js';
+import solicitudRoutes from './solicitudRoutes.js';
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.use('/notifications', notificationsRoutes);
 router.use('/recepciones', recepcionRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/backup', backupRoutes);
+router.use('/solicitudes', solicitudRoutes);
 
 // Ruta base de la API
 router.get('/', (req, res) => {

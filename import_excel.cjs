@@ -82,12 +82,26 @@ async function run() {
       const sku = `GE-${nextSkuNumber.toString().padStart(5, '0')}`;
       nextSkuNumber++;
 
-      let catId = 1;
-      const nameUpper = name.toUpperCase();
-      if (nameUpper.includes('TUBO') || nameUpper.includes('TUBERIA') || nameUpper.includes('PVC') || nameUpper.includes('EMT')) catId = 2;
-      else if (nameUpper.includes('ALAMBRE')) catId = 3;
-      else if (nameUpper.includes('BREAKER') || nameUpper.includes('TOTALIZADOR') || nameUpper.includes('TACO')) catId = 4;
-      else if (nameUpper.includes('SOLAR')) catId = 5;
+      function quitarAcentos(str) {
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+      }
+      function clasificar(nombreRaw) {
+        const n = ' ' + quitarAcentos(nombreRaw).trim() + ' ';
+        if (n.includes(' SOLAR') || n.includes('FOTOVOLTAIC') || n.includes('INVERSOR SOLAR') || n.includes('PLANTA SOLAR')) return 5;
+        if (n.includes('CAJA') || n.includes('TABLERO') || n.includes('COFRE') || n.includes('GABINETE') || n.includes('TAPA CIEGA') || n.includes('OCTOGONAL') || n.includes(' 5800') || n.includes('CENTRO DE CARGA')) return 7;
+        if (n.includes('BOM ') || n.includes('BOM-') || n.includes('BOMBILLO') || n.includes('LAMPARA') || n.includes('PANEL ') || n.includes('PANEL-') || n.includes('PANEL LED') || n.includes('REFLECTOR') || n.includes('BALA ') || n.includes('BALA-') || n.includes('LUMINARIA') || n.includes('BALASTRO') || n.includes('OJO DE BUEY') || n.includes('SPOT') || n.includes('FOCO') || n.includes('CAMPANA') || n.includes('TORTUGA') || n.includes('CINTA LED') || n.includes('PLAFON') || n.includes('PORTALAMPARA') || n.includes('SOCATE') || n.includes('STRIP LED') || n.includes('REFLEC') || n.includes('DIRIGIBLE') || n.includes('APLIQUE') || n.includes('REGLETA LED') || n.includes('TUBO LED') || n.includes('LUCES ')) return 3;
+        if (n.includes('BREAKER') || n.includes('TOTALIZADOR') || n.includes('TACO ') || n.includes('TACO-') || n.includes('GUARDAMOTOR') || n.includes('FUSIBLE') || n.includes('DPS') || n.includes('CUCHILLA') || n.includes('MINIBREAKER') || n.includes('TERMOMAGNETICO') || n.includes('DIFERENCIAL') || n.includes('RELET') || n.includes('RELE TERMICO') || n.includes('PROTECTOR DE VOLTAJE') || n.includes('SECCIONADOR') || n.includes('PORTAFUSIBLE') || n.includes('SEGURIDAD 3X') || n.includes('SEGURIDAD 2X')) return 4;
+        if (n.includes('CONTACTOR') || n.includes('SENSOR') || n.includes('TRANSFORMADOR') || n.includes('CONTADOR') || n.includes('REGULADOR') || n.includes('UPS') || n.includes('BORNERA') || n.includes('FOTOCELDA') || n.includes('TEMPORIZADOR') || n.includes('TIMER') || n.includes('ARRANCADOR') || n.includes('ARANCADOR') || n.includes('DISCONTATOR') || n.includes('TERMOSTATO') || n.includes('HOROMETRO') || n.includes('PILOTO')) return 8;
+        if (n.includes('ALICATE') || n.includes('PINZA') || n.includes('DESTORNILLADOR') || n.includes('MULTIMETRO') || n.includes('SONDA') || n.includes('PROBADOR') || n.includes('BISTURI') || n.includes('SEGUETA') || n.includes('MARTILLO') || n.includes('LLAVE ') || n.includes('TALADRO') || n.includes('CRIMPADORA') || n.includes('PONCHADORA') || n.includes('PELACABLE') || n.includes('AMPERIMETRO') || n.includes('VOLTIMETRO') || n.includes('CALIBRADOR') || n.includes('FLEXOMETRO') || n.includes('HERRAMIENTA') || n.includes('CAIMAN')) return 10;
+        if (n.includes('TOMA') || n.includes('CLAVIJA') || n.includes('INTERRUPTOR') || n.includes('INT ') || n.includes('PULSADOR') || n.includes('TIMBRE') || n.includes('MULTITOMA') || n.includes('PLACA ') || n.includes('DIMMER') || n.includes('CONMUTADOR') || n.includes('ENCHUFE') || n.includes('INTERR') || n.includes('SUPRESOR') || n.includes('MODULO TOMA') || n.includes('MODULO INT')) return 6;
+        if (n.includes('HERRAJERIA') || n.includes('HERRAJERRIA') || n.includes('AISLADOR') || n.includes('VARRILLA') || n.includes('VARILLA') || n.includes('GRAPA') || n.includes('PERCHA') || n.includes('RETENIDA') || n.includes('CRUCETA') || n.includes('TENSOR') || n.includes('BAJANTE') || n.includes('PARARRAYO') || n.includes('TERMINAL CONO') || n.includes('MENSULA')) return 9;
+        if (n.includes('CINTA') || n.includes('AMARE') || n.includes('AMARRE') || n.includes('BRIDA') || n.includes('CHAZO') || n.includes('TORNILLO') || n.includes('SOLDADURA') || n.includes('ANILLO MARQUILLA') || n.includes('MARQUILLA') || n.includes('SILICONA') || n.includes('GRASA') || n.includes('ESPIRAL') || n.includes('REATA') || n.includes('TUERCA') || n.includes('ARANDELA') || n.includes('REMACHE') || n.includes('TERMOENCOGIBLE')) return 11;
+        if (n.includes('TUBO') || n.includes('TUBERIA') || n.includes('EMT') || n.includes('IMC') || n.includes('PVC') || n.includes('CANALETA') || n.includes('CONDULETA') || n.includes('ACOPLE') || n.includes('CAPACETE') || n.includes('CURVA') || n.includes('UNION') || n.includes('CONECTOR CONDUIT') || n.includes('TERMINAL CONDUIT') || n.includes('ABRAZADERA') || n.includes('DEXSON') || n.includes('CORRUGAD')) return 2;
+        if (n.includes('CABLE') || n.includes('ALAMBRE') || n.includes('ENCAUCHETADO') || n.includes('DUPLEX') || n.includes('ANTIFRAUDE') || n.includes('CORDON') || n.includes('CONCENTRICO') || n.includes('POTENCIAL') || n.includes('THHN') || n.includes('SUPERFLEX') || n.includes('SOLDAR') || n.includes('CALIBRE') || n.includes('AWG') || n.includes('CONDUCTOR')) return 1;
+        return 12;
+      }
+
+      let catId = clasificar(name);
 
       const offset = prodValues.length * 4;
       prodValues.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, true)`);

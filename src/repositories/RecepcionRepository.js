@@ -105,12 +105,23 @@ class RecepcionRepository {
 
       const addedProducts = [];
       for (const prod of productos) {
+        let finalSku = (prod.codigo_sku && prod.codigo_sku.trim())
+          ? prod.codigo_sku.trim().toUpperCase()
+          : `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
         const query = `
-          INSERT INTO recepcion_productos (recepcion_id, codigo_sku, cantidad_recibida)
-          VALUES ($1, $2, $3)
+          INSERT INTO recepcion_productos (recepcion_id, codigo_sku, cantidad_recibida, nombre_producto, marca, producto_id)
+          VALUES ($1, $2, $3, $4, $5, $6)
           RETURNING *;
         `;
-        const { rows } = await client.query(query, [recepcionId, prod.codigo_sku, prod.cantidad_recibida]);
+        const { rows } = await client.query(query, [
+          recepcionId, 
+          finalSku, 
+          prod.cantidad_recibida,
+          prod.nombre_producto || null,
+          prod.marca || null,
+          prod.producto_id || null
+        ]);
         addedProducts.push(rows[0]);
       }
 
@@ -158,23 +169,46 @@ class RecepcionRepository {
       await client.query('BEGIN');
 
       for (const prod of productos) {
-        // Find producto_id from codigo_sku
-        const resProd = await client.query('SELECT id FROM productos WHERE codigo_sku = $1', [prod.codigo_sku]);
-        if (resProd.rows.length === 0) continue;
-        const productoId = resProd.rows[0].id;
-        const qty = parseFloat(prod.cantidad_recibida);
+        let productoId = prod.producto_id;
+        if (!productoId && prod.codigo_sku) {
+          const resProd = await client.query('SELECT id FROM productos WHERE codigo_sku = $1', [prod.codigo_sku]);
+          if (resProd.rows.length > 0) {
+            productoId = resProd.rows[0].id;
+          }
+        }
 
-        // Check if exists in producto_sede
-        const resStock = await client.query('SELECT stock_actual, precio_venta FROM producto_sede WHERE producto_id = $1 AND sede_id = $2', [productoId, sedeId]);
+        // Si el producto aún no existe en catálogo porque es nuevo, crearlo automáticamente
+        if (!productoId) {
+          const skuParaCrear = prod.codigo_sku || `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+          const nombreParaCrear = prod.nombre_producto || `Producto ${skuParaCrear}`;
+          const marcaParaCrear = prod.marca || null;
+
+          const nuevoProdRes = await client.query(`
+            INSERT INTO productos (codigo_sku, nombre, marca, unidad_medida, activo)
+            VALUES ($1, $2, $3, 'UNIDAD', TRUE)
+            RETURNING id;
+          `, [skuParaCrear, nombreParaCrear, marcaParaCrear]);
+
+          productoId = nuevoProdRes.rows[0].id;
+        }
+
+        const qty = parseFloat(prod.cantidad_recibida);
+        if (qty <= 0 || isNaN(qty)) continue;
+
+        // Verificar existencias en producto_sede
+        const resStock = await client.query(
+          'SELECT stock_actual, precio_venta FROM producto_sede WHERE producto_id = $1 AND sede_id = $2',
+          [productoId, sedeId]
+        );
         
         let stock_anterior = 0;
         let stock_posterior = qty;
-        let precio_venta = 0;
+        let precio_venta = 0.00;
 
         if (resStock.rows.length > 0) {
-          stock_anterior = parseFloat(resStock.rows[0].stock_actual);
+          stock_anterior = parseFloat(resStock.rows[0].stock_actual) || 0;
           stock_posterior = stock_anterior + qty;
-          precio_venta = resStock.rows[0].precio_venta;
+          precio_venta = parseFloat(resStock.rows[0].precio_venta) || 0.00;
 
           await client.query(
             'UPDATE producto_sede SET stock_actual = $1, updated_at = NOW() WHERE producto_id = $2 AND sede_id = $3',
@@ -187,7 +221,7 @@ class RecepcionRepository {
           );
         }
 
-        // Insert movement
+        // Registrar movimiento de entrada
         await client.query(`
           INSERT INTO movimientos_inventario 
           (tipo_movimiento, producto_id, sede_id, usuario_id, cantidad, stock_anterior, stock_posterior, precio_unitario, motivo_observacion, referencia_documento)

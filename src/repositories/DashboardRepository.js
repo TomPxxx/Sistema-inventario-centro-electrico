@@ -6,14 +6,18 @@ class DashboardRepository {
    */
   async getMovementsOverTime(days = 7) {
     const query = `
+      WITH dates AS (
+        SELECT TO_CHAR(d::date, 'YYYY-MM-DD') AS fecha, d::date AS f_date
+        FROM generate_series(CURRENT_DATE - (($1 - 1) * INTERVAL '1 day'), CURRENT_DATE, INTERVAL '1 day') d
+      )
       SELECT 
-        TO_CHAR(DATE(created_at), 'YYYY-MM-DD') as fecha, 
-        SUM(CASE WHEN tipo_movimiento IN ('ENTRADA', 'TRASLADO_ENTRADA', 'AJUSTE') AND cantidad > 0 THEN cantidad ELSE 0 END) as entradas,
-        SUM(CASE WHEN tipo_movimiento IN ('SALIDA', 'TRASLADO_SALIDA') OR (tipo_movimiento = 'AJUSTE' AND cantidad < 0) THEN ABS(cantidad) ELSE 0 END) as salidas
-      FROM movimientos_inventario
-      WHERE created_at >= CURRENT_DATE - ($1 * INTERVAL '1 day')
-      GROUP BY DATE(created_at)
-      ORDER BY DATE(created_at) ASC
+        d.fecha, 
+        COALESCE(SUM(CASE WHEN m.tipo_movimiento IN ('ENTRADA', 'TRASLADO_ENTRADA', 'AJUSTE') AND m.cantidad > 0 THEN m.cantidad ELSE 0 END), 0) as entradas,
+        COALESCE(SUM(CASE WHEN m.tipo_movimiento IN ('SALIDA', 'TRASLADO_SALIDA') OR (m.tipo_movimiento = 'AJUSTE' AND m.cantidad < 0) THEN ABS(m.cantidad) ELSE 0 END), 0) as salidas
+      FROM dates d
+      LEFT JOIN movimientos_inventario m ON DATE(m.created_at) = d.f_date
+      GROUP BY d.fecha, d.f_date
+      ORDER BY d.f_date ASC
     `;
     const { rows } = await pool.query(query, [days]);
     return rows;

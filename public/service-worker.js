@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inventario-ce-v4';
+const CACHE_NAME = 'inventario-ce-v14';
 const API_CACHE_NAME = 'inventario-api-v2';
 const ASSETS_TO_CACHE = [
   '/',
@@ -158,16 +158,19 @@ self.addEventListener('fetch', (event) => {
       }
     }
   } else {
-    // Activos estáticos: Cache-First
+    // Activos estáticos: Network-First (siempre la versión más reciente si hay conexión),
+    // con fallback a caché para modo offline.
     if (method !== 'GET') return;
     event.respondWith(
-      caches.match(event.request).then((response) => {
-        if (response) return response;
-        return fetch(event.request).then((response) => {
-          if (!response || response.status !== 200 || response.type !== 'basic') return response;
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type === 'basic') {
+            const resClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, resClone));
+          }
           return response;
-        });
-      })
+        })
+        .catch(() => caches.match(event.request))
     );
   }
 });
