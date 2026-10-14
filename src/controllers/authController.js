@@ -119,6 +119,14 @@ export const login = async (req, res) => {
     // Guardamos el token en una cookie segura
     res.cookie('token', token, cookieOptions);
 
+    if (req.app.get('io')) {
+      const io = req.app.get('io');
+      io.emit('usuario_nueva_sesion', {
+        userId: user.id,
+        sessionToken: payload.sessionToken
+      });
+    }
+
     await AuditRepository.logAction(user.id, user.username, 'LOGIN', 'Inicio de sesión exitoso', req.ip);
 
     return res.status(200).json({
@@ -192,6 +200,14 @@ export const googleLogin = async (req, res) => {
 
     const jwtToken = jwt.sign(jwtPayload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
     res.cookie('token', jwtToken, cookieOptions);
+
+    if (req.app.get('io')) {
+      const io = req.app.get('io');
+      io.emit('usuario_nueva_sesion', {
+        userId: user.id,
+        sessionToken: jwtPayload.sessionToken
+      });
+    }
 
     return res.status(200).json({
       success: true,

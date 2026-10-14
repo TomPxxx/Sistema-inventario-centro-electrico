@@ -142,6 +142,12 @@ function initSocketConnection() {
       loadEmployeeTransfers();
     }
   });
+
+  globalSocket.on('usuario_nueva_sesion', (data) => {
+    if (currentUser && currentUser.id === data.userId && currentUser.sessionToken && currentUser.sessionToken !== data.sessionToken) {
+      forceLocalLogout('Tu sesión ha sido finalizada porque iniciaste sesión en otro dispositivo o navegador.');
+    }
+  });
 }
 
 function showToast(message, type = 'info') {
@@ -2643,7 +2649,12 @@ const sessionChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('ce
 
 function announceSessionStart(user) {
   if (sessionChannel && user) {
-    sessionChannel.postMessage({ type: 'login', userId: user.id, username: user.username });
+    sessionChannel.postMessage({
+      type: 'login',
+      userId: user.id,
+      username: user.username,
+      sessionToken: user.sessionToken
+    });
   }
 }
 
@@ -2675,8 +2686,12 @@ if (sessionChannel) {
   sessionChannel.onmessage = (event) => {
     const msg = event.data || {};
     if (!currentUser) return;
-    if (msg.type === 'login' && msg.userId !== currentUser.id) {
-      forceLocalLogout(`Se inició sesión como "${msg.username}" en otra pestaña de este navegador. Solo se permite una sesión por navegador; usa una ventana de incógnito para otro usuario.`);
+    if (msg.type === 'login') {
+      if (msg.userId !== currentUser.id) {
+        forceLocalLogout(`Se inició sesión como "${msg.username}" en otra pestaña de este navegador. Solo se permite una sesión por navegador; usa una ventana de incógnito para otro usuario.`);
+      } else if (msg.sessionToken && currentUser.sessionToken && msg.sessionToken !== currentUser.sessionToken) {
+        forceLocalLogout('Tu sesión ha sido finalizada porque iniciaste una nueva sesión en otra pestaña o ventana.');
+      }
     } else if (msg.type === 'logout') {
       forceLocalLogout('La sesión se cerró desde otra pestaña de este navegador.');
     }
@@ -2691,7 +2706,7 @@ async function verifySessionIdentity() {
     const data = await res.json().catch(() => ({}));
     const serverUser = data.user;
     if (!res.ok || !serverUser) {
-      forceLocalLogout('Tu sesión ya no es válida. Ingresa nuevamente.');
+      forceLocalLogout(data.message || 'Tu sesión ya no es válida. Ingresa nuevamente.');
       return false;
     }
     if (serverUser.id !== currentUser.id) {
