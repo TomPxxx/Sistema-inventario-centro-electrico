@@ -18,6 +18,7 @@ import rateLimit from 'express-rate-limit';
 app.use(helmet({ 
   contentSecurityPolicy: false,
   crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginEmbedderPolicy: false
 }));
 

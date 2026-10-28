@@ -1,15 +1,17 @@
-const CACHE_NAME = 'inventario-ce-v14';
-const API_CACHE_NAME = 'inventario-api-v2';
+const CACHE_NAME = 'inventario-ce-v25';
+const API_CACHE_NAME = 'inventario-api-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/css/styles.css',
+  '/css/style.css',
+  '/css/material-symbols.css',
+  '/fonts/material-symbols-outlined.woff2',
+  '/js/tailwindcss.js',
+  '/js/passwordPolicy.js',
+  '/js/i18n.js',
   '/js/app.js',
-  '/images/logo-background.png',
-  'https://cdn.tailwindcss.com',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700;800&display=swap',
-  'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'
+  '/images/logo-background.png'
 ];
 
 // --- IndexedDB para Cola Offline ---
@@ -67,7 +69,9 @@ async function deleteOfflineAction(id) {
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.allSettled(ASSETS_TO_CACHE.map((url) => cache.add(url)))
+    )
   );
   self.skipWaiting();
 });
@@ -158,9 +162,10 @@ self.addEventListener('fetch', (event) => {
       }
     }
   } else {
-    // Activos estáticos: Network-First (siempre la versión más reciente si hay conexión),
-    // con fallback a caché para modo offline.
+    // Activos estáticos locales: Network-First con fallback a caché para modo offline.
     if (method !== 'GET') return;
+    if (!event.request.url.startsWith(self.location.origin)) return;
+
     event.respondWith(
       fetch(event.request)
         .then((response) => {
@@ -170,7 +175,10 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(event.request))
+        .catch(async () => {
+          const cached = await caches.match(event.request, { ignoreSearch: true });
+          return cached || new Response('', { status: 503, statusText: 'Offline' });
+        })
     );
   }
 });
