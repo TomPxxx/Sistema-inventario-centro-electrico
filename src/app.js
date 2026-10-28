@@ -27,7 +27,7 @@ app.set('trust proxy', 1);
 // Rate Limiting Global (Prevención de DDoS adaptada a multi-dispositivos)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 1500, // 1500 solicitudes por ventana para soportar múltiples cajeros simultáneos
+  max: 300, // 300 solicitudes por ventana de 15 minutos
   message: { success: false, message: 'Demasiadas solicitudes desde esta IP.' }
 });
 
