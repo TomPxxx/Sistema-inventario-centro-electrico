@@ -34,6 +34,14 @@ const startServer = async () => {
       console.log(`[Socket.io] Cliente ${socket.id} se unió a la sala sede_${sedeId}`);
     });
 
+    // Sala de espera para usuarios recién registrados pendientes de aprobación
+    socket.on('join_pending_user', (userId) => {
+      if (userId) {
+        socket.join(`pending_user_${userId}`);
+        console.log(`[Socket.io] Usuario pendiente #${userId} esperando aprobación en sala pending_user_${userId}`);
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log(`📡 [Socket.io] Cliente desconectado: ${socket.id}`);
     });

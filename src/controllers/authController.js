@@ -8,6 +8,7 @@ import UserRepository from '../repositories/UserRepository.js';
 import SedeRepository from '../repositories/SedeRepository.js';
 import AuditRepository from '../repositories/AuditRepository.js';
 import { passwordSchema } from '../validators/authValidator.js';
+import { notificationSystem } from '../utils/NotificationObserver.js';
 
 const googleClient = new OAuth2Client(config.google.clientId);
 
@@ -673,8 +674,28 @@ export const approveUser = async (req, res) => {
     const finalSedeId = (rol === 'ENCARGADO') ? Number(sedeId) : null;
     
     await UserRepository.approveUser(userId, rol, finalSedeId, req.user.id);
+    const approvedUser = await UserRepository.findById(userId);
+
+    const approvalEventPayload = {
+      type: 'USUARIO_APROBADO',
+      userId: Number(userId),
+      username: approvedUser?.username,
+      nombre_completo: approvedUser?.nombre_completo,
+      rol,
+      sede_id: finalSedeId,
+      sede_nombre: approvedUser?.sede_nombre || null,
+      message: '¡Registro exitoso! Tu cuenta ha sido aprobada por el administrador.'
+    };
+
+    if (req.app.get('io')) {
+      const io = req.app.get('io');
+      io.to(`pending_user_${userId}`).emit('usuario_aprobado', approvalEventPayload);
+      io.emit('usuario_aprobado', approvalEventPayload);
+    }
+    notificationSystem.notifyPendingUser(Number(userId), approvalEventPayload);
+
     await AuditRepository.logAction(req.user.id, req.user.username, 'APROBAR_USUARIO', `Aprobó al usuario ID ${userId} con rol ${rol}${finalSedeId ? ` y sede ${finalSedeId}` : ''}`, req.ip);
-    return res.status(200).json({ success: true, message: 'Usuario aprobado exitosamente.' });
+    return res.status(200).json({ success: true, message: 'Usuario aprobado exitosamente.', user: approvedUser });
   } catch (error) {
     console.error('Error approving user:', error);
     return res.status(500).json({ success: false, message: 'Error al aprobar usuario.' });
@@ -689,6 +710,20 @@ export const rejectUser = async (req, res) => {
   try {
     const { userId } = req.body;
     await UserRepository.rejectUser(userId, req.user.id);
+
+    const rejectEventPayload = {
+      type: 'USUARIO_RECHAZADO',
+      userId: Number(userId),
+      message: 'Tu solicitud de registro fue rechazada por el administrador.'
+    };
+
+    if (req.app.get('io')) {
+      const io = req.app.get('io');
+      io.to(`pending_user_${userId}`).emit('usuario_rechazado', rejectEventPayload);
+      io.emit('usuario_rechazado', rejectEventPayload);
+    }
+    notificationSystem.notifyPendingUser(Number(userId), rejectEventPayload);
+
     await AuditRepository.logAction(req.user.id, req.user.username, 'RECHAZAR_USUARIO', `Rechazó al usuario ID ${userId}`, req.ip);
     return res.status(200).json({ success: true, message: 'Usuario rechazado.' });
   } catch (error) {

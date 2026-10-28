@@ -10,4 +10,9 @@ router.get('/stream', authenticateJWT, (req, res) => {
   notificationSystem.subscribe(req, res);
 });
 
+// Endpoint SSE para usuarios en espera de aprobación del administrador
+router.get('/pending-stream/:userId', (req, res) => {
+  notificationSystem.subscribePending(req, res, req.params.userId);
+});
+
 export default router;

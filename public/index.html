@@ -663,6 +663,53 @@
   </div>
 
   <!-- ========================================================================= -->
+  <!-- MODAL: FLUJO DE ESPERA — PENDIENTE DE APROBACIÓN (SOCKET.IO / SSE) -->
+  <!-- ========================================================================= -->
+  <div id="pendingApprovalModal" class="hidden fixed inset-0 z-[75] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="w-full max-w-md glass-panel rounded-2xl p-6 md:p-8 space-y-5 border border-outline-variant/40 shadow-2xl text-center">
+      <!-- Estado 1: En espera de aprobación -->
+      <div id="pendingApprovalWaitingView" class="space-y-4">
+        <div class="w-16 h-16 mx-auto rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center">
+          <span class="material-symbols-outlined text-amber-400 text-3xl animate-pulse" id="pendingApprovalIcon">hourglass_top</span>
+        </div>
+        <div class="space-y-1">
+          <h3 class="font-headline font-bold text-xl text-on-surface" id="pendingApprovalTitle" data-i18n="pending_approval_modal_title">Pendiente de Aprobación</h3>
+          <p class="text-xs font-mono text-amber-400" id="pendingApprovalUserBadge">@usuario</p>
+        </div>
+        <p class="text-xs text-on-surface-variant leading-relaxed" id="pendingApprovalDesc" data-i18n="pending_approval_modal_desc">
+          Tu solicitud de registro fue enviada correctamente. Un <strong>Administrador</strong> debe aprobar tu cuenta y asignarte un <strong>Rol</strong> y <strong>Sede</strong> antes de que puedas ingresar.
+        </p>
+        <div class="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center justify-center gap-2 text-xs font-mono text-outline" id="pendingApprovalRealtimeBox">
+          <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+          <span data-i18n="pending_approval_listening">Esperando confirmación del administrador en tiempo real...</span>
+        </div>
+        <button type="button" onclick="closePendingApprovalModal()" class="w-full py-2.5 px-4 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-headline font-semibold text-xs uppercase rounded-lg border border-outline-variant/40 transition-all" data-i18n="btn_back_to_login">
+          Volver al Inicio de Sesión
+        </button>
+      </div>
+
+      <!-- Estado 2: Aprobado en tiempo real ("Registro exitoso") -->
+      <div id="pendingApprovalSuccessView" class="space-y-4 hidden">
+        <div class="w-16 h-16 mx-auto rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center">
+          <span class="material-symbols-outlined text-primary text-4xl">verified_user</span>
+        </div>
+        <div class="space-y-1">
+          <h3 class="font-headline font-bold text-xl text-primary" data-i18n="pending_approval_success_title">¡Registro exitoso!</h3>
+          <p class="text-xs font-mono text-on-surface-variant" id="pendingApprovalSuccessSubtitle">Tu cuenta ha sido aprobada por el administrador.</p>
+        </div>
+        <div class="p-3.5 rounded-xl bg-primary/10 border border-primary/30 text-xs font-mono text-on-surface space-y-1">
+          <div><span class="text-outline">Rol asignado:</span> <strong class="text-primary" id="approvedRoleBadge">--</strong></div>
+          <div id="approvedSedeRow" class="hidden"><span class="text-outline">Sede asignada:</span> <strong class="text-secondary" id="approvedSedeBadge">--</strong></div>
+        </div>
+        <button type="button" onclick="proceedToLoginAfterApproval()" class="w-full py-3 px-4 bg-primary hover:bg-emerald-400 text-on-primary font-headline font-bold text-xs uppercase rounded-lg shadow-lg transition-all flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-base">login</span>
+          <span data-i18n="btn_login_now">Iniciar Sesión Ahora</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
   <!-- MODAL: RECUPERACIÓN DE CONTRASEÑA ENLAZADA AL CORREO -->
   <!-- ========================================================================= -->
   <div id="forgotPasswordModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">

@@ -82,6 +82,9 @@ function initSocketConnection() {
     if (currentUser && currentUser.sede_id) {
       globalSocket.emit('join_sede', currentUser.sede_id);
     }
+    if (typeof waitingApprovalUser !== 'undefined' && waitingApprovalUser && waitingApprovalUser.id) {
+      globalSocket.emit('join_pending_user', waitingApprovalUser.id);
+    }
   });
 
   globalSocket.on('recepcion_creada', (data) => {
@@ -153,6 +156,18 @@ function initSocketConnection() {
     if (currentUser && currentUser.rol === 'ADMINISTRADOR') {
       showToast(`Nueva solicitud de acceso pendiente: ${data.nombre_completo} (@${data.username})`, 'info');
       if (typeof loadPendingUsers === 'function') loadPendingUsers();
+    }
+  });
+
+  globalSocket.on('usuario_aprobado', (data) => {
+    if (waitingApprovalUser && Number(waitingApprovalUser.id) === Number(data.userId)) {
+      handleRealtimeUserApproved(data);
+    }
+  });
+
+  globalSocket.on('usuario_rechazado', (data) => {
+    if (waitingApprovalUser && Number(waitingApprovalUser.id) === Number(data.userId)) {
+      handleRealtimeUserRejected(data);
     }
   });
 }
@@ -541,6 +556,9 @@ async function handleLoginSubmit(e) {
     const data = await res.json();
 
     if (!res.ok) {
+      if (res.status === 403 && data.status === 'PENDIENTE') {
+        openPendingApprovalModal(data.user || { username, nombre_completo: username });
+      }
       showAuthAlert(data.message || 'Credenciales inválidas.');
       btn.disabled = false;
       btnText.textContent = 'Autenticar y Abrir Panel del Software';
@@ -603,6 +621,7 @@ async function handleGoogleLogin(response) {
     if (!res.ok) {
       if (res.status === 403 && data.status === 'PENDIENTE') {
         showAuthAlert('Tu cuenta está pendiente de aprobación por un administrador. No puedes ingresar aún.', 'warning');
+        if (data.user) openPendingApprovalModal(data.user);
       } else if (res.status === 403 && data.status === 'RECHAZADO') {
         showAuthAlert('Tu solicitud fue rechazada por el administrador.', 'error');
       } else {
@@ -734,9 +753,10 @@ async function handleRegisterSubmit(e) {
       return;
     }
 
-    // El usuario queda en estado PENDIENTE sin sesión ni cookie JWT
+    // El usuario queda en estado PENDIENTE sin sesión ni cookie JWT; abrimos ventana de espera en tiempo real
     document.getElementById('registerForm').reset();
     showAuthAlert(data.message || 'Tu cuenta ha sido registrada y está pendiente de aprobación por un administrador.', 'success');
+    openPendingApprovalModal(data.user || { username, nombre_completo, email });
     btn.disabled = false;
     btnText.textContent = 'Registrarse';
 
@@ -746,6 +766,151 @@ async function handleRegisterSubmit(e) {
     btnText.textContent = 'Registrarse';
   }
 }
+
+// =============================================================================
+// 4.1 FLUJO DE ESPERA EN TIEMPO REAL (SOCKET.IO + SSE)
+// =============================================================================
+let waitingApprovalUser = null;
+let pendingApprovalEventSource = null;
+
+function openPendingApprovalModal(user) {
+  waitingApprovalUser = user || {};
+  const modal = document.getElementById('pendingApprovalModal');
+  const waitingView = document.getElementById('pendingApprovalWaitingView');
+  const successView = document.getElementById('pendingApprovalSuccessView');
+  if (!modal) return;
+
+  waitingView.classList.remove('hidden');
+  successView.classList.add('hidden');
+
+  const titleEl = document.getElementById('pendingApprovalTitle');
+  const descEl = document.getElementById('pendingApprovalDesc');
+  const iconEl = document.getElementById('pendingApprovalIcon');
+  const badgeEl = document.getElementById('pendingApprovalUserBadge');
+  const rtBox = document.getElementById('pendingApprovalRealtimeBox');
+
+  if (titleEl) titleEl.textContent = 'Pendiente de Aprobación';
+  if (iconEl) {
+    iconEl.textContent = 'hourglass_top';
+    iconEl.className = 'material-symbols-outlined text-amber-400 text-3xl animate-pulse';
+  }
+  if (badgeEl) {
+    badgeEl.textContent = user?.username ? `${user.nombre_completo || ''} (@${user.username})` : (user?.email || '');
+  }
+  if (descEl) {
+    descEl.innerHTML = 'Tu solicitud de registro fue recibida. Un <strong>Administrador</strong> debe aprobar tu cuenta y asignarte un <strong>Rol</strong> y <strong>Sede</strong> antes de que puedas ingresar.';
+  }
+  if (rtBox) rtBox.classList.remove('hidden');
+
+  modal.classList.remove('hidden');
+
+  // 1. Suscribir por Socket.IO
+  initSocketConnection();
+  if (globalSocket && user?.id) {
+    globalSocket.emit('join_pending_user', user.id);
+  }
+
+  // 2. Suscribir también por Server-Sent Events (SSE) como canal redundante
+  if (pendingApprovalEventSource) {
+    pendingApprovalEventSource.close();
+    pendingApprovalEventSource = null;
+  }
+  if (typeof EventSource !== 'undefined' && user?.id) {
+    pendingApprovalEventSource = new EventSource(`${API_BASE}/notifications/pending-stream/${user.id}`);
+    pendingApprovalEventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'USUARIO_APROBADO' && Number(payload.userId) === Number(user.id)) {
+          handleRealtimeUserApproved(payload);
+        } else if (payload.type === 'USUARIO_RECHAZADO' && Number(payload.userId) === Number(user.id)) {
+          handleRealtimeUserRejected(payload);
+        }
+      } catch (err) {
+        console.error('Error parseando evento SSE de aprobación:', err);
+      }
+    };
+  }
+}
+
+function handleRealtimeUserApproved(data) {
+  const waitingView = document.getElementById('pendingApprovalWaitingView');
+  const successView = document.getElementById('pendingApprovalSuccessView');
+  if (!waitingView || !successView) return;
+
+  waitingView.classList.add('hidden');
+  successView.classList.remove('hidden');
+
+  const roleBadge = document.getElementById('approvedRoleBadge');
+  const sedeRow = document.getElementById('approvedSedeRow');
+  const sedeBadge = document.getElementById('approvedSedeBadge');
+  const subEl = document.getElementById('pendingApprovalSuccessSubtitle');
+
+  if (roleBadge) roleBadge.textContent = data.rol || 'ASIGNADO';
+  if (data.sede_nombre || data.sede_id) {
+    if (sedeRow) sedeRow.classList.remove('hidden');
+    if (sedeBadge) sedeBadge.textContent = data.sede_nombre || `Sede #${data.sede_id}`;
+  } else if (sedeRow) {
+    sedeRow.classList.add('hidden');
+  }
+  if (subEl) {
+    subEl.textContent = data.message || 'Tu cuenta ha sido aprobada por el administrador.';
+  }
+
+  showAuthAlert('¡Registro exitoso! Tu cuenta ha sido aprobada. Ya puedes iniciar sesión.', 'success');
+  showToast('¡Registro exitoso! Tu cuenta fue aprobada por el administrador.', 'success');
+
+  if (pendingApprovalEventSource) {
+    pendingApprovalEventSource.close();
+    pendingApprovalEventSource = null;
+  }
+}
+
+function handleRealtimeUserRejected(data) {
+  const titleEl = document.getElementById('pendingApprovalTitle');
+  const descEl = document.getElementById('pendingApprovalDesc');
+  const iconEl = document.getElementById('pendingApprovalIcon');
+  const rtBox = document.getElementById('pendingApprovalRealtimeBox');
+
+  if (titleEl) titleEl.textContent = 'Solicitud Rechazada';
+  if (iconEl) {
+    iconEl.textContent = 'block';
+    iconEl.className = 'material-symbols-outlined text-error text-3xl';
+  }
+  if (descEl) {
+    descEl.textContent = data.message || 'Tu solicitud fue rechazada, contacta al administrador.';
+  }
+  if (rtBox) rtBox.classList.add('hidden');
+  showAuthAlert('Tu solicitud fue rechazada, contacta al administrador.', 'error');
+
+  if (pendingApprovalEventSource) {
+    pendingApprovalEventSource.close();
+    pendingApprovalEventSource = null;
+  }
+}
+
+function closePendingApprovalModal() {
+  const modal = document.getElementById('pendingApprovalModal');
+  if (modal) modal.classList.add('hidden');
+  if (pendingApprovalEventSource) {
+    pendingApprovalEventSource.close();
+    pendingApprovalEventSource = null;
+  }
+  switchAuthTab('login');
+}
+
+function proceedToLoginAfterApproval() {
+  const usernameToFill = waitingApprovalUser?.username || waitingApprovalUser?.email || '';
+  closePendingApprovalModal();
+  switchAuthTab('login');
+  const loginUserEl = document.getElementById('loginUsername');
+  const loginPassEl = document.getElementById('loginPassword');
+  if (loginUserEl && usernameToFill) loginUserEl.value = usernameToFill;
+  if (loginPassEl) loginPassEl.focus();
+}
+
+window.openPendingApprovalModal = openPendingApprovalModal;
+window.closePendingApprovalModal = closePendingApprovalModal;
+window.proceedToLoginAfterApproval = proceedToLoginAfterApproval;
 
 // =============================================================================
 // 5. RECUPERACIÓN DE CONTRASEÑA

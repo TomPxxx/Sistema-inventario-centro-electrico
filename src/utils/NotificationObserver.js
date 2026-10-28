@@ -27,6 +27,32 @@ class NotificationObserver {
     });
   }
 
+  // Suscribir un usuario en espera de aprobación (SSE sin sesión activa)
+  subscribePending(req, res, pendingUserId) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    res.write(`data: ${JSON.stringify({ type: 'WAITING_APPROVAL', userId: Number(pendingUserId) })}\n\n`);
+
+    const client = { req, res, pendingUserId: Number(pendingUserId) };
+    this.clients.add(client);
+
+    req.on('close', () => {
+      this.clients.delete(client);
+    });
+  }
+
+  // Notificar a un usuario específico en espera de aprobación
+  notifyPendingUser(userId, data) {
+    const payload = `data: ${JSON.stringify(data)}\n\n`;
+    for (const client of this.clients) {
+      if (client.pendingUserId === Number(userId)) {
+        client.res.write(payload);
+      }
+    }
+  }
+
   // Notificar a todos los clientes
   notifyAll(data) {
     const payload = `data: ${JSON.stringify(data)}\n\n`;
