@@ -62,13 +62,64 @@ export const getCategories = async (req, res) => {
 export const createCategory = async (req, res) => {
   try {
     const { nombre, descripcion, imagen_url } = req.body;
-    if (!nombre) return res.status(400).json({ success: false, message: 'Nombre de categoría requerido.' });
+    if (!nombre || !nombre.trim()) return res.status(400).json({ success: false, message: 'Nombre de categoría requerido.' });
     
-    const newCategory = await InventoryRepository.createCategory(nombre.trim(), descripcion, imagen_url);
-    return res.status(201).json({ success: true, message: 'Categoría creada', category: newCategory });
+    const newCategory = await InventoryRepository.createCategory(nombre.trim(), descripcion ? descripcion.trim() : null, imagen_url || null);
+    if (req.user) {
+      await AuditRepository.logAction(
+        req.user.id,
+        req.user.username,
+        'CREAR_CATEGORIA',
+        `Creó la categoría "${newCategory.nombre}" (ID: ${newCategory.id})${imagen_url ? ` con imagen de perfil (${imagen_url})` : ''}`,
+        req.ip
+      );
+    }
+    return res.status(201).json({ success: true, message: 'Categoría creada exitosamente.', category: newCategory });
   } catch (error) {
     console.error('[Inventory Error] createCategory:', error);
     return res.status(500).json({ success: false, message: 'Error al crear categoría: ' + error.message });
+  }
+};
+
+export const updateCategory = async (req, res) => {
+  try {
+    const categoryId = Number(req.params.id);
+    if (!categoryId) {
+      return res.status(400).json({ success: false, message: 'ID de categoría inválido.' });
+    }
+
+    const existing = await InventoryRepository.findCategoryById(categoryId);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Categoría no encontrada.' });
+    }
+
+    const { nombre, descripcion, imagen_url } = req.body;
+    const finalImageUrl = imagen_url === undefined ? existing.imagen_url : (imagen_url || null);
+
+    const updated = await InventoryRepository.updateCategory(categoryId, {
+      nombre: nombre ? nombre.trim() : existing.nombre,
+      descripcion: descripcion !== undefined ? descripcion : existing.descripcion,
+      imagen_url: finalImageUrl
+    });
+
+    if (req.user) {
+      await AuditRepository.logAction(
+        req.user.id,
+        req.user.username,
+        'ACTUALIZAR_CATEGORIA',
+        `Actualizó la categoría "${updated.nombre}" (ID: ${categoryId})${finalImageUrl ? ` — Imagen de perfil: ${finalImageUrl}` : ' — Con ícono de respaldo'}`,
+        req.ip
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Categoría actualizada exitosamente.',
+      category: updated
+    });
+  } catch (error) {
+    console.error('[Inventory Error] updateCategory:', error);
+    return res.status(500).json({ success: false, message: 'Error al actualizar categoría: ' + error.message });
   }
 };
 

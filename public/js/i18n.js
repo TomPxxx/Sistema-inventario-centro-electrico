@@ -238,7 +238,14 @@ const translations = {
     barcode_manual_placeholder: "O digita / escanea el código SKU manualmente...",
     btn_search_code: "Buscar",
     encargado_subtitle: "Gestión de almacén local.",
-    assigned_counting_tasks_title: "Tareas de Conteo Asignadas"
+    assigned_counting_tasks_title: "Tareas de Conteo Asignadas",
+    btn_new_category: "+ Categoría",
+    btn_create_new_category: "+ Crear Categoría",
+    edit_category_title: "Editar Perfil de Categoría",
+    lbl_category_name: "Nombre de la Categoría *",
+    lbl_category_profile_image: "Imagen de Perfil de Categoría (PNG, JPG, WEBP · Máx 5MB)",
+    category_image_fallback_hint: "Si no subes una imagen (o si deseas quitarla), se mostrará automáticamente el ícono eléctrico de respaldo.",
+    btn_use_fallback_icon: "Usar Ícono de Respaldo"
   },
   en: {
     // Auth & General
@@ -473,7 +480,14 @@ const translations = {
     barcode_manual_placeholder: "Or type / scan the SKU code manually...",
     btn_search_code: "Search",
     encargado_subtitle: "Local warehouse management.",
-    assigned_counting_tasks_title: "Assigned Counting Tasks"
+    assigned_counting_tasks_title: "Assigned Counting Tasks",
+    btn_new_category: "+ Category",
+    btn_create_new_category: "+ Create Category",
+    edit_category_title: "Edit Category Profile",
+    lbl_category_name: "Category Name *",
+    lbl_category_profile_image: "Category Profile Image (PNG, JPG, WEBP · Max 5MB)",
+    category_image_fallback_hint: "If no image is uploaded (or if removed), the fallback electrical icon tile will be displayed automatically.",
+    btn_use_fallback_icon: "Use Fallback Icon"
   }
 };
 

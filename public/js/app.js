@@ -1085,32 +1085,135 @@ function populateCategoriesSelect() {
 async function uploadImage(fileInputId) {
   const input = document.getElementById(fileInputId);
   if (!input || !input.files || input.files.length === 0) return null;
-  
+
   const file = input.files[0];
+  const allowedMimes = ['image/png', 'image/jpeg', 'image/webp'];
+  if (!allowedMimes.includes((file.type || '').toLowerCase())) {
+    alert('Formato no permitido. Solo se aceptan imágenes PNG, JPG o WEBP.');
+    return '__UPLOAD_ERROR__';
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    alert('El archivo excede el tamaño máximo permitido de 5 MB.');
+    return '__UPLOAD_ERROR__';
+  }
+
   const formData = new FormData();
   formData.append('image', file);
-  
+
   try {
     const res = await fetch(`${API_BASE}/upload`, {
       method: 'POST',
+      headers: currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {},
+      credentials: 'include',
       body: formData
     });
     const data = await res.json();
     if (res.ok && data.success) {
       return data.imagen_url;
     } else {
-      alert('Error subiendo imagen: ' + data.message);
-      return null;
+      alert('Error subiendo imagen: ' + (data.message || 'Archivo rechazado'));
+      return '__UPLOAD_ERROR__';
     }
   } catch (e) {
     console.error('Error uploading:', e);
-    return null;
+    alert('Error de red al subir la imagen.');
+    return '__UPLOAD_ERROR__';
   }
 }
 
-function promptCreateCategory() {
+window.promptCreateCategory = function() {
+  const idInput = document.getElementById('editingCategoryId');
+  const currentImgInput = document.getElementById('editingCategoryCurrentImage');
+  const nameInput = document.getElementById('newCategoryName');
+  const descInput = document.getElementById('newCategoryDescription');
+  const fileInput = document.getElementById('newCategoryImage');
+  const previewContainer = document.getElementById('categoryImagePreviewContainer');
+  const titleEl = document.getElementById('categoryModalTitle');
+  const iconEl = document.getElementById('categoryModalIcon');
+
+  if (idInput) idInput.value = '';
+  if (currentImgInput) currentImgInput.value = '';
+  if (nameInput) nameInput.value = '';
+  if (descInput) descInput.value = '';
+  if (fileInput) fileInput.value = '';
+  if (previewContainer) previewContainer.classList.add('hidden');
+  if (titleEl) titleEl.textContent = typeof window.t === 'function' ? window.t('create_category_title', 'Nueva Categoría') : 'Nueva Categoría';
+  if (iconEl) iconEl.textContent = 'create_new_folder';
+
   document.getElementById('createCategoryModal').classList.remove('hidden');
-}
+};
+
+window.openEditCategoryModal = function(categoryId) {
+  const cat = (liveCategories || []).find((c) => Number(c.id) === Number(categoryId));
+  if (!cat) return;
+
+  const idInput = document.getElementById('editingCategoryId');
+  const currentImgInput = document.getElementById('editingCategoryCurrentImage');
+  const nameInput = document.getElementById('newCategoryName');
+  const descInput = document.getElementById('newCategoryDescription');
+  const fileInput = document.getElementById('newCategoryImage');
+  const previewContainer = document.getElementById('categoryImagePreviewContainer');
+  const previewImg = document.getElementById('categoryImagePreviewImg');
+  const titleEl = document.getElementById('categoryModalTitle');
+  const iconEl = document.getElementById('categoryModalIcon');
+
+  if (idInput) idInput.value = cat.id;
+  if (currentImgInput) currentImgInput.value = cat.imagen_url || '';
+  if (nameInput) nameInput.value = cat.nombre || '';
+  if (descInput) descInput.value = cat.descripcion || '';
+  if (fileInput) fileInput.value = '';
+  if (titleEl) titleEl.textContent = typeof window.t === 'function' ? window.t('edit_category_title', 'Editar Perfil de Categoría') : 'Editar Perfil de Categoría';
+  if (iconEl) iconEl.textContent = 'add_a_photo';
+
+  if (cat.imagen_url && previewContainer && previewImg) {
+    previewImg.src = cat.imagen_url;
+    previewContainer.classList.remove('hidden');
+  } else if (previewContainer) {
+    previewContainer.classList.add('hidden');
+  }
+
+  document.getElementById('createCategoryModal').classList.remove('hidden');
+};
+
+window.previewCategoryImageInput = function(input) {
+  const previewContainer = document.getElementById('categoryImagePreviewContainer');
+  const previewImg = document.getElementById('categoryImagePreviewImg');
+  if (!input || !input.files || input.files.length === 0) return;
+
+  const file = input.files[0];
+  const allowedMimes = ['image/png', 'image/jpeg', 'image/webp'];
+  if (!allowedMimes.includes((file.type || '').toLowerCase())) {
+    alert('Formato no permitido. Solo se aceptan imágenes PNG, JPG o WEBP.');
+    input.value = '';
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    alert('El archivo excede el tamaño máximo permitido de 5 MB.');
+    input.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    if (previewImg && previewContainer) {
+      previewImg.src = evt.target.result;
+      previewContainer.classList.remove('hidden');
+    }
+  };
+  reader.readAsDataURL(file);
+};
+
+window.clearCategoryImageSelection = function() {
+  const fileInput = document.getElementById('newCategoryImage');
+  const currentImgInput = document.getElementById('editingCategoryCurrentImage');
+  const previewContainer = document.getElementById('categoryImagePreviewContainer');
+  const previewImg = document.getElementById('categoryImagePreviewImg');
+
+  if (fileInput) fileInput.value = '';
+  if (currentImgInput) currentImgInput.value = '';
+  if (previewImg) previewImg.src = '';
+  if (previewContainer) previewContainer.classList.add('hidden');
+};
 
 function closeCreateCategoryModal() {
   document.getElementById('createCategoryModal').classList.add('hidden');
@@ -1118,32 +1221,55 @@ function closeCreateCategoryModal() {
 
 async function handleCreateCategorySubmit(e) {
   e.preventDefault();
+  const editingId = document.getElementById('editingCategoryId')?.value;
+  const currentImg = document.getElementById('editingCategoryCurrentImage')?.value || null;
   const nombre = document.getElementById('newCategoryName').value.trim();
+  const descripcion = document.getElementById('newCategoryDescription')?.value.trim() || '';
   if (!nombre) return;
-  
+
   const btn = document.getElementById('btnSubmitNewCategory');
   btn.disabled = true;
-  btn.textContent = 'Subiendo...';
-  
-  const imagen_url = await uploadImage('newCategoryImage');
-  
+  btn.textContent = 'Guardando...';
+
+  const fileInput = document.getElementById('newCategoryImage');
+  let imagen_url = currentImg;
+
+  if (fileInput && fileInput.files && fileInput.files.length > 0) {
+    const uploadedUrl = await uploadImage('newCategoryImage');
+    if (uploadedUrl === '__UPLOAD_ERROR__') {
+      btn.disabled = false;
+      btn.innerHTML = '<span class="material-symbols-outlined text-base">save</span><span>Guardar Categoría</span>';
+      return;
+    }
+    imagen_url = uploadedUrl;
+  }
+
   try {
-    const res = await fetch(`${API_BASE}/inventory/categories`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, descripcion: '', imagen_url })
+    const url = editingId ? `${API_BASE}/inventory/categories/${editingId}` : `${API_BASE}/inventory/categories`;
+    const method = editingId ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
+      },
+      credentials: 'include',
+      body: JSON.stringify({ nombre, descripcion, imagen_url })
     });
     const data = await res.json();
-    if (res.ok) {
-      showAuthAlert('Categoría creada exitosamente', 'success');
+    if (res.ok && data.success) {
+      if (typeof showToast === 'function') {
+        showToast(editingId ? '✓ Perfil de categoría actualizado.' : '✓ Nueva categoría creada exitosamente.', 'success');
+      }
       closeCreateCategoryModal();
       document.getElementById('createCategoryForm').reset();
-      loadRealInventory();
+      await loadRealInventory();
     } else {
-      alert('Error: ' + data.message);
+      alert('Error: ' + (data.message || 'No se pudo guardar la categoría.'));
     }
   } catch (e) {
-    alert('Error al crear categoría');
+    alert('Error al guardar la categoría.');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<span class="material-symbols-outlined text-base">save</span><span>Guardar Categoría</span>';
@@ -1415,9 +1541,23 @@ function renderCategoryCardHtml(cat, count, clickHandler, suffixText) {
        <div class="w-full h-full hidden">${imgFallback}</div>`
     : imgFallback;
 
+  const isAdmin = currentUser && currentUser.rol === 'ADMINISTRADOR' && cat.id !== 'uncategorized';
+  const editProfileBtnHtml = isAdmin
+    ? `<button
+         type="button"
+         onclick="event.stopPropagation(); openEditCategoryModal(${cat.id})"
+         title="Cambiar imagen de perfil / editar categoría"
+         class="absolute top-2 right-2 z-20 px-2 py-1 rounded-lg bg-black/75 hover:bg-primary text-white hover:text-slate-950 border border-white/20 font-mono text-[10px] font-bold flex items-center gap-1 shadow-md transition-all"
+       >
+         <span class="material-symbols-outlined text-[13px]">add_a_photo</span>
+         <span class="hidden sm:inline">Perfil</span>
+       </button>`
+    : '';
+
   return `
     <div onclick="${clickHandler}" class="cursor-pointer group relative overflow-hidden rounded-xl bg-white dark:bg-surface-container border-2 border-slate-300 dark:border-outline-variant/40 hover:border-primary dark:hover:border-primary hover:shadow-lg transition-all duration-200 flex flex-col justify-between">
       <div class="aspect-video w-full overflow-hidden relative border-b border-slate-200 dark:border-outline-variant/30">
+        ${editProfileBtnHtml}
         ${imgHtml}
       </div>
       <div class="p-3 bg-white dark:bg-surface-container flex flex-col justify-between flex-1">
@@ -1485,6 +1625,17 @@ function renderAdminView() {
         t.product_count_suffix || 'producto(s)'
       );
     }
+
+    // Tarjeta interactiva para que el Administrador cree nuevas categorías con imagen de perfil
+    categoriesGrid.innerHTML += `
+      <div onclick="promptCreateCategory()" class="cursor-pointer group relative overflow-hidden rounded-xl bg-surface-container-low/50 hover:bg-primary/10 border-2 border-dashed border-primary/50 hover:border-primary transition-all duration-200 flex flex-col items-center justify-center p-5 min-h-[160px] text-center gap-2">
+        <div class="w-12 h-12 rounded-full bg-primary/15 border border-primary/40 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+          <span class="material-symbols-outlined text-2xl">create_new_folder</span>
+        </div>
+        <h4 class="font-headline font-bold text-xs sm:text-sm text-primary" data-i18n="btn_create_new_category">+ Crear Categoría</h4>
+        <span class="text-[10px] font-mono text-outline">Subir imagen de perfil opcional</span>
+      </div>
+    `;
     
     // En modo galería de categorías no mostramos la barra de paginación de la tabla
     const paginationContainer = document.getElementById('adminPaginationContainer');

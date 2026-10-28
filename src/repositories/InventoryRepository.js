@@ -22,9 +22,30 @@ class InventoryRepository {
   async createCategory(nombre, descripcion, imagen_url) {
     const { rows } = await pool.query(
       `INSERT INTO categorias (nombre, descripcion, imagen_url) VALUES ($1, $2, $3) RETURNING *`,
-      [nombre, descripcion, imagen_url || null]
+      [nombre, descripcion || null, imagen_url || null]
     );
     return rows[0];
+  }
+
+  async findCategoryById(id) {
+    const { rows } = await pool.query(
+      `SELECT id, nombre, descripcion, imagen_url FROM categorias WHERE id = $1`,
+      [id]
+    );
+    return rows[0] || null;
+  }
+
+  async updateCategory(id, { nombre, descripcion, imagen_url }) {
+    const { rows } = await pool.query(
+      `UPDATE categorias
+       SET nombre = COALESCE($1, nombre),
+           descripcion = COALESCE($2, descripcion),
+           imagen_url = $3
+       WHERE id = $4
+       RETURNING *`,
+      [nombre ? nombre.trim() : null, descripcion !== undefined ? descripcion : null, imagen_url || null, id]
+    );
+    return rows[0] || null;
   }
 
   async getStocks() {

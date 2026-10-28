@@ -977,6 +977,10 @@
                   <span data-i18n="btn_sync_neon">Sync Neon</span>
                 </button>
 
+                <button type="button" onclick="promptCreateCategory()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border-2 border-amber-500/60 flex items-center gap-1.5 transition-all shadow-sm font-bold">
+                  <span class="material-symbols-outlined text-sm">create_new_folder</span>
+                  <span data-i18n="btn_new_category">+ Categoría</span>
+                </button>
                 <button type="button" onclick="openNewProductModal()" class="text-xs font-mono px-3.5 py-1.5 rounded-lg bg-primary hover:bg-emerald-600 text-white border-2 border-emerald-700 flex items-center gap-1.5 transition-all shadow-md font-bold ml-1">
                   <span class="material-symbols-outlined text-sm">add</span>
                   <span data-i18n="btn_new_entry">+ Nueva Entrada</span>
@@ -1456,14 +1460,14 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: CREAR CATEGORIA (ADMIN) -->
+  <!-- MODAL: CREAR / EDITAR CATEGORIA E IMAGEN DE PERFIL (ADMIN) -->
   <!-- ========================================================================= -->
   <div id="createCategoryModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="w-full max-w-sm bg-surface-container rounded-xl p-6 border border-outline-variant/60 shadow-2xl space-y-4">
+    <div class="w-full max-w-md bg-surface-container rounded-xl p-6 border border-outline-variant/60 shadow-2xl space-y-4">
       <div class="flex items-center justify-between border-b border-outline-variant/30 pb-3">
         <div class="flex items-center gap-2 text-primary">
-          <span class="material-symbols-outlined">category</span>
-          <h3 class="font-headline font-bold text-base text-on-surface" data-i18n="create_category_title">Nueva Categoría</h3>
+          <span class="material-symbols-outlined" id="categoryModalIcon">category</span>
+          <h3 class="font-headline font-bold text-base text-on-surface" id="categoryModalTitle" data-i18n="create_category_title">Nueva Categoría</h3>
         </div>
         <button type="button" onclick="closeCreateCategoryModal()" class="text-outline hover:text-on-surface">
           <span class="material-symbols-outlined text-lg">close</span>
@@ -1471,14 +1475,35 @@
       </div>
 
       <form id="createCategoryForm" onsubmit="handleCreateCategorySubmit(event)" class="space-y-3 font-mono text-xs">
+        <input type="hidden" id="editingCategoryId" value="" />
+        <input type="hidden" id="editingCategoryCurrentImage" value="" />
+
         <div>
-          <label class="text-outline uppercase block mb-1">Nombre *</label>
-          <input id="newCategoryName" required class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40"/>
+          <label class="text-outline uppercase block mb-1" data-i18n="lbl_category_name">Nombre de la Categoría *</label>
+          <input id="newCategoryName" required placeholder="Ej: Iluminación Industrial" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40 font-sans"/>
         </div>
+
         <div>
-          <label class="text-outline uppercase block mb-1" data-i18n="lbl_image">Imagen (Opcional)</label>
-          <input id="newCategoryImage" type="file" accept="image/*" class="w-full bg-surface-container-low text-on-surface p-1.5 rounded border border-outline-variant/40 font-sans text-[10px] file:mr-2 file:py-1 file:px-2 file:border-0 file:rounded file:text-xs file:font-semibold file:bg-primary file:text-on-primary hover:file:bg-primary/90"/>
+          <label class="text-outline uppercase block mb-1" data-i18n="lbl_desc">Descripción (Opcional)</label>
+          <input id="newCategoryDescription" placeholder="Ej: Reflectores, campanas LED y alumbrado" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40 font-sans"/>
         </div>
+
+        <div class="space-y-2">
+          <label class="text-outline uppercase block mb-1" data-i18n="lbl_category_profile_image">Imagen de Perfil de Categoría (PNG, JPG, WEBP · Máx 5MB)</label>
+          <input id="newCategoryImage" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" onchange="previewCategoryImageInput(this)" class="w-full bg-surface-container-low text-on-surface p-1.5 rounded border border-outline-variant/40 font-sans text-[10px] file:mr-2 file:py-1 file:px-2 file:border-0 file:rounded file:text-xs file:font-semibold file:bg-primary file:text-on-primary hover:file:bg-primary/90"/>
+          <p class="text-[10px] text-outline font-sans" data-i18n="category_image_fallback_hint">
+            Si no subes una imagen (o si deseas quitarla), se mostrará automáticamente el ícono eléctrico de respaldo.
+          </p>
+
+          <div id="categoryImagePreviewContainer" class="hidden relative rounded-xl overflow-hidden border border-outline-variant/40 bg-surface-container-lowest h-32 flex items-center justify-center">
+            <img id="categoryImagePreviewImg" src="" alt="Vista previa" class="w-full h-full object-cover" />
+            <button type="button" onclick="clearCategoryImageSelection()" class="absolute top-2 right-2 px-2 py-1 rounded bg-black/75 hover:bg-error text-white text-[10px] font-mono font-bold flex items-center gap-1 shadow">
+              <span class="material-symbols-outlined text-[13px]">delete</span>
+              <span data-i18n="btn_use_fallback_icon">Usar Ícono de Respaldo</span>
+            </button>
+          </div>
+        </div>
+
         <div class="pt-2">
           <button id="btnSubmitNewCategory" type="submit" class="w-full py-3 bg-primary hover:bg-emerald-400 text-on-primary font-headline font-bold text-xs uppercase rounded-lg transition-colors flex items-center justify-center gap-2 custom-glow">
             <span class="material-symbols-outlined text-base">save</span>
