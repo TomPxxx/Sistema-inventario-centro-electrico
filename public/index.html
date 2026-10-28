@@ -1032,14 +1032,14 @@
               <table class="w-full text-left border-collapse font-sans text-xs">
                 <thead id="adminInventoryTableHead">
                   <tr class="bg-surface-container-lowest border-b border-outline-variant/40 font-mono text-[11px] uppercase tracking-wider text-outline">
-                    <th class="py-3 px-4">SKU / Producto</th>
-                    <th class="py-3 px-4">Unidad</th>
+                    <th class="py-3 px-4" data-i18n="th_sku_product">SKU / Producto</th>
+                    <th class="py-3 px-4" data-i18n="th_unit">Unidad</th>
                     <th class="py-3 px-4">Centro EP</th>
                     <th class="py-3 px-4">EP1</th>
                     <th class="py-3 px-4">EP3</th>
                     <th class="py-3 px-4">EP6</th>
-                    <th class="py-3 px-4 text-center">Total Red</th>
-                    <th class="py-3 px-4 text-right">Acción</th>
+                    <th class="py-3 px-4 text-center" data-i18n="th_total_network">Total Red</th>
+                    <th class="py-3 px-4 text-right" data-i18n="th_actions">Acción</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-outline-variant/20 text-on-surface" id="adminInventoryTableBody">
@@ -1061,8 +1061,8 @@
               <div class="flex items-center gap-3">
                 <img id="encargadoSedeImg" src="" class="w-12 h-12 rounded-lg object-cover shadow-sm hidden" alt="Sede">
                 <div>
-                  <h1 class="font-headline font-semibold text-xl text-on-surface" id="encargadoSedeTitle">Sede Asignada</h1>
-                  <p class="text-sm text-on-surface-variant mt-1">Gestión de almacén local.</p>
+                  <h1 class="font-headline font-semibold text-xl text-on-surface" id="encargadoSedeTitle" data-i18n="lbl_assigned_branch">Sede Asignada</h1>
+                  <p class="text-sm text-on-surface-variant mt-1" data-i18n="encargado_subtitle">Gestión de almacén local.</p>
                 </div>
               </div>
             </div>
@@ -1097,8 +1097,12 @@
                 </button>
                 <div class="relative w-full">
                   <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
-                  <input type="text" id="encargadoSearchInput" onkeyup="filterEncargadoSearch(this.value)" placeholder="Buscar producto en tu sede..." class="w-full bg-surface-container-lowest text-on-surface pl-10 pr-4 py-2.5 rounded-lg border border-outline-variant/40 focus:border-primary focus:outline-none font-sans text-xs shadow-sm transition-all" />
+                  <input type="text" id="encargadoSearchInput" onkeyup="filterEncargadoSearch(this.value)" placeholder="Buscar producto en tu sede..." data-i18n-placeholder="search_placeholder" class="w-full bg-surface-container-lowest text-on-surface pl-10 pr-4 py-2.5 rounded-lg border border-outline-variant/40 focus:border-primary focus:outline-none font-sans text-xs shadow-sm transition-all" />
                 </div>
+                <button type="button" onclick="openBarcodeScannerModal('encargadoSearchInput')" class="px-3 py-2.5 bg-secondary hover:bg-yellow-400 text-on-secondary rounded-lg font-mono text-xs font-bold flex items-center gap-1 shadow-sm shrink-0" title="Escanear Código de Barras / SKU con Cámara">
+                  <span class="material-symbols-outlined text-[18px]">barcode_scanner</span>
+                  <span class="hidden sm:inline" data-i18n="btn_scan">Escanear</span>
+                </button>
               </div>
             </div>
 
@@ -1153,7 +1157,7 @@
                 <span class="material-symbols-outlined text-base">price_check</span>
                 <span data-i18n="quick_price_title">Consulta de Precios</span>
               </div>
-              <input id="quickPriceInput" oninput="handleQuickPriceSearch(this.value)" placeholder="Buscar producto o SKU..." class="w-full bg-surface-container-low text-xs p-2 rounded border border-outline-variant/40 text-on-surface font-sans" type="text"/>
+              <input id="quickPriceInput" oninput="handleQuickPriceSearch(this.value)" placeholder="Buscar producto o SKU..." data-i18n-placeholder="search_placeholder" class="w-full bg-surface-container-low text-xs p-2 rounded border border-outline-variant/40 text-on-surface font-sans" type="text"/>
               <div id="quickPriceResults" class="space-y-1.5 max-h-48 overflow-y-auto text-xs">
                 <!-- Resultados -->
               </div>
@@ -1180,7 +1184,7 @@
             <div class="bg-surface-container p-4 rounded-xl border border-outline-variant/40 space-y-3 shadow-sm">
               <div class="flex items-center gap-2 text-tertiary font-headline font-semibold text-sm">
                 <span class="material-symbols-outlined text-base">fact_check</span>
-                <span>Tareas de Conteo Asignadas</span>
+                <span data-i18n="assigned_counting_tasks_title">Tareas de Conteo Asignadas</span>
               </div>
               <div class="space-y-2 font-mono text-xs" id="employeeRecepcionesList">
                 <!-- Se poblarán las recepciones asignadas -->

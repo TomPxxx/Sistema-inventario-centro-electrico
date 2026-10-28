@@ -200,16 +200,44 @@ const translations = {
     session_locked_title: "Sesión Bloqueada",
     session_locked_desc: "Por seguridad, la sesión se bloqueó tras 2 minutos de inactividad. Ingresa tu contraseña para continuar donde lo dejaste.",
     btn_unlock_session: "Desbloquear Sesión",
-    pending_users_title: "Solicitudes de Acceso (Google)",
-    th_name: "Nombre",
-    th_email: "Correo",
+    pending_users_title: "Solicitudes de Acceso Pendientes",
+    th_name: "Nombre / Usuario",
+    th_email: "Correo / Origen",
     th_assign_role_branch: "Asignar Rol / Sede",
     lbl_assigned_employee_count: "Empleado Asignado para Conteo",
     btn_create_count_task: "Crear Tarea de Conteo",
     btn_add: "Añadir",
     btn_finish_count_send: "Finalizar Conteo y Enviar",
     lbl_brand_req: "Marca",
-    lbl_quantity_req: "Cantidad"
+    lbl_quantity_req: "Cantidad",
+
+    // Nuevas traducciones (Puntos 3 a 8)
+    lbl_register_pending_notice: "Tu solicitud quedará en estado PENDIENTE. Un Administrador verificará tu identidad y te asignará tu Rol y Sede antes de habilitar tu acceso.",
+    pending_approval_modal_title: "Pendiente de Aprobación",
+    pending_approval_modal_desc: "Tu solicitud de registro fue enviada correctamente. Un Administrador debe aprobar tu cuenta y asignarte un Rol y Sede antes de que puedas ingresar.",
+    pending_approval_listening: "Esperando confirmación del administrador en tiempo real...",
+    btn_back_to_login: "Volver al Inicio de Sesión",
+    pending_approval_success_title: "¡Registro exitoso!",
+    btn_login_now: "Iniciar Sesión Ahora",
+    menu_users_panel: "Panel de Usuarios",
+    admin_users_modal_title: "Panel de Usuarios y Sesiones Activas",
+    admin_users_modal_desc: "Presencia en tiempo real vía Socket.IO y cierre forzoso de sesiones con registro en Blacklist y Auditoría.",
+    lbl_total_users: "Total de Usuarios",
+    lbl_online_users: "En Línea (Socket.IO)",
+    lbl_offline_users: "Desconectados",
+    th_presence: "Presencia",
+    th_last_login: "Último Acceso",
+    btn_force_logout: "Cerrar Sesión",
+    status_online: "En línea",
+    status_offline: "Desconectado",
+    barcode_modal_title: "Lector de Código de Barras / SKU",
+    barcode_https_warning_title: "Se requiere HTTPS o localhost para usar la cámara",
+    barcode_https_warning_desc: "Por seguridad del navegador, el acceso a la cámara web solo está habilitado bajo conexiones seguras (HTTPS) o desde localhost. Puedes usar el campo manual inferior o un lector láser USB.",
+    barcode_align_hint: "Alinea el código de barras o QR dentro del recuadro",
+    barcode_manual_placeholder: "O digita / escanea el código SKU manualmente...",
+    btn_search_code: "Buscar",
+    encargado_subtitle: "Gestión de almacén local.",
+    assigned_counting_tasks_title: "Tareas de Conteo Asignadas"
   },
   en: {
     // Auth & General
@@ -406,16 +434,44 @@ const translations = {
     session_locked_title: "Session Locked",
     session_locked_desc: "For security, your session was locked after 2 minutes of inactivity. Enter your password to continue.",
     btn_unlock_session: "Unlock Session",
-    pending_users_title: "Access Requests (Google)",
-    th_name: "Name",
-    th_email: "Email",
+    pending_users_title: "Pending Access Requests",
+    th_name: "Name / Username",
+    th_email: "Email / Provider",
     th_assign_role_branch: "Assign Role / Branch",
     lbl_assigned_employee_count: "Assigned Counting Employee",
     btn_create_count_task: "Create Counting Task",
     btn_add: "Add",
     btn_finish_count_send: "Finish Count & Send",
     lbl_brand_req: "Brand",
-    lbl_quantity_req: "Quantity"
+    lbl_quantity_req: "Quantity",
+
+    // New translations (Points 3 to 8)
+    lbl_register_pending_notice: "Your request will remain in PENDING status. An Administrator will verify your identity and assign your Role and Branch before enabling access.",
+    pending_approval_modal_title: "Pending Approval",
+    pending_approval_modal_desc: "Your registration request was submitted. An Administrator must approve your account and assign a Role and Branch before you can sign in.",
+    pending_approval_listening: "Waiting for real-time administrator confirmation...",
+    btn_back_to_login: "Back to Login",
+    pending_approval_success_title: "Registration Successful!",
+    btn_login_now: "Sign In Now",
+    menu_users_panel: "Users Panel",
+    admin_users_modal_title: "Users & Active Sessions Panel",
+    admin_users_modal_desc: "Real-time presence via Socket.IO and forced session termination with Blacklist and Audit logging.",
+    lbl_total_users: "Total Users",
+    lbl_online_users: "Online (Socket.IO)",
+    lbl_offline_users: "Offline",
+    th_presence: "Presence",
+    th_last_login: "Last Login",
+    btn_force_logout: "End Session",
+    status_online: "Online",
+    status_offline: "Offline",
+    barcode_modal_title: "Barcode / SKU Scanner",
+    barcode_https_warning_title: "HTTPS or localhost is required to access the camera",
+    barcode_https_warning_desc: "For browser security, camera access is only enabled over secure connections (HTTPS) or localhost. You can use the manual input below or a USB laser scanner.",
+    barcode_align_hint: "Align the barcode or QR code inside the frame",
+    barcode_manual_placeholder: "Or type / scan the SKU code manually...",
+    btn_search_code: "Search",
+    encargado_subtitle: "Local warehouse management.",
+    assigned_counting_tasks_title: "Assigned Counting Tasks"
   }
 };
 
@@ -504,6 +560,13 @@ function setLanguage(lang) {
     if (encView && !encView.classList.contains('hidden')) {
       renderEncargadoView();
     }
+  }
+  if (typeof window.updatePasswordChecklist === 'function') {
+    window.updatePasswordChecklist('regPassword', 'regPasswordChecklist');
+    window.updatePasswordChecklist('recoveryNewPassword', 'recoveryPasswordChecklist');
+  }
+  if (typeof window.renderAdminUsersTable === 'function' && typeof adminUsersCache !== 'undefined' && Array.isArray(adminUsersCache) && adminUsersCache.length > 0) {
+    window.renderAdminUsersTable(adminUsersCache);
   }
 }
 window.setLanguage = setLanguage;

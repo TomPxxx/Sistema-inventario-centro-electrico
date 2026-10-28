@@ -3772,12 +3772,15 @@ window.renderAdminUsersTable = function(users) {
 
   tbody.innerHTML = list.map((u) => {
     const isMe = currentUser && Number(currentUser.id) === Number(u.id);
+    const onlineLabel = typeof window.t === 'function' ? window.t('status_online', 'En línea') : 'En línea';
+    const offlineLabel = typeof window.t === 'function' ? window.t('status_offline', 'Desconectado') : 'Desconectado';
+    const forceLogoutLabel = typeof window.t === 'function' ? window.t('btn_force_logout', 'Cerrar Sesión') : 'Cerrar Sesión';
     const presenceBadge = u.online
       ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-mono text-[11px] font-bold">
-           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>En línea
+           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>${onlineLabel}
          </span>`
       : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-container-highest text-outline border border-outline-variant/30 font-mono text-[11px]">
-           <span class="w-2 h-2 rounded-full bg-slate-500"></span>Desconectado
+           <span class="w-2 h-2 rounded-full bg-slate-500"></span>${offlineLabel}
          </span>`;
 
     const statusBadgeClass = u.estado === 'ACTIVO'
@@ -3811,7 +3814,7 @@ window.renderAdminUsersTable = function(users) {
             class="px-3 py-1.5 rounded-lg bg-error/15 hover:bg-error text-error hover:text-white border border-error/40 font-mono text-[11px] font-bold transition-all inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <span class="material-symbols-outlined text-[14px]">power_settings_new</span>
-            <span data-i18n="btn_force_logout">Cerrar Sesión</span>
+            <span data-i18n="btn_force_logout">${forceLogoutLabel}</span>
           </button>
         </td>
       </tr>
