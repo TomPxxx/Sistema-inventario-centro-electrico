@@ -3775,6 +3775,7 @@ window.renderAdminUsersTable = function(users) {
     const onlineLabel = typeof window.t === 'function' ? window.t('status_online', 'En línea') : 'En línea';
     const offlineLabel = typeof window.t === 'function' ? window.t('status_offline', 'Desconectado') : 'Desconectado';
     const forceLogoutLabel = typeof window.t === 'function' ? window.t('btn_force_logout', 'Cerrar Sesión') : 'Cerrar Sesión';
+    const deleteUserLabel = typeof window.t === 'function' ? window.t('btn_delete_user', 'Eliminar') : 'Eliminar';
     const presenceBadge = u.online
       ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-mono text-[11px] font-bold">
            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>${onlineLabel}
@@ -3807,15 +3808,26 @@ window.renderAdminUsersTable = function(users) {
         <td class="py-2.5 px-3">${presenceBadge}</td>
         <td class="py-2.5 px-3 font-mono text-[11px] text-outline">${lastLoginStr}</td>
         <td class="py-2.5 px-3 text-right">
-          <button
-            type="button"
-            onclick="forceLogoutUser(${u.id}, '${u.username}')"
-            ${isMe ? 'disabled title="Usa el botón Salir para tu propia sesión"' : ''}
-            class="px-3 py-1.5 rounded-lg bg-error/15 hover:bg-error text-error hover:text-white border border-error/40 font-mono text-[11px] font-bold transition-all inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <span class="material-symbols-outlined text-[14px]">power_settings_new</span>
-            <span data-i18n="btn_force_logout">${forceLogoutLabel}</span>
-          </button>
+          <div class="inline-flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              onclick="forceLogoutUser(${u.id}, '${u.username}')"
+              ${isMe ? 'disabled title="Usa el botón Salir para tu propia sesión"' : ''}
+              class="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/40 font-mono text-[11px] font-bold transition-all inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <span class="material-symbols-outlined text-[14px]">power_settings_new</span>
+              <span data-i18n="btn_force_logout">${forceLogoutLabel}</span>
+            </button>
+            <button
+              type="button"
+              onclick="deleteUserAdmin(${u.id}, '${u.username}')"
+              ${isMe ? 'disabled title="No puedes eliminar tu propia cuenta activa"' : ''}
+              class="px-2.5 py-1.5 rounded-lg bg-error/15 hover:bg-error text-error hover:text-white border border-error/40 font-mono text-[11px] font-bold transition-all inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <span class="material-symbols-outlined text-[14px]">delete_forever</span>
+              <span data-i18n="btn_delete_user">${deleteUserLabel}</span>
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -3843,6 +3855,31 @@ window.forceLogoutUser = async function(userId, username) {
   } catch (err) {
     console.error('Error cerrando sesión de usuario:', err);
     alert('Error de red al intentar cerrar la sesión.');
+  }
+};
+
+window.deleteUserAdmin = async function(userId, username) {
+  if (!confirm(`⚠️ ¿Estás seguro de que deseas ELIMINAR permanentemente del sistema al usuario @${username}?\n\nSi tiene sesión activa se le cerrará inmediatamente y esta acción quedará registrada en auditoría.`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/auth/users/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
+      },
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast(data.message || `Usuario @${username} eliminado del sistema.`, 'success');
+      await loadAdminUsers();
+      if (typeof loadPendingUsers === 'function') loadPendingUsers();
+    } else {
+      alert(data.message || 'Error al eliminar el usuario del sistema.');
+    }
+  } catch (err) {
+    console.error('Error eliminando usuario:', err);
+    alert('Error de red al intentar eliminar el usuario.');
   }
 };
 

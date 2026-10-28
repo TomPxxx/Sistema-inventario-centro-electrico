@@ -196,6 +196,53 @@ class UserRepository {
     const result = await pool.query(query, [token]);
     return result.rows.length > 0;
   }
+
+  async deleteUserById(userId, fallbackAdminId) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      await client.query('UPDATE usuarios SET admin_aprobador_id = NULL WHERE admin_aprobador_id = $1', [userId]);
+      await client.query('DELETE FROM usuario_politicas WHERE usuario_id = $1', [userId]);
+      await client.query('UPDATE audit_logs SET usuario_id = NULL WHERE usuario_id = $1', [userId]);
+
+      await client.query('UPDATE solicitudes_material SET usuario_respuesta_id = NULL WHERE usuario_respuesta_id = $1', [userId]);
+      await client.query('SAVEPOINT sp_corredor');
+      try {
+        await client.query('UPDATE solicitudes_material SET empleado_corredor_id = NULL WHERE empleado_corredor_id = $1', [userId]);
+      } catch (_err) {
+        await client.query('ROLLBACK TO SAVEPOINT sp_corredor');
+      }
+
+      if (fallbackAdminId) {
+        await client.query('UPDATE solicitudes_material SET usuario_solicitante_id = $2 WHERE usuario_solicitante_id = $1', [userId, fallbackAdminId]);
+        await client.query('UPDATE traslados SET usuario_recibe_id = NULL WHERE usuario_recibe_id = $1', [userId]);
+        await client.query('UPDATE traslados SET usuario_envia_id = $2 WHERE usuario_envia_id = $1', [userId, fallbackAdminId]);
+        await client.query('UPDATE movimientos_inventario SET usuario_id = $2 WHERE usuario_id = $1', [userId, fallbackAdminId]);
+        await client.query('UPDATE recepciones_mercancia SET empleado_id = NULL WHERE empleado_id = $1', [userId]);
+        await client.query('UPDATE recepciones_mercancia SET administrador_id = NULL WHERE administrador_id = $1', [userId]);
+        await client.query('UPDATE recepciones_mercancia SET encargado_id = $2 WHERE encargado_id = $1', [userId, fallbackAdminId]);
+      } else {
+        await client.query('DELETE FROM traslados WHERE usuario_envia_id = $1 OR usuario_recibe_id = $1', [userId]);
+        await client.query('DELETE FROM solicitudes_material WHERE usuario_solicitante_id = $1', [userId]);
+        await client.query('DELETE FROM movimientos_inventario WHERE usuario_id = $1', [userId]);
+        await client.query('DELETE FROM recepciones_mercancia WHERE encargado_id = $1', [userId]);
+      }
+
+      const result = await client.query(
+        'DELETE FROM usuarios WHERE id = $1 RETURNING id, username, nombre_completo, rol',
+        [userId]
+      );
+
+      await client.query('COMMIT');
+      return result.rows[0] || null;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 export default new UserRepository();

@@ -17,7 +17,8 @@ import {
   rejectUser,
   getAuditLogs,
   getAllUsers,
-  forceLogoutUser
+  forceLogoutUser,
+  deleteUser
 } from '../controllers/authController.js';
 import { authenticateJWT } from '../middlewares/authMiddleware.js';
 import { authorizeRoles } from '../middlewares/roleMiddleware.js';
@@ -55,6 +56,7 @@ router.post('/approve', authenticateJWT, authorizeRoles('ADMINISTRADOR'), approv
 router.post('/reject', authenticateJWT, authorizeRoles('ADMINISTRADOR'), rejectUser);
 router.get('/users', authenticateJWT, authorizeRoles('ADMINISTRADOR'), getAllUsers);
 router.post('/users/:id/force-logout', authenticateJWT, authorizeRoles('ADMINISTRADOR'), forceLogoutUser);
+router.delete('/users/:id', authenticateJWT, authorizeRoles('ADMINISTRADOR'), deleteUser);
 
 // Ruta para ver logs de auditoría
 router.get('/audit-logs', authenticateJWT, authorizeRoles('ADMINISTRADOR'), getAuditLogs);

@@ -863,3 +863,81 @@ export const forceLogoutUser = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error interno al cerrar la sesión del usuario.' });
   }
 };
+
+/**
+ * Panel Admin: Eliminar un usuario del sistema, revocando primero su sesión activa y registrando en auditoría
+ * DELETE /api/auth/users/:id
+ */
+export const deleteUser = async (req, res) => {
+  try {
+    const targetUserId = Number(req.params.id);
+    if (!targetUserId) {
+      return res.status(400).json({ success: false, message: 'ID de usuario inválido.' });
+    }
+
+    if (targetUserId === Number(req.user.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'No puedes eliminar tu propia cuenta de administrador mientras tienes sesión iniciada.'
+      });
+    }
+
+    const targetUser = await UserRepository.findById(targetUserId);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+    }
+
+    // 1. Revocar token activo en blacklist antes de eliminar
+    const activeJwt = activeUserTokens.get(targetUserId);
+    if (activeJwt) {
+      await UserRepository.blacklistToken(activeJwt);
+      activeUserTokens.delete(targetUserId);
+    }
+    if (targetUser.current_session_token) {
+      await UserRepository.blacklistToken(targetUser.current_session_token);
+    }
+
+    // 2. Remover de presencia activa en Socket.IO y notificar cierre forzoso si estaba conectado
+    const onlineUsersMap = req.app.get('onlineUsers');
+    if (onlineUsersMap && onlineUsersMap.has(targetUserId)) {
+      onlineUsersMap.delete(targetUserId);
+    }
+
+    if (req.app.get('io')) {
+      const io = req.app.get('io');
+      io.emit('sesion_revocada_admin', {
+        userId: targetUserId,
+        username: targetUser.username,
+        message: 'Tu cuenta ha sido eliminada del sistema por un administrador.'
+      });
+
+      const onlineUserIds = [];
+      if (onlineUsersMap) {
+        for (const [uid, sockets] of onlineUsersMap.entries()) {
+          if (sockets.size > 0) onlineUserIds.push(Number(uid));
+        }
+      }
+      io.emit('presencia_usuarios_actualizada', { onlineUserIds });
+    }
+
+    // 3. Eliminar usuario de la base de datos preservando integridad referencial
+    await UserRepository.deleteUserById(targetUserId, req.user.id);
+
+    // 4. Registrar en auditoría
+    await AuditRepository.logAction(
+      req.user.id,
+      req.user.username,
+      'ELIMINAR_USUARIO',
+      `Eliminó del sistema al usuario @${targetUser.username} (${targetUser.nombre_completo}, ID: ${targetUserId}, Rol: ${targetUser.rol})`,
+      req.ip
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `El usuario @${targetUser.username} ha sido eliminado del sistema.`
+    });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return res.status(500).json({ success: false, message: 'Error interno al eliminar el usuario del sistema.' });
+  }
+};
