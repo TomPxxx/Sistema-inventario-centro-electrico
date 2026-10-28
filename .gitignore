@@ -20,4 +20,5 @@ test_hash.js
 create_audit.cjs
 backups/*.sql
 !backups/.gitkeep
+scratch/
 

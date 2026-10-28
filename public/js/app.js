@@ -441,11 +441,11 @@ async function checkDatabaseHealth() {
 
     if (res.ok && data.database === 'Connected') {
       dot.className = 'w-2 h-2 rounded-full bg-primary animate-pulse';
-      text.textContent = 'MySQL Conectado · 4 Sedes Online';
+      text.textContent = 'Sistema Conectado · 4 Sedes Online';
       text.className = 'text-primary font-semibold';
     } else {
       dot.className = 'w-2 h-2 rounded-full bg-error';
-      text.textContent = 'MySQL Desconectado';
+      text.textContent = 'Sistema Desconectado';
       text.className = 'text-error font-semibold';
     }
   } catch (err) {
@@ -660,6 +660,27 @@ async function submitPolicyAcceptance() {
   }
 }
 
+// Validación de política de contraseñas (Mín. 12 caracteres, 1 mayús, 1 minús, 3 números, 1 carácter especial)
+function validatePasswordPolicy(password) {
+  if (!password || password.length < 12) {
+    return 'La contraseña debe tener al menos 12 caracteres.';
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'La contraseña debe incluir al menos una letra mayúscula.';
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'La contraseña debe incluir al menos una letra minúscula.';
+  }
+  const digitMatches = password.match(/\d/g) || [];
+  if (digitMatches.length < 3) {
+    return 'La contraseña debe contener al menos 3 números.';
+  }
+  if (!/[^a-zA-Z0-9]/.test(password)) {
+    return 'La contraseña debe contener al menos un carácter especial (ej: !@#$%^&*).';
+  }
+  return null;
+}
+
 // =============================================================================
 // 4. REGISTRO DE NUEVOS USUARIOS
 // =============================================================================
@@ -676,11 +697,18 @@ async function handleRegisterSubmit(e) {
   const sede_id = rol === 'ENCARGADO' ? document.getElementById('regSedeId').value : null;
   const honey = document.getElementById('registerHoney') ? document.getElementById('registerHoney').value : '';
 
+  // Validar política de contraseña antes de enviar
+  const pwdPolicyError = validatePasswordPolicy(password);
+  if (pwdPolicyError) {
+    showAuthAlert(pwdPolicyError);
+    return;
+  }
+
   const btn = document.getElementById('btnRegisterSubmit');
   const btnText = document.getElementById('btnRegisterText');
 
   btn.disabled = true;
-  btnText.textContent = 'Registrando en Base de Datos MySQL...';
+  btnText.textContent = 'Registrando usuario...';
 
   try {
     const res = await fetch(`${API_BASE}/auth/register`, {
@@ -692,9 +720,12 @@ async function handleRegisterSubmit(e) {
     const data = await res.json();
 
     if (!res.ok) {
-      showAuthAlert(data.message || 'Error al registrar el usuario.');
+      const errorMsg = data.errors && data.errors.length > 0 
+        ? data.errors.map(e => e.mensaje).join(' ') 
+        : (data.message || 'Error al registrar el usuario.');
+      showAuthAlert(errorMsg);
       btn.disabled = false;
-      btnText.textContent = 'Registrar en Base de Datos';
+      btnText.textContent = 'Registrarse';
       return;
     }
 
@@ -708,13 +739,13 @@ async function handleRegisterSubmit(e) {
     setTimeout(() => {
       launchSoftwareView(data.user);
       btn.disabled = false;
-      btnText.textContent = 'Registrar en Base de Datos';
+      btnText.textContent = 'Registrarse';
     }, 600);
 
   } catch (error) {
     showAuthAlert('Error al procesar la solicitud de registro.');
     btn.disabled = false;
-    btnText.textContent = 'Registrar en Base de Datos';
+    btnText.textContent = 'Registrarse';
   }
 }
 
@@ -785,6 +816,12 @@ async function confirmResetPassword() {
 
   if (!pin || !newPassword) {
     alert('Ingresa el código PIN y la nueva contraseña.');
+    return;
+  }
+
+  const pwdPolicyError = validatePasswordPolicy(newPassword);
+  if (pwdPolicyError) {
+    alert(pwdPolicyError);
     return;
   }
 
@@ -984,11 +1021,11 @@ function filterAdminTable(sedeId) {
   
   const tabs = document.getElementById('adminSedeTabs').querySelectorAll('button');
   tabs.forEach(t => {
-    t.className = 'px-3 py-1.5 rounded bg-surface-container-high text-on-surface hover:bg-surface-container-highest font-mono text-xs font-bold transition-colors';
+    t.className = 'px-3 py-1.5 rounded-lg bg-white dark:bg-surface-container-high text-slate-700 dark:text-on-surface hover:border-slate-500 border-2 border-slate-300 dark:border-outline-variant/60 font-mono text-xs font-bold transition-all shadow-sm';
   });
   
   if (window.event && window.event.currentTarget) {
-    window.event.currentTarget.className = 'px-3 py-1.5 rounded bg-primary text-on-primary font-mono text-xs font-bold transition-colors shadow-sm';
+    window.event.currentTarget.className = 'px-3.5 py-1.5 rounded-lg bg-primary text-white border-2 border-emerald-700 font-mono text-xs font-bold transition-all shadow-md';
   }
   
   renderAdminView();
@@ -1126,6 +1163,77 @@ function renderPaginationControls(containerId, currentPage, totalItems, pageSize
 }
 
 
+// --- CONFIGURACIÓN VISUAL Y CATEGORÍAS ELÉCTRICAS (ALTO CONTRASTE) ---
+function getCategoryTileConfig(catName) {
+  const name = (catName || '').toLowerCase();
+  if (name.includes('cable') || name.includes('conductor')) {
+    return { icon: 'cable', gradientLight: 'from-emerald-100 via-teal-50 to-emerald-50', gradientDark: 'from-emerald-950/50 via-teal-900/30 to-slate-900/50', color: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-500/40', tag: 'Cables / THHN' };
+  }
+  if (name.includes('tub') || name.includes('canal')) {
+    return { icon: 'view_column', gradientLight: 'from-sky-100 via-blue-50 to-sky-50', gradientDark: 'from-sky-950/50 via-blue-900/30 to-slate-900/50', color: 'text-sky-700 dark:text-sky-400', border: 'border-sky-500/40', tag: 'Tubería / EMT' };
+  }
+  if (name.includes('ilumin') || name.includes('lamp') || name.includes('luz')) {
+    return { icon: 'lightbulb', gradientLight: 'from-amber-100 via-yellow-50 to-amber-50', gradientDark: 'from-amber-950/50 via-yellow-900/30 to-slate-900/50', color: 'text-amber-700 dark:text-amber-300', border: 'border-amber-500/40', tag: 'LED / Iluminación' };
+  }
+  if (name.includes('protec') || name.includes('breaker') || name.includes('dps')) {
+    return { icon: 'shield', gradientLight: 'from-rose-100 via-red-50 to-rose-50', gradientDark: 'from-rose-950/50 via-red-900/30 to-slate-900/50', color: 'text-rose-700 dark:text-rose-400', border: 'border-rose-500/40', tag: 'Breakers / DPS' };
+  }
+  if (name.includes('solar') || name.includes('panel') || name.includes('foto')) {
+    return { icon: 'solar_power', gradientLight: 'from-orange-100 via-amber-50 to-orange-50', gradientDark: 'from-orange-950/50 via-amber-900/30 to-slate-900/50', color: 'text-orange-700 dark:text-orange-400', border: 'border-orange-500/40', tag: 'Paneles / Solar' };
+  }
+  if (name.includes('dispositiv') || name.includes('mecanism') || name.includes('toma') || name.includes('interrupt')) {
+    return { icon: 'toggle_on', gradientLight: 'from-violet-100 via-indigo-50 to-violet-50', gradientDark: 'from-violet-950/50 via-indigo-900/30 to-slate-900/50', color: 'text-violet-700 dark:text-violet-400', border: 'border-violet-500/40', tag: 'Tomas / Switches' };
+  }
+  if (name.includes('caja') || name.includes('tabler') || name.includes('gabinete')) {
+    return { icon: 'developer_board', gradientLight: 'from-cyan-100 via-teal-50 to-cyan-50', gradientDark: 'from-cyan-950/50 via-teal-900/30 to-slate-900/50', color: 'text-cyan-700 dark:text-cyan-400', border: 'border-cyan-500/40', tag: 'Tableros / Cajas' };
+  }
+  if (name.includes('auto') || name.includes('control') || name.includes('rele')) {
+    return { icon: 'precision_manufacturing', gradientLight: 'from-fuchsia-100 via-purple-50 to-fuchsia-50', gradientDark: 'from-fuchsia-950/50 via-purple-900/30 to-slate-900/50', color: 'text-fuchsia-700 dark:text-fuchsia-400', border: 'border-fuchsia-500/40', tag: 'Automatización' };
+  }
+  if (name.includes('herraj') || name.includes('red') || name.includes('poste')) {
+    return { icon: 'construction', gradientLight: 'from-slate-200 via-zinc-100 to-slate-100', gradientDark: 'from-slate-800/50 via-zinc-900/40 to-slate-950/50', color: 'text-slate-800 dark:text-slate-300', border: 'border-slate-500/40', tag: 'Herrajes / Redes' };
+  }
+  if (name.includes('herramient') || name.includes('medici') || name.includes('tester')) {
+    return { icon: 'home_repair_service', gradientLight: 'from-emerald-100 via-cyan-50 to-emerald-50', gradientDark: 'from-emerald-950/50 via-cyan-900/30 to-slate-900/50', color: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-500/40', tag: 'Herramientas' };
+  }
+  return { icon: 'category', gradientLight: 'from-slate-100 via-slate-50 to-white', gradientDark: 'from-slate-900/50 via-slate-800/40 to-slate-950/50', color: 'text-primary', border: 'border-outline-variant/40', tag: 'Material Eléctrico' };
+}
+
+function renderCategoryCardHtml(cat, count, clickHandler, suffixText) {
+  const conf = getCategoryTileConfig(cat.nombre);
+  const imgFallback = `
+    <div class="w-full h-full bg-gradient-to-br ${conf.gradientLight} dark:${conf.gradientDark} flex flex-col items-center justify-center p-3 relative overflow-hidden group-hover:scale-105 transition-transform duration-300">
+      <div class="absolute -right-3 -bottom-3 opacity-15 dark:opacity-10 pointer-events-none">
+        <span class="material-symbols-outlined text-7xl">${conf.icon}</span>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-white dark:bg-black/50 border ${conf.border} flex items-center justify-center shadow-sm mb-1.5 z-10">
+        <span class="material-symbols-outlined text-2xl ${conf.color}">${conf.icon}</span>
+      </div>
+      <span class="text-[9px] font-mono uppercase tracking-wider font-extrabold ${conf.color} z-10 px-2 py-0.5 rounded bg-white/80 dark:bg-black/50 border ${conf.border}">${conf.tag}</span>
+    </div>
+  `;
+
+  const imgHtml = cat.imagen_url 
+    ? `<img src="${cat.imagen_url}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+       <div class="w-full h-full hidden">${imgFallback}</div>`
+    : imgFallback;
+
+  return `
+    <div onclick="${clickHandler}" class="cursor-pointer group relative overflow-hidden rounded-xl bg-white dark:bg-surface-container border-2 border-slate-300 dark:border-outline-variant/40 hover:border-primary dark:hover:border-primary hover:shadow-lg transition-all duration-200 flex flex-col justify-between">
+      <div class="aspect-video w-full overflow-hidden relative border-b border-slate-200 dark:border-outline-variant/30">
+        ${imgHtml}
+      </div>
+      <div class="p-3 bg-white dark:bg-surface-container flex flex-col justify-between flex-1">
+        <h4 class="font-headline font-bold text-xs sm:text-sm text-slate-900 dark:text-on-surface truncate group-hover:text-primary transition-colors" title="${cat.nombre}">${cat.nombre}</h4>
+        <div class="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-200 dark:border-outline-variant/20">
+          <span class="text-[11px] font-mono font-medium text-slate-600 dark:text-outline">${count} ${suffixText || 'producto(s)'}</span>
+          <span class="w-2 h-2 rounded-full ${count > 0 ? 'bg-emerald-500' : 'bg-slate-300'}"></span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 // --- VISTA 1: ADMINISTRADOR (CESAR) ---
 function renderAdminView() {
   const container = document.getElementById('viewAdmin');
@@ -1158,47 +1266,27 @@ function renderAdminView() {
       catCounts[cid]++;
     });
 
-    // Renderizar categorías
+    // Renderizar categorías con diseño eléctrico enriquecido y alto contraste
     if (liveCategories && liveCategories.length > 0) {
       liveCategories.forEach(cat => {
         const count = catCounts[cat.id] || 0;
-        
-        const imgHtml = cat.imagen_url 
-          ? `<img src="${cat.imagen_url}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-             <div class="w-full h-full bg-surface-container-highest items-center justify-center hidden">
-               <span class="material-symbols-outlined text-4xl text-outline">category</span>
-             </div>`
-          : `<div class="w-full h-full bg-surface-container-highest flex items-center justify-center">
-               <span class="material-symbols-outlined text-4xl text-outline">category</span>
-             </div>`;
-        
-        categoriesGrid.innerHTML += `
-          <div onclick="filterAdminCategory(${cat.id})" class="cursor-pointer group relative overflow-hidden rounded-xl bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:shadow-lg transition-all">
-            <div class="aspect-video w-full bg-surface-container-highest overflow-hidden relative">
-              ${imgHtml}
-            </div>
-            <div class="p-3">
-              <h4 class="font-headline font-semibold text-sm text-on-surface truncate">${cat.nombre}</h4>
-              <p class="text-[10px] text-outline mt-0.5">${count} ${t.product_count_suffix || 'producto(s)'}</p>
-            </div>
-          </div>
-        `;
+        categoriesGrid.innerHTML += renderCategoryCardHtml(
+          cat, 
+          count, 
+          `filterAdminCategory(${cat.id})`, 
+          t.product_count_suffix || 'producto(s)'
+        );
       });
     }
     
     // Categoría "Sin Categoría"
     if (catCounts['uncategorized'] > 0) {
-      categoriesGrid.innerHTML += `
-        <div onclick="filterAdminCategory('uncategorized')" class="cursor-pointer group relative overflow-hidden rounded-xl bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:shadow-lg transition-all">
-          <div class="aspect-video w-full bg-surface-container-highest overflow-hidden flex items-center justify-center">
-             <span class="material-symbols-outlined text-4xl text-outline">category</span>
-          </div>
-          <div class="p-3">
-            <h4 class="font-headline font-semibold text-sm text-on-surface truncate">${t.uncategorized || 'Sin Categoría'}</h4>
-            <p class="text-[10px] text-outline mt-0.5">${catCounts['uncategorized']} ${t.product_count_suffix || 'producto(s)'}</p>
-          </div>
-        </div>
-      `;
+      categoriesGrid.innerHTML += renderCategoryCardHtml(
+        { id: 'uncategorized', nombre: t.uncategorized || 'Sin Categoría' },
+        catCounts['uncategorized'],
+        `filterAdminCategory('uncategorized')`,
+        t.product_count_suffix || 'producto(s)'
+      );
     }
     
     // En modo galería de categorías no mostramos la barra de paginación de la tabla
@@ -1426,45 +1514,26 @@ function renderEncargadoView() {
       catCounts[cid]++;
     });
 
+    // Renderizar categorías con diseño eléctrico enriquecido y alto contraste
     if (liveCategories && liveCategories.length > 0) {
       liveCategories.forEach(cat => {
         const count = catCounts[cat.id] || 0;
-        
-        const imgHtml = cat.imagen_url 
-          ? `<img src="${cat.imagen_url}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-             <div class="w-full h-full bg-surface-container-highest items-center justify-center hidden">
-               <span class="material-symbols-outlined text-4xl text-outline">category</span>
-             </div>`
-          : `<div class="w-full h-full bg-surface-container-highest flex items-center justify-center">
-               <span class="material-symbols-outlined text-4xl text-outline">category</span>
-             </div>`;
-        
-        categoriesGrid.innerHTML += `
-          <div onclick="filterEncargadoCategory(${cat.id})" class="cursor-pointer group relative overflow-hidden rounded-xl bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:shadow-lg transition-all">
-            <div class="aspect-video w-full bg-surface-container-highest overflow-hidden relative">
-              ${imgHtml}
-            </div>
-            <div class="p-3">
-              <h4 class="font-headline font-semibold text-sm text-on-surface truncate">${cat.nombre}</h4>
-              <p class="text-[10px] text-outline mt-0.5">${count} producto(s)</p>
-            </div>
-          </div>
-        `;
+        categoriesGrid.innerHTML += renderCategoryCardHtml(
+          cat, 
+          count, 
+          `filterEncargadoCategory(${cat.id})`, 
+          'producto(s)'
+        );
       });
     }
     
     if (catCounts['uncategorized'] > 0) {
-      categoriesGrid.innerHTML += `
-        <div onclick="filterEncargadoCategory('uncategorized')" class="cursor-pointer group relative overflow-hidden rounded-xl bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:shadow-lg transition-all">
-          <div class="aspect-video w-full bg-surface-container-highest overflow-hidden flex items-center justify-center">
-             <span class="material-symbols-outlined text-4xl text-outline">category</span>
-          </div>
-          <div class="p-3">
-            <h4 class="font-headline font-semibold text-sm text-on-surface truncate">Sin Categoría</h4>
-            <p class="text-[10px] text-outline mt-0.5">${catCounts['uncategorized']} producto(s)</p>
-          </div>
-        </div>
-      `;
+      categoriesGrid.innerHTML += renderCategoryCardHtml(
+        { id: 'uncategorized', nombre: 'Sin Categoría' },
+        catCounts['uncategorized'],
+        `filterEncargadoCategory('uncategorized')`,
+        'producto(s)'
+      );
     }
     return;
   }
@@ -1781,7 +1850,7 @@ async function handleCreateProductSubmit(e) {
   btn.textContent = 'Subiendo imagen...';
   
   let imagen_url = await uploadImage('newProdImage');
-  btn.textContent = 'Guardando en Base de Datos MySQL...';
+  btn.textContent = 'Guardando producto...';
 
   try {
     const res = await fetch(`${API_BASE}/inventory/products`, {
@@ -1805,7 +1874,7 @@ async function handleCreateProductSubmit(e) {
       return;
     }
 
-    alert('✓ Producto registrado exitosamente en la base de datos MySQL con sus precios para cada sede.');
+    alert('✓ Producto registrado exitosamente con sus precios para cada sede.');
     closeCreateProductModal();
     document.getElementById('createProductForm').reset();
     
@@ -1816,7 +1885,7 @@ async function handleCreateProductSubmit(e) {
     alert('Error al comunicar con el servidor.');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Guardar Producto en MySQL';
+    btn.textContent = 'Guardar Producto';
   }
 }
 
@@ -1894,7 +1963,7 @@ async function handleEditProductSubmit(e) {
     }
   }
 
-  btn.textContent = 'Actualizando en BD...';
+  btn.textContent = 'Actualizando producto...';
 
   try {
     const res = await fetch(`${API_BASE}/inventory/products/${id}`, {
@@ -2127,7 +2196,7 @@ async function handleExecuteTransferSubmit(e) {
 
   const btn = document.getElementById('btnExecuteTransferSubmit');
   btn.disabled = true;
-  btn.textContent = 'Procesando traslado en la base de datos...';
+  btn.textContent = 'Procesando traslado...';
 
   try {
     const res = await fetch(`${API_BASE}/inventory/transfers`, {
@@ -2161,7 +2230,7 @@ async function handleExecuteTransferSubmit(e) {
     alert('Error de conexión o de lectura al ejecutar el traslado.');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Confirmar Traslado en Base de Datos';
+    btn.textContent = 'Confirmar Traslado';
   }
 }
 
@@ -3660,21 +3729,42 @@ function updateNetworkBadges() {
 window.filterRequestsTab = function(tab) {
   activeRequestsTab = tab;
   
-  const tabs = ['tabReqPendientes', 'tabReqMisPedidos', 'tabReqTransito', 'tabReqHistorial'];
-  tabs.forEach(tId => {
-    const btn = document.getElementById(tId);
+  const tabConfigs = [
+    { id: 'tabReqPendientes', badgeId: 'tabCountPendientes' },
+    { id: 'tabReqMisPedidos', badgeId: 'tabCountMisPedidos' },
+    { id: 'tabReqTransito', badgeId: 'tabCountTransito' },
+    { id: 'tabReqHistorial', badgeId: null }
+  ];
+
+  tabConfigs.forEach(t => {
+    const btn = document.getElementById(t.id);
     if (!btn) return;
-    btn.className = 'px-4 py-2 font-mono text-xs font-bold rounded-t-lg text-outline hover:text-on-surface transition-all flex items-center gap-1.5';
+    btn.className = 'whitespace-nowrap flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 font-mono text-xs font-semibold rounded-lg bg-surface-container/60 text-outline hover:text-on-surface hover:bg-surface-container-high border border-outline-variant/30 transition-all active:scale-95';
+    if (t.badgeId) {
+      const badge = document.getElementById(t.badgeId);
+      if (badge) badge.className = 'px-2 py-0.5 rounded-full bg-outline/20 text-outline text-[10px] font-bold';
+    }
   });
 
-  const activeBtn = document.getElementById(
+  const activeId = 
     tab === 'PENDIENTES' ? 'tabReqPendientes' :
     tab === 'MIS_PEDIDOS' ? 'tabReqMisPedidos' :
-    tab === 'TRANSITO' ? 'tabReqTransito' : 'tabReqHistorial'
-  );
+    tab === 'TRANSITO' ? 'tabReqTransito' : 'tabReqHistorial';
 
+  const activeBadgeId =
+    tab === 'PENDIENTES' ? 'tabCountPendientes' :
+    tab === 'MIS_PEDIDOS' ? 'tabCountMisPedidos' :
+    tab === 'TRANSITO' ? 'tabCountTransito' : null;
+
+  const activeBtn = document.getElementById(activeId);
   if (activeBtn) {
-    activeBtn.className = 'px-4 py-2 font-mono text-xs font-bold rounded-t-lg bg-surface-container text-amber-400 border-t-2 border-amber-500 transition-all flex items-center gap-1.5';
+    activeBtn.className = 'whitespace-nowrap flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 font-mono text-xs font-bold rounded-lg bg-amber-500/20 text-amber-300 border-2 border-amber-500 shadow-sm transition-all active:scale-95';
+  }
+  if (activeBadgeId) {
+    const activeBadge = document.getElementById(activeBadgeId);
+    if (activeBadge) {
+      activeBadge.className = 'px-2 py-0.5 rounded-full bg-amber-500/30 text-amber-200 text-[10px] font-extrabold border border-amber-500/40';
+    }
   }
 
   renderNetworkRequests();
@@ -3753,29 +3843,35 @@ function renderNetworkRequests() {
       estadoBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-400 border border-red-500/40">RECHAZADA</span>`;
     }
 
-    // Materiales
+    // Materiales (con soporte robusto de unidades y cantidades)
     let itemsHtml = '';
     if (s.items_json && Array.isArray(s.items_json) && s.items_json.length > 0) {
       itemsHtml = `
-        <div class="space-y-1 mt-1">
-          <span class="text-[10px] text-outline uppercase font-mono">Lista de Materiales (${s.items_json.length}):</span>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs font-mono">
-            ${s.items_json.map(it => `
-              <div class="p-1.5 bg-surface-container rounded border border-outline-variant/30 flex justify-between items-center">
-                <span class="text-on-surface truncate font-sans">${it.nombre || ('SKU: ' + it.producto_id)}</span>
-                <span class="text-primary font-bold ml-2">${it.cantidad} un.</span>
-              </div>
-            `).join('')}
+        <div class="space-y-1.5 py-1">
+          <span class="text-[10px] text-outline uppercase font-mono font-bold tracking-wider">Lista de Materiales (${s.items_json.length}):</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+            ${s.items_json.map(it => {
+              const cant = (it.cantidad !== undefined && it.cantidad !== null && it.cantidad !== '')
+                ? it.cantidad
+                : (it.cantidad_solicitada || it.cant || s.cantidad_solicitada || 1);
+              const un = it.unidad || it.unidad_medida || s.producto_unidad || 'un.';
+              return `
+                <div class="p-2 bg-surface-container rounded-lg border border-outline-variant/30 flex justify-between items-center gap-2 shadow-xs">
+                  <span class="text-on-surface font-sans font-medium truncate">${it.nombre || ('SKU: ' + it.producto_id)}</span>
+                  <span class="text-primary font-bold px-2 py-0.5 rounded bg-primary/10 border border-primary/20 shrink-0">${cant} ${un}</span>
+                </div>
+              `;
+            }).join('')}
           </div>
         </div>
       `;
     } else {
       itemsHtml = `
-        <div class="flex items-center gap-2 text-xs font-mono">
+        <div class="p-2 bg-surface-container rounded-lg border border-outline-variant/30 flex flex-wrap items-center gap-2 text-xs font-mono">
           <span class="text-on-surface font-semibold font-sans">${s.producto_nombre || 'Producto SKU-' + s.producto_id}</span>
           <span class="text-outline text-[11px]">(SKU: ${s.producto_sku || s.producto_id})</span>
-          <span class="text-primary font-bold bg-primary/10 px-2 py-0.5 rounded">Requerido: ${s.cantidad_solicitada} ${s.producto_unidad || 'un.'}</span>
-          ${s.cantidad_aprobada ? `<span class="text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded">Aprobado a Enviar: ${s.cantidad_aprobada}</span>` : ''}
+          <span class="text-primary font-bold bg-primary/10 border border-primary/20 px-2 py-0.5 rounded">Requerido: ${s.cantidad_solicitada || 1} ${s.producto_unidad || 'un.'}</span>
+          ${s.cantidad_aprobada ? `<span class="text-amber-400 font-bold bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">Aprobado a Enviar: ${s.cantidad_aprobada}</span>` : ''}
         </div>
       `;
     }
@@ -3846,16 +3942,15 @@ function renderNetworkRequests() {
     }
 
     return `
-      <div class="p-4 bg-surface-container-low rounded-xl border border-outline-variant/40 space-y-2.5 hover:border-outline-variant transition-all">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex items-center gap-2">
-            <span class="font-headline font-bold text-xs text-on-surface">#${s.id}</span>
-            <span class="text-outline text-xs">•</span>
+      <div class="p-4 sm:p-5 bg-surface-container-low rounded-xl border border-outline-variant/40 space-y-3 hover:border-amber-500/40 transition-all shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-outline-variant/20">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-headline font-bold text-xs text-on-surface bg-surface-container px-2 py-0.5 rounded border border-outline-variant/30">#${s.id}</span>
             <span class="font-mono text-xs font-bold text-amber-400">${s.sede_solicitante_nombre || 'Sede ' + s.sede_solicitante_id}</span>
             <span class="material-symbols-outlined text-xs text-outline">arrow_forward</span>
             <span class="font-mono text-xs font-bold text-primary">${s.sede_proveedora_nombre || (s.tipo === 'ENVIO_PROACTIVO' ? 'Sede ' + s.sede_proveedora_id : 'Red Abierta')}</span>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2.5">
             <span class="text-[10px] font-mono text-outline">${fecha}</span>
             ${estadoBadge}
           </div>
@@ -3864,21 +3959,21 @@ function renderNetworkRequests() {
         ${itemsHtml}
 
         ${Array.isArray(s.sedes_rechazadas_json) && s.sedes_rechazadas_json.length > 0 ? `
-          <div class="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs space-y-1 font-mono">
+          <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs space-y-2 font-mono">
             <div class="text-amber-400 font-bold flex items-center gap-1.5">
               <span class="material-symbols-outlined text-sm">info</span>
               <span>Sedes que reportaron falta de existencias (${s.sedes_rechazadas_json.length}):</span>
             </div>
-            <div class="space-y-1 mt-1 font-sans">
+            <div class="space-y-1.5 font-sans">
               ${s.sedes_rechazadas_json.map(r => `
-                <div class="flex items-center justify-between text-[11px] bg-surface-container/60 px-2 py-1 rounded border border-outline-variant/20">
+                <div class="flex items-center justify-between text-[11px] bg-surface-container/70 px-2.5 py-1.5 rounded-md border border-outline-variant/20">
                   <span class="font-bold text-on-surface">📍 ${r.sede_nombre || 'Sede #' + r.sede_id}</span>
                   <span class="text-red-400 italic font-mono">${r.motivo || 'Sin existencias'}</span>
                 </div>
               `).join('')}
             </div>
             ${isAdm && s.estado === 'PENDIENTE' ? `
-              <div class="text-[10px] text-amber-300 font-sans pt-0.5">
+              <div class="text-[10px] text-amber-300 font-sans pt-1">
                 ⚡ Como Administrador, puedes atender la solicitud despachando desde otra sede disponible o gestionar el requerimiento.
               </div>
             ` : ''}
@@ -3886,21 +3981,21 @@ function renderNetworkRequests() {
         ` : ''}
 
         ${s.motivo_solicitud ? `
-          <div class="text-xs text-on-surface-variant font-sans bg-surface-container/60 p-2 rounded border border-outline-variant/20">
-            <strong>Motivo:</strong> ${s.motivo_solicitud}
+          <div class="text-xs text-on-surface-variant font-sans bg-surface-container/60 p-2.5 rounded-lg border border-outline-variant/20">
+            <strong class="text-on-surface">Motivo:</strong> ${s.motivo_solicitud}
           </div>
         ` : ''}
 
         ${s.motivo_rechazo ? `
-          <div class="text-xs text-red-400 font-sans bg-red-500/10 p-2 rounded border border-red-500/20">
+          <div class="text-xs text-red-400 font-sans bg-red-500/10 p-2.5 rounded-lg border border-red-500/20">
             <strong>Motivo de rechazo:</strong> ${s.motivo_rechazo}
           </div>
         ` : ''}
 
-        <div class="text-[10px] text-outline font-mono flex items-center gap-2">
-          <span>Solicitado por: @${s.usuario_solicitante_nombre || 'Encargado'}</span>
-          ${s.usuario_respuesta_nombre ? `<span>| Respondido por: @${s.usuario_respuesta_nombre}</span>` : ''}
-          ${s.corredor_nombre ? `<span>| Corredor: @${s.corredor_nombre}</span>` : ''}
+        <div class="text-[11px] text-outline font-mono flex flex-wrap items-center gap-x-3 gap-y-1 pt-1.5 border-t border-outline-variant/20">
+          <span>Solicitado por: <strong class="text-on-surface-variant font-medium">@${s.usuario_solicitante_nombre || 'Encargado'}</strong></span>
+          ${s.usuario_respuesta_nombre ? `<span>| Respondido por: <strong class="text-on-surface-variant font-medium">@${s.usuario_respuesta_nombre}</strong></span>` : ''}
+          ${s.corredor_nombre ? `<span>| Corredor: <strong class="text-secondary font-bold">@${s.corredor_nombre}</strong></span>` : ''}
         </div>
 
         ${accionesHtml}
@@ -4114,8 +4209,9 @@ window.handleEmitirPeticionRed = async function(e) {
     const pId = r.querySelector('.item-producto-id').value;
     const txt = r.querySelector('.item-search-input').value;
     const cant = parseFloat(r.querySelector('.item-cantidad-input').value) || 1;
+    const un = r.querySelector('.item-unidad-input')?.value || 'un.';
     if (pId) {
-      items.push({ producto_id: Number(pId), nombre: txt, cantidad: cant });
+      items.push({ producto_id: Number(pId), nombre: txt, cantidad: cant, unidad: un });
     }
   });
 

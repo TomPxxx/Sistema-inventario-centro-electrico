@@ -1,7 +1,7 @@
 /**
  * SISTEMA DE INTERNACIONALIZACIÓN (i18n) - GRUPO ELÉCTRICO CE
  * Soporta cambio dinámico de idioma (Español / English)
- * Sin afectar bases de datos ni depender del traductor de Google.
+ * Sin recargar la página, sin afectar bases de datos y sin dependencias externas.
  */
 
 const translations = {
@@ -27,7 +27,25 @@ const translations = {
     theme_toggle: "Cambiar Tema",
     lang_toggle: "Idioma",
 
-    // Menú Lateral
+    // Tabs y Formularios de Auth
+    tab_login: "Ingreso al Sistema",
+    tab_register: "Crear Nuevo Usuario",
+    lbl_user_email: "Usuario o Correo",
+    lbl_password: "Contraseña de Seguridad",
+    btn_login_submit: "Ingresar",
+    lbl_or_login_with: "O INGRESA CON",
+    lbl_full_name: "Nombre Completo",
+    lbl_username_login: "Usuario (Login)",
+    lbl_email: "Correo Electrónico",
+    lbl_role: "Cargo / Rol",
+    lbl_assigned_branch: "Sede Asignada",
+    lbl_password_policy_hint: "Mín. 12 caracteres (1 mayúscula, 1 minúscula, 3 números y 1 símbolo especial).",
+    btn_register_submit: "Registrarse",
+    btn_send_pin: "Enviar Código de Recuperación",
+    btn_confirm_reset: "Restablecer Contraseña",
+    btn_accept_policy: "Aceptar y Continuar",
+
+    // Menú Lateral (Sidebar)
     menu_main: "PANEL PRINCIPAL",
     menu_dashboard: "Panel Operativo",
     menu_transfer: "Mover Stock",
@@ -70,6 +88,38 @@ const translations = {
     product_count_suffix: "producto(s)",
     back_to_categories: "Volver a Categorías",
 
+    // Botones de Operación / Dashboard
+    btn_register_arrival: "Registrar Llegada",
+    btn_request_material: "Pedir Material a la Red",
+    btn_yield_material: "Ceder Mercancía",
+    btn_scan: "Escanear",
+    btn_register_delivery: "Registrar Entrega",
+    btn_save_product: "Guardar Producto",
+    btn_confirm_transfer: "Confirmar Traslado",
+    btn_save_category: "Guardar Categoría",
+    btn_cancel: "Cancelar",
+    btn_close: "Cerrar",
+    btn_save: "Guardar",
+    btn_edit: "Editar",
+    btn_delete: "Eliminar",
+    btn_delete_confirm: "Eliminar Definitivamente",
+
+    // Títulos de Modales
+    policy_modal_title: "Política de Tratamiento de Datos",
+    forgot_password_title: "Recuperar Contraseña",
+    create_product_title: "Crear Nuevo Producto",
+    new_product_title: "Registrar Entrada Nueva",
+    transfer_modal_title: "Traslado de Stock Entre Sedes",
+    create_category_title: "Nueva Categoría",
+    edit_product_title: "Editar Producto",
+    delete_product_title: "¿Eliminar Producto?",
+    network_requests_title: "Red de Solicitudes y Traslados entre Sedes",
+    request_material_title: "Pedir Material a la Red de Sedes",
+    yield_material_title: "Ceder Mercancía a Otra Sede",
+    admin_attend_request_title: "Atender Solicitud de Material (Admin)",
+    register_arrival_title: "Registrar Llegada de Mercancía",
+    count_goods_title: "Conteo de Mercancía",
+
     // Modal Auditoría / Logs
     audit_modal_title: "Registro de Auditoría y Vigilancia del Sistema",
     audit_modal_desc: "Monitoreo en tiempo real de operaciones, movimientos, modificaciones y acciones de usuarios.",
@@ -80,11 +130,6 @@ const translations = {
     th_action: "Acción",
     th_details: "Detalles de la Operación",
     th_ip: "Dirección IP",
-    btn_close: "Cerrar",
-    btn_save: "Guardar",
-    btn_cancel: "Cancelar",
-    btn_edit: "Editar",
-    btn_delete: "Eliminar",
 
     // Modal: Llegadas / Distribución
     arrivals_title: "Distribución de Mercancía Recibida",
@@ -92,17 +137,33 @@ const translations = {
     th_employee: "Encargado / Empleado",
     th_status: "Estado",
 
-    // Modal: Edición de Producto
-    edit_product_title: "Editar Producto",
+    // Formulario de Producto (Crear / Editar)
     lbl_sku: "Código SKU *",
+    lbl_sku_code: "Código SKU *",
     lbl_unit: "Unidad de Medida",
+    lbl_unit_measure: "Unidad de Medida",
     lbl_prod_name: "Nombre del Material *",
-    lbl_category: "Categoría del Catálogo",
+    lbl_product_name: "Nombre del Producto *",
+    lbl_category: "Categoría",
     lbl_brand: "Marca / Fabricante",
-    lbl_desc: "Descripción Técnica",
-    lbl_image: "Actualizar Imagen",
+    lbl_desc: "Descripción Técnica (Opcional)",
+    lbl_image: "Imagen del Producto",
     lbl_stock_price_branches: "Stock Actual y Precio de Venta por Sede:",
     btn_update_product: "Actualizar Producto",
+
+    // Formulario de Traslado
+    lbl_product_to_move: "Producto a Mover",
+    lbl_origin_branch: "Sede Origen",
+    lbl_dest_branch: "Sede Destino",
+    lbl_qty: "Cantidad",
+    lbl_observations: "Observaciones",
+    lbl_courier: "Empleado Corredor (Transporta la mercancía)",
+
+    // Vista Empleado
+    empleado_title: "Consulta de Precios y Traslados",
+    empleado_subtitle: "Verificación rápida y entregas.",
+    quick_price_title: "Consulta de Precios",
+    transfers_between_branches_title: "Traslados Entre Sedes",
 
     // Paginación
     page_showing: "Mostrando",
@@ -112,7 +173,43 @@ const translations = {
     page_prev: "Anterior",
     page_next: "Siguiente",
     page_first: "Primero",
-    page_last: "Último"
+    page_last: "Último",
+
+    // Modales de Operaciones y Red
+    lbl_price_unit: "Precio Unitario ($)",
+    lbl_initial_branch: "Sede de Ingreso Inicial",
+    lbl_initial_stock: "Stock Inicial",
+    btn_broadcast_request: "Emitir Solicitud a Todas las Sedes",
+    lbl_receiving_branch_dest: "Sede Receptora (Destino)",
+    lbl_materials_to_request: "Materiales a Solicitar",
+    btn_add_another_product: "+ Agregar otro producto",
+    lbl_urgency_reason: "Motivo / Nivel de Urgencia",
+    lbl_dest_branch_accepts: "Sede Destino (Aceptará la mercancía)",
+    lbl_product_to_transfer: "Producto a Transferir",
+    lbl_qty_to_yield: "Cantidad a Ceder",
+    lbl_reason_observation: "Motivo / Observación",
+    btn_send_transfer_proposal: "Enviar Propuesta de Traslado",
+    accept_request_title: "Aceptar Solicitud de Material",
+    lbl_qty_to_dispatch: "Cantidad a Despachar / Enviar",
+    lbl_assign_courier_opt: "Asignar Corredor Logístico (Opcional)",
+    lbl_rejection_reason: "Motivo del Rechazo",
+    btn_confirm: "Confirmar",
+    btn_confirm_dispatch: "Confirmar Despacho y Poner en Tránsito",
+    assign_courier_title: "Asignar Corredor Logístico",
+    lbl_responsible_courier: "Empleado Corredor Responsable *",
+    session_locked_title: "Sesión Bloqueada",
+    session_locked_desc: "Por seguridad, la sesión se bloqueó tras 2 minutos de inactividad. Ingresa tu contraseña para continuar donde lo dejaste.",
+    btn_unlock_session: "Desbloquear Sesión",
+    pending_users_title: "Solicitudes de Acceso (Google)",
+    th_name: "Nombre",
+    th_email: "Correo",
+    th_assign_role_branch: "Asignar Rol / Sede",
+    lbl_assigned_employee_count: "Empleado Asignado para Conteo",
+    btn_create_count_task: "Crear Tarea de Conteo",
+    btn_add: "Añadir",
+    btn_finish_count_send: "Finalizar Conteo y Enviar",
+    lbl_brand_req: "Marca",
+    lbl_quantity_req: "Cantidad"
   },
   en: {
     // Auth & General
@@ -132,9 +229,27 @@ const translations = {
     connected_branches_count: "4 Connected Branches",
     online: "ONLINE",
     role: "Role",
-    logout: "Exit",
+    logout: "Log Out",
     theme_toggle: "Toggle Theme",
     lang_toggle: "Language",
+
+    // Tabs & Auth Forms
+    tab_login: "System Login",
+    tab_register: "Create New User",
+    lbl_user_email: "Username or Email",
+    lbl_password: "Security Password",
+    btn_login_submit: "Sign In",
+    lbl_or_login_with: "OR SIGN IN WITH",
+    lbl_full_name: "Full Name",
+    lbl_username_login: "Username (Login)",
+    lbl_email: "Corporate Email",
+    lbl_role: "Role / Position",
+    lbl_assigned_branch: "Assigned Branch",
+    lbl_password_policy_hint: "Min. 12 chars (1 uppercase, 1 lowercase, 3 numbers and 1 special symbol).",
+    btn_register_submit: "Register",
+    btn_send_pin: "Send Recovery Code",
+    btn_confirm_reset: "Reset Password",
+    btn_accept_policy: "Accept and Continue",
 
     // Sidebar
     menu_main: "MAIN PANEL",
@@ -179,7 +294,39 @@ const translations = {
     product_count_suffix: "product(s)",
     back_to_categories: "Back to Categories",
 
-    // Modal Auditoría / Logs
+    // Operation & Dashboard Buttons
+    btn_register_arrival: "Register Arrival",
+    btn_request_material: "Request Material",
+    btn_yield_material: "Transfer Merchandise",
+    btn_scan: "Scan",
+    btn_register_delivery: "Register Delivery",
+    btn_save_product: "Save Product",
+    btn_confirm_transfer: "Confirm Transfer",
+    btn_save_category: "Save Category",
+    btn_cancel: "Cancel",
+    btn_close: "Close",
+    btn_save: "Save",
+    btn_edit: "Edit",
+    btn_delete: "Delete",
+    btn_delete_confirm: "Permanently Delete",
+
+    // Modal Titles
+    policy_modal_title: "Data Protection & Privacy Policy",
+    forgot_password_title: "Recover Password",
+    create_product_title: "Create New Product",
+    new_product_title: "Register New Inbound Stock",
+    transfer_modal_title: "Stock Transfer Between Branches",
+    create_category_title: "New Category",
+    edit_product_title: "Edit Product",
+    delete_product_title: "Delete Product?",
+    network_requests_title: "Network Requests & Branch Transfers",
+    request_material_title: "Request Material from Branches",
+    yield_material_title: "Transfer Goods to Another Branch",
+    admin_attend_request_title: "Process Material Request (Admin)",
+    register_arrival_title: "Register Incoming Goods",
+    count_goods_title: "Goods Inventory Count",
+
+    // System Audit & Logs
     audit_modal_title: "System Audit & Surveillance Logs",
     audit_modal_desc: "Real-time monitoring of operations, transfers, product updates, and administrative actions.",
     audit_filter_all: "All Actions",
@@ -189,11 +336,6 @@ const translations = {
     th_action: "Action",
     th_details: "Operation Details",
     th_ip: "IP Address",
-    btn_close: "Close",
-    btn_save: "Save",
-    btn_cancel: "Cancel",
-    btn_edit: "Edit",
-    btn_delete: "Delete",
 
     // Modal: Arrivals / Distribution
     arrivals_title: "Incoming Goods Distribution",
@@ -201,17 +343,33 @@ const translations = {
     th_employee: "Manager / Employee",
     th_status: "Status",
 
-    // Modal: Edit Product
-    edit_product_title: "Edit Product",
+    // Product Form (Create / Edit)
     lbl_sku: "SKU Code *",
+    lbl_sku_code: "SKU Code *",
     lbl_unit: "Unit of Measure",
+    lbl_unit_measure: "Unit of Measure",
     lbl_prod_name: "Material / Item Name *",
-    lbl_category: "Catalog Category",
+    lbl_product_name: "Product Name *",
+    lbl_category: "Category",
     lbl_brand: "Brand / Manufacturer",
-    lbl_desc: "Technical Description",
-    lbl_image: "Update Image",
+    lbl_desc: "Technical Description (Optional)",
+    lbl_image: "Product Photo",
     lbl_stock_price_branches: "Current Stock and Sale Price by Branch:",
     btn_update_product: "Update Product",
+
+    // Transfer Form
+    lbl_product_to_move: "Product to Move",
+    lbl_origin_branch: "Origin Branch",
+    lbl_dest_branch: "Destination Branch",
+    lbl_qty: "Quantity",
+    lbl_observations: "Observations",
+    lbl_courier: "Courier (Transports the goods)",
+
+    // Empleado View
+    empleado_title: "Price Inquiry and Transfers",
+    empleado_subtitle: "Quick verification and deliveries.",
+    quick_price_title: "Price Check",
+    transfers_between_branches_title: "Transfers Between Branches",
 
     // Pagination
     page_showing: "Showing",
@@ -221,51 +379,120 @@ const translations = {
     page_prev: "Previous",
     page_next: "Next",
     page_first: "First",
-    page_last: "Last"
+    page_last: "Last",
+
+    // Operations & Network Modals
+    lbl_price_unit: "Unit Price ($)",
+    lbl_initial_branch: "Initial Inbound Branch",
+    lbl_initial_stock: "Initial Stock",
+    btn_broadcast_request: "Broadcast Request to All Branches",
+    lbl_receiving_branch_dest: "Receiving Branch (Destination)",
+    lbl_materials_to_request: "Materials to Request",
+    btn_add_another_product: "+ Add another product",
+    lbl_urgency_reason: "Reason / Urgency Level",
+    lbl_dest_branch_accepts: "Destination Branch (Accepts goods)",
+    lbl_product_to_transfer: "Product to Transfer",
+    lbl_qty_to_yield: "Quantity to Yield",
+    lbl_reason_observation: "Reason / Observation",
+    btn_send_transfer_proposal: "Send Transfer Proposal",
+    accept_request_title: "Accept Material Request",
+    lbl_qty_to_dispatch: "Quantity to Dispatch / Send",
+    lbl_assign_courier_opt: "Assign Courier (Optional)",
+    lbl_rejection_reason: "Rejection Reason",
+    btn_confirm: "Confirm",
+    btn_confirm_dispatch: "Confirm Dispatch & Set In Transit",
+    assign_courier_title: "Assign Delivery Courier",
+    lbl_responsible_courier: "Responsible Courier Employee *",
+    session_locked_title: "Session Locked",
+    session_locked_desc: "For security, your session was locked after 2 minutes of inactivity. Enter your password to continue.",
+    btn_unlock_session: "Unlock Session",
+    pending_users_title: "Access Requests (Google)",
+    th_name: "Name",
+    th_email: "Email",
+    th_assign_role_branch: "Assign Role / Branch",
+    lbl_assigned_employee_count: "Assigned Counting Employee",
+    btn_create_count_task: "Create Counting Task",
+    btn_add: "Add",
+    btn_finish_count_send: "Finish Count & Send",
+    lbl_brand_req: "Brand",
+    lbl_quantity_req: "Quantity"
   }
 };
 
 let currentLang = localStorage.getItem('app_lang') || 'es';
 
+/**
+ * Función auxiliar para obtener traducciones desde JS dinámico
+ */
+function t(key, fallback = '') {
+  return translations[currentLang]?.[key] || fallback || key;
+}
+window.t = t;
+window.getCurrentLang = () => currentLang;
+
+/**
+ * Aplica el idioma seleccionado al DOM de manera inteligente
+ */
 function setLanguage(lang) {
   if (!translations[lang]) return;
   currentLang = lang;
   localStorage.setItem('app_lang', lang);
 
-  // Actualizar todos los elementos con atributo data-i18n
+  // 1. Actualizar elementos con data-i18n
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if (translations[currentLang] && translations[currentLang][key]) {
-      el.textContent = translations[currentLang][key];
+    const translatedText = translations[currentLang]?.[key];
+    if (!translatedText) return;
+
+    // Si tiene un icono material-symbols-outlined, preservar el icono y actualizar solo el texto
+    const icon = el.querySelector('.material-symbols-outlined');
+    if (icon) {
+      const textElement = Array.from(el.children).find(c => c !== icon && (c.tagName === 'SPAN' || c.tagName === 'B' || c.tagName === 'STRONG' || c.tagName === 'DIV'));
+      if (textElement) {
+        textElement.textContent = translatedText;
+      } else {
+        let textNodeFound = false;
+        for (let n of el.childNodes) {
+          if (n.nodeType === 3 && n.nodeValue.trim().length > 0) {
+            n.nodeValue = ' ' + translatedText;
+            textNodeFound = true;
+            break;
+          }
+        }
+        if (!textNodeFound) {
+          el.innerHTML = `${icon.outerHTML} <span>${translatedText}</span>`;
+        }
+      }
+    } else {
+      el.textContent = translatedText;
     }
   });
 
-  // Actualizar placeholders con data-i18n-placeholder
+  // 2. Actualizar placeholders con data-i18n-placeholder
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');
-    if (translations[currentLang] && translations[currentLang][key]) {
+    if (translations[currentLang]?.[key]) {
       el.setAttribute('placeholder', translations[currentLang][key]);
     }
   });
 
-  // Actualizar títulos con data-i18n-title
+  // 3. Actualizar títulos con data-i18n-title
   document.querySelectorAll('[data-i18n-title]').forEach(el => {
     const key = el.getAttribute('data-i18n-title');
-    if (translations[currentLang] && translations[currentLang][key]) {
+    if (translations[currentLang]?.[key]) {
       el.setAttribute('title', translations[currentLang][key]);
     }
   });
 
-  // Actualizar indicadores visuales de idioma
-  const labels = document.querySelectorAll('.lang-indicator');
-  labels.forEach(lbl => {
+  // 4. Actualizar indicadores visuales de idioma (ES / EN)
+  document.querySelectorAll('.lang-indicator').forEach(lbl => {
     lbl.textContent = currentLang.toUpperCase();
   });
 
-  // Actualizar atributo lang en html
+  // 5. Actualizar atributo lang en <html>
   document.documentElement.lang = currentLang;
 
-  // Re-renderizar vistas dinámicas de catálogo si están visibles
+  // 6. Si hay funciones dinámicas de re-renderizado en la vista activa, invocarlas
   if (typeof renderAdminView === 'function') {
     const adminView = document.getElementById('viewAdmin');
     if (adminView && !adminView.classList.contains('hidden')) {
@@ -279,11 +506,16 @@ function setLanguage(lang) {
     }
   }
 }
+window.setLanguage = setLanguage;
 
+/**
+ * Alterna entre Español e Inglés
+ */
 function toggleLanguage() {
   const nextLang = currentLang === 'es' ? 'en' : 'es';
   setLanguage(nextLang);
 }
+window.toggleLanguage = toggleLanguage;
 
 // Inicializar al cargar el DOM
 document.addEventListener('DOMContentLoaded', () => {

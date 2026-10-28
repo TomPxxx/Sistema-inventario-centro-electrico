@@ -316,13 +316,13 @@ INSERT INTO sedes (id, nombre, ciudad, direccion, telefono) VALUES
 SELECT setval('sedes_id_seq', (SELECT MAX(id) FROM sedes));
 
 INSERT INTO usuarios (id, nombre_completo, username, email, password_hash, rol, sede_id, estado) VALUES
-(1, 'Tomás Administrador Global', 'tomas_admin', 'tomas0822palacios@gmail.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ADMINISTRADOR', NULL, 'ACTIVO'),
-(2, 'Encargado Centro Eléctrico EP', 'encargado_ep', 'ep@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ENCARGADO', 1, 'ACTIVO'),
-(3, 'Encargado Centro Eléctrico EP1', 'encargado_ep1', 'ep1@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ENCARGADO', 2, 'ACTIVO'),
-(4, 'Encargado Grupo Eléctrico EP3', 'encargado_ep3', 'ep3@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ENCARGADO', 3, 'ACTIVO'),
-(5, 'Encargado EP6 Ecoiluminación', 'encargado_ep6', 'ep6@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'ENCARGADO', 4, 'ACTIVO'),
-(6, 'Corredor Logístico 1', 'corredor_1', 'corredor1@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'EMPLEADO', NULL, 'ACTIVO'),
-(7, 'Corredor Logístico 2', 'corredor_2', 'corredor2@grupoelectrico.com', '$2a$10$CaQVRoDMLbq3L.W9Df0rWuDeQQMtpOQIw68cWnD2/HJVSTbmWnnU.', 'EMPLEADO', NULL, 'ACTIVO');
+(1, 'Tomás Administrador Global', 'tomas_admin', 'tomas0822palacios@gmail.com', '$2a$10$p9MunPP9fYrcxY/0A/fwdODezEVHFwlOmacn3f5uFjbmBY5b9wgnO', 'ADMINISTRADOR', NULL, 'ACTIVO'),
+(2, 'Encargado Centro Eléctrico EP', 'encargado_ep', 'ep@grupoelectrico.com', '$2a$10$z06m3G2IhngkZU87vo0skeFH8FUE9IFayJuw8glVfKZfLjZQoeZVu', 'ENCARGADO', 1, 'ACTIVO'),
+(3, 'Encargado Centro Eléctrico EP1', 'encargado_ep1', 'ep1@grupoelectrico.com', '$2a$10$JRzJMz4lf1/znxjy58B08uALRF2K1tr6p7wj42a1By3FkuJ0UcLGq', 'ENCARGADO', 2, 'ACTIVO'),
+(4, 'Encargado Grupo Eléctrico EP3', 'encargado_ep3', 'ep3@grupoelectrico.com', '$2a$10$z/8ZfBoI0IRimORVPBrv8O1tYRRNEPwV9RO3LEMeu1bL1.BuhpNNi', 'ENCARGADO', 3, 'ACTIVO'),
+(5, 'Encargado EP6 Ecoiluminación', 'encargado_ep6', 'ep6@grupoelectrico.com', '$2a$10$oa0EzjWac1javOaA2jVaFeaHmT6RuC0/ASR/nSyBLyVXXmMVQukHe', 'ENCARGADO', 4, 'ACTIVO'),
+(6, 'Corredor Logístico 1', 'corredor_1', 'corredor1@grupoelectrico.com', '$2a$10$s7l9FHuOBsUgKprnEXmMj.gRav7bG0cAINUF5JsDoTTz1.dgu7oNO', 'EMPLEADO', NULL, 'ACTIVO'),
+(7, 'Corredor Logístico 2', 'corredor_2', 'corredor2@grupoelectrico.com', '$2a$10$hC5c0OSZ7Z8lt0SLDLrB9emtwAYLqKwzRUox4KHj0VJaZOaj8vHP6', 'EMPLEADO', NULL, 'ACTIVO');
 
 SELECT setval('usuarios_id_seq', (SELECT MAX(id) FROM usuarios));
 

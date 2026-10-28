@@ -11,7 +11,7 @@ describe('Auth Endpoints', () => {
         .send({
           nombre_completo: 'Bot Malicioso',
           username: 'bot_123',
-          password: 'passwordSeguro123',
+          password: 'PasswordSeguro123!',
           rol: 'EMPLEADO',
           _honey: 'soy_un_bot_revisando_campos'
         });
@@ -49,7 +49,7 @@ describe('Auth Endpoints', () => {
         .send({
           nombre_completo: 'Encargado Sin Sede',
           username: 'encargado_1',
-          password: 'passwordValida123',
+          password: 'PasswordValida123!',
           rol: 'ENCARGADO'
           // Falta sede_id
         });

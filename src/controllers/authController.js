@@ -7,6 +7,7 @@ import { initializeDatabase } from '../database/initDb.js';
 import UserRepository from '../repositories/UserRepository.js';
 import SedeRepository from '../repositories/SedeRepository.js';
 import AuditRepository from '../repositories/AuditRepository.js';
+import { passwordSchema } from '../validators/authValidator.js';
 
 const googleClient = new OAuth2Client(config.google.clientId);
 
@@ -413,6 +414,14 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'El código de recuperación ha expirado. Solicita uno nuevo.'
+      });
+    }
+
+    const passwordValidation = passwordSchema.safeParse(newPassword);
+    if (!passwordValidation.success) {
+      return res.status(400).json({
+        success: false,
+        message: passwordValidation.error.errors[0]?.message || 'La contraseña no cumple con la política de seguridad.'
       });
     }
 

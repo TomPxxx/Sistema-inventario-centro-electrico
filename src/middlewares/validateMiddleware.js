@@ -9,12 +9,13 @@ export const validate = (schema) => async (req, res, next) => {
     });
     return next();
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (error instanceof z.ZodError || error.name === 'ZodError') {
+      const issues = error.issues || error.errors || [];
       return res.status(400).json({
         success: false,
         message: 'Error de validación en los datos enviados',
-        errors: error.errors.map(err => ({
-          campo: err.path.join('.'),
+        errors: issues.map(err => ({
+          campo: Array.isArray(err.path) ? err.path.join('.') : String(err.path),
           mensaje: err.message
         }))
       });

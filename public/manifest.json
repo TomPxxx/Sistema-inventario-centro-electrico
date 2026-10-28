@@ -1,17 +1,24 @@
 {
-  "name": "Sistema de Inventario CE",
-  "short_name": "Inventario CE",
+  "name": "Grupo Eléctrico - Sistema de Inventario",
+  "short_name": "Grupo Eléctrico",
   "description": "Sistema de Inventario Multi-Sede y Logística de Grupo Eléctrico",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#008f39",
+  "background_color": "#04110e",
+  "theme_color": "#10b981",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/images/logo-background.png",
+      "src": "/images/logo-nuevo-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo-nuevo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/images/logo-background.png",

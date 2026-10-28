@@ -1,43 +1,54 @@
 @echo off
-title Sistema de Inventario Multi-Sede - Grupo Electrico CE
-cd /d "%~dp0"
+title Grupo Electrico CE - Sistema de Inventario
+color 0A
+
+echo ========================================================
+echo   SISTEMA DE INVENTARIO - GRUPO ELECTRICO CE
+echo ========================================================
+echo.
+
+:: 1. Ir al directorio del proyecto
+cd /d "C:\Users\tomas\OneDrive\Documentos\SISTEMA DE INVENTARIO CE"
 set "PATH=%LOCALAPPDATA%\Programs\DockerDesktop\resources\bin;%PATH%"
 
-echo ========================================================
-echo   INICIANDO SISTEMA DE INVENTARIO GRUPO ELECTRICO CE
-echo ========================================================
-echo.
-
-:: 1. Verificar si Docker Desktop esta abierto
-echo [1/3] Verificando Docker...
-docker info >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [INFO] Iniciando Docker Desktop, espera unos segundos...
-    start "" "%LOCALAPPDATA%\Programs\DockerDesktop\Docker Desktop.exe"
-    :wait_docker
-    timeout /t 3 /nobreak >nul
-    docker info >nul 2>&1
-    if %errorlevel% neq 0 goto wait_docker
-    echo [OK] Docker Desktop conectado.
-) else (
-    echo [OK] Docker ya esta en ejecucion.
+:: 2. Verificar si el servidor ya esta corriendo en el puerto 4000
+netstat -ano | findstr /R ":4000.*LISTENING" >nul
+if not errorlevel 1 (
+    echo [INFO] El servidor ya esta en linea en http://localhost:4000
+    echo Abriendo el sistema en tu navegador...
+    start "" "http://localhost:4000"
+    timeout /t 3 >nul
+    exit /b 0
 )
 
-:: 2. Levantar la base de datos PostgreSQL local
-echo.
-echo [2/3] Levantando base de datos PostgreSQL en contenedor Docker...
-docker compose up -d
+:: 3. Verificar e iniciar Docker Desktop
+echo [1/3] Verificando Docker Desktop...
+tasklist /fi "imagename eq Docker Desktop.exe" | findstr /i "Docker Desktop.exe" >nul
+if errorlevel 1 (
+    echo [INFO] Iniciando Docker Desktop en segundo plano...
+    if exist "%LOCALAPPDATA%\Programs\DockerDesktop\Docker Desktop.exe" (
+        start "" "%LOCALAPPDATA%\Programs\DockerDesktop\Docker Desktop.exe"
+        timeout /t 8 /nobreak >nul
+    ) else if exist "C:\Program Files\Docker\Docker\Docker Desktop.exe" (
+        start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+        timeout /t 8 /nobreak >nul
+    )
+)
 
-:: 3. Abrir la aplicacion en el navegador
-echo.
-echo [3/3] Abriendo navegador en http://localhost:4000...
+:: 4. Levantar contenedor de Base de Datos PostgreSQL
+echo [2/3] Verificando contenedor PostgreSQL...
+docker compose up -d 2>nul
+
+:: 5. Abrir la aplicacion en el navegador
+echo [3/3] Abriendo aplicacion en http://localhost:4000...
 start "" "http://localhost:4000"
 
-:: 4. Iniciar Servidor Node.js
+:: 6. Iniciar Servidor Node.js
 echo.
 echo ========================================================
-echo   SISTEMA LISTO Y EN LINEA
+echo   SERVIDOR EN LINEA - http://localhost:4000
+echo   (Deja esta ventana abierta mientras uses el sistema)
 echo ========================================================
 echo.
-npm start
+node server.js
 pause
