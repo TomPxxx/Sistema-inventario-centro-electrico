@@ -22,8 +22,18 @@ const startServer = async () => {
     }
   });
 
-  // Guardar la instancia de socket.io en app para usarla en los controladores
+  // Guardar la instancia de socket.io y el mapa de presencia en app para usarlos en los controladores
+  const onlineUsers = new Map(); // userId (number) -> Set<socket.id>
   app.set('io', io);
+  app.set('onlineUsers', onlineUsers);
+
+  const broadcastPresence = () => {
+    const onlineUserIds = [];
+    for (const [uid, sockets] of onlineUsers.entries()) {
+      if (sockets.size > 0) onlineUserIds.push(Number(uid));
+    }
+    io.emit('presencia_usuarios_actualizada', { onlineUserIds });
+  };
 
   io.on('connection', (socket) => {
     console.log(`📡 [Socket.io] Nuevo cliente conectado: ${socket.id}`);
@@ -42,7 +52,40 @@ const startServer = async () => {
       }
     });
 
+    // Presencia en tiempo real de usuarios autenticados
+    socket.on('register_presence', (data) => {
+      const uid = Number(data?.userId);
+      if (!uid) return;
+      socket.data.userId = uid;
+      if (!onlineUsers.has(uid)) {
+        onlineUsers.set(uid, new Set());
+      }
+      onlineUsers.get(uid).add(socket.id);
+      socket.join(`user_${uid}`);
+      broadcastPresence();
+    });
+
+    socket.on('leave_presence', () => {
+      const uid = socket.data.userId;
+      if (uid && onlineUsers.has(uid)) {
+        onlineUsers.get(uid).delete(socket.id);
+        if (onlineUsers.get(uid).size === 0) {
+          onlineUsers.delete(uid);
+        }
+        socket.data.userId = null;
+        broadcastPresence();
+      }
+    });
+
     socket.on('disconnect', () => {
+      const uid = socket.data.userId;
+      if (uid && onlineUsers.has(uid)) {
+        onlineUsers.get(uid).delete(socket.id);
+        if (onlineUsers.get(uid).size === 0) {
+          onlineUsers.delete(uid);
+        }
+        broadcastPresence();
+      }
       console.log(`📡 [Socket.io] Cliente desconectado: ${socket.id}`);
     });
   });

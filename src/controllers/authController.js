@@ -23,6 +23,9 @@ const cookieOptions = {
 // Versión actual de la política de tratamiento de datos
 const CURRENT_POLICY_VERSION = 'v1.0';
 
+// Mapa de últimos tokens JWT emitidos por usuario para revocación directa desde el panel admin
+const activeUserTokens = new Map();
+
 /**
  * Iniciar sesión (Login)
  * POST /api/auth/login
@@ -146,6 +149,7 @@ export const login = async (req, res) => {
     await UserRepository.updateSessionToken(user.id, payload.sessionToken);
 
     const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+    activeUserTokens.set(Number(user.id), token);
 
     // Guardamos el token en una cookie segura
     res.cookie('token', token, cookieOptions);
@@ -270,6 +274,7 @@ export const googleLogin = async (req, res) => {
     await UserRepository.updateSessionToken(user.id, jwtPayload.sessionToken);
 
     const jwtToken = jwt.sign(jwtPayload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+    activeUserTokens.set(Number(user.id), jwtToken);
     res.cookie('token', jwtToken, cookieOptions);
 
     if (req.app.get('io')) {
@@ -740,5 +745,121 @@ export const getAuditLogs = async (req, res) => {
   } catch (error) {
     console.error('Error fetching audit logs:', error);
     res.status(500).json({ success: false, message: 'Error fetching logs' });
+  }
+};
+
+/**
+ * Panel Admin: Obtener todos los usuarios con su estado en línea / desconectado (Socket.IO)
+ * GET /api/auth/users
+ */
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await UserRepository.findAllUsers();
+    const onlineUsersMap = req.app.get('onlineUsers');
+
+    const enrichedUsers = users.map((u) => {
+      const uid = Number(u.id);
+      const isOnline = Boolean(onlineUsersMap && onlineUsersMap.has(uid) && onlineUsersMap.get(uid).size > 0);
+      return {
+        id: u.id,
+        nombre_completo: u.nombre_completo,
+        username: u.username,
+        email: u.email,
+        rol: u.rol,
+        sede_id: u.sede_id,
+        sede_nombre: u.sede_nombre,
+        estado: u.estado,
+        auth_provider: u.auth_provider,
+        ultimo_login: u.ultimo_login,
+        online: isOnline,
+        has_active_session: Boolean(u.current_session_token || isOnline || activeUserTokens.has(uid))
+      };
+    });
+
+    const onlineCount = enrichedUsers.filter((u) => u.online).length;
+
+    return res.status(200).json({
+      success: true,
+      summary: {
+        total: enrichedUsers.length,
+        online: onlineCount,
+        offline: enrichedUsers.length - onlineCount
+      },
+      users: enrichedUsers
+    });
+  } catch (error) {
+    console.error('Error fetching all users:', error);
+    return res.status(500).json({ success: false, message: 'Error al obtener el listado de usuarios.' });
+  }
+};
+
+/**
+ * Panel Admin: Cerrar forzosamente la sesión de un usuario usando la blacklist existente y registrar en auditoría
+ * POST /api/auth/users/:id/force-logout
+ */
+export const forceLogoutUser = async (req, res) => {
+  try {
+    const targetUserId = Number(req.params.id);
+    if (!targetUserId) {
+      return res.status(400).json({ success: false, message: 'ID de usuario inválido.' });
+    }
+
+    const targetUser = await UserRepository.findById(targetUserId);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+    }
+
+    // 1. Agregar el JWT activo y/o el sessionToken actual a la tabla token_blacklist existente
+    const activeJwt = activeUserTokens.get(targetUserId);
+    if (activeJwt) {
+      await UserRepository.blacklistToken(activeJwt);
+      activeUserTokens.delete(targetUserId);
+    }
+    if (targetUser.current_session_token) {
+      await UserRepository.blacklistToken(targetUser.current_session_token);
+    }
+
+    // 2. Limpiar el current_session_token del usuario en base de datos
+    await UserRepository.updateSessionToken(targetUserId, null);
+
+    // 3. Remover de presencia activa en Socket.IO y notificar cierre forzoso en tiempo real
+    const onlineUsersMap = req.app.get('onlineUsers');
+    if (onlineUsersMap && onlineUsersMap.has(targetUserId)) {
+      onlineUsersMap.delete(targetUserId);
+    }
+
+    if (req.app.get('io')) {
+      const io = req.app.get('io');
+      io.emit('sesion_revocada_admin', {
+        userId: targetUserId,
+        username: targetUser.username,
+        message: 'Tu sesión ha sido cerrada por un administrador.'
+      });
+
+      const onlineUserIds = [];
+      if (onlineUsersMap) {
+        for (const [uid, sockets] of onlineUsersMap.entries()) {
+          if (sockets.size > 0) onlineUserIds.push(Number(uid));
+        }
+      }
+      io.emit('presencia_usuarios_actualizada', { onlineUserIds });
+    }
+
+    // 4. Registrar acción en auditoría
+    await AuditRepository.logAction(
+      req.user.id,
+      req.user.username,
+      'CERRAR_SESION_USUARIO',
+      `Cerró la sesión del usuario @${targetUser.username} (ID: ${targetUserId}) mediante blacklist`,
+      req.ip
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `La sesión de @${targetUser.username} ha sido cerrada y revocada en la blacklist.`
+    });
+  } catch (error) {
+    console.error('Error forcing logout on user:', error);
+    return res.status(500).json({ success: false, message: 'Error interno al cerrar la sesión del usuario.' });
   }
 };

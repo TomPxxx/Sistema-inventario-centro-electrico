@@ -82,6 +82,9 @@ function initSocketConnection() {
     if (currentUser && currentUser.sede_id) {
       globalSocket.emit('join_sede', currentUser.sede_id);
     }
+    if (currentUser && currentUser.id) {
+      globalSocket.emit('register_presence', { userId: currentUser.id, username: currentUser.username });
+    }
     if (typeof waitingApprovalUser !== 'undefined' && waitingApprovalUser && waitingApprovalUser.id) {
       globalSocket.emit('join_pending_user', waitingApprovalUser.id);
     }
@@ -168,6 +171,27 @@ function initSocketConnection() {
   globalSocket.on('usuario_rechazado', (data) => {
     if (waitingApprovalUser && Number(waitingApprovalUser.id) === Number(data.userId)) {
       handleRealtimeUserRejected(data);
+    }
+  });
+
+  globalSocket.on('presencia_usuarios_actualizada', (data) => {
+    if (Array.isArray(data?.onlineUserIds)) {
+      onlineUserIdsSet = new Set(data.onlineUserIds.map(Number));
+      const badge = document.getElementById('badgeOnlineUsersCount');
+      if (badge) badge.textContent = `${onlineUserIdsSet.size} online`;
+      if (Array.isArray(adminUsersCache) && adminUsersCache.length > 0) {
+        adminUsersCache = adminUsersCache.map((u) => ({
+          ...u,
+          online: onlineUserIdsSet.has(Number(u.id))
+        }));
+        renderAdminUsersTable(adminUsersCache);
+      }
+    }
+  });
+
+  globalSocket.on('sesion_revocada_admin', (data) => {
+    if (currentUser && Number(currentUser.id) === Number(data.userId)) {
+      forceLocalLogout(data.message || 'Tu sesión ha sido cerrada por un administrador.');
     }
   });
 }
@@ -1145,6 +1169,15 @@ function launchSoftwareView(user) {
 
   // Cargar datos reales de MySQL
   loadRealInventory();
+
+  // Registrar presencia en Socket.IO
+  initSocketConnection();
+  if (globalSocket && user.id) {
+    globalSocket.emit('register_presence', { userId: user.id, username: user.username });
+  }
+  if (user.rol === 'ADMINISTRADOR' && typeof loadAdminUsers === 'function') {
+    loadAdminUsers();
+  }
   
   // Iniciar notificaciones en tiempo real
   if (typeof setupNotificationObserver === 'function') {
@@ -2855,6 +2888,9 @@ async function handleAdminDistribuir(recepcionId) {
 // =============================================================================
 
 async function handleLogout() {
+  if (globalSocket) {
+    globalSocket.emit('leave_presence');
+  }
   try {
     await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
   } catch (err) {
@@ -3466,6 +3502,136 @@ window.rejectUser = async function(id) {
       alert(data.message);
     }
   } catch(e) { console.error(e); }
+};
+
+// =============================================================================
+// 11.1 PANEL ADMIN DE USUARIOS: PRESENCIA SOCKET.IO Y CIERRE FORZOSO (BLACKLIST)
+// =============================================================================
+let onlineUserIdsSet = new Set();
+let adminUsersCache = [];
+
+window.openAdminUsersModal = async function() {
+  const modal = document.getElementById('adminUsersModal');
+  if (modal) modal.classList.remove('hidden');
+  await loadAdminUsers();
+};
+
+window.closeAdminUsersModal = function() {
+  const modal = document.getElementById('adminUsersModal');
+  if (modal) modal.classList.add('hidden');
+};
+
+window.loadAdminUsers = async function() {
+  if (!currentUser || currentUser.rol !== 'ADMINISTRADOR') return;
+  try {
+    const res = await fetch(`${API_BASE}/auth/users`, {
+      headers: currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {},
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      adminUsersCache = data.users || [];
+      onlineUserIdsSet = new Set(adminUsersCache.filter((u) => u.online).map((u) => Number(u.id)));
+      renderAdminUsersTable(adminUsersCache);
+    }
+  } catch (err) {
+    console.error('Error cargando panel de usuarios:', err);
+  }
+};
+
+window.renderAdminUsersTable = function(users) {
+  const tbody = document.getElementById('adminUsersTbody');
+  const totalEl = document.getElementById('adminUsersTotalCount');
+  const onlineEl = document.getElementById('adminUsersOnlineCount');
+  const offlineEl = document.getElementById('adminUsersOfflineCount');
+  const sidebarBadge = document.getElementById('badgeOnlineUsersCount');
+
+  const list = Array.isArray(users) ? users : [];
+  const onlineCount = list.filter((u) => u.online).length;
+  const offlineCount = list.length - onlineCount;
+
+  if (totalEl) totalEl.textContent = list.length;
+  if (onlineEl) onlineEl.textContent = onlineCount;
+  if (offlineEl) offlineEl.textContent = offlineCount;
+  if (sidebarBadge) sidebarBadge.textContent = `${onlineCount} online`;
+
+  if (!tbody) return;
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-outline text-sm">No se encontraron usuarios registrados.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map((u) => {
+    const isMe = currentUser && Number(currentUser.id) === Number(u.id);
+    const presenceBadge = u.online
+      ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-mono text-[11px] font-bold">
+           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>En línea
+         </span>`
+      : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-container-highest text-outline border border-outline-variant/30 font-mono text-[11px]">
+           <span class="w-2 h-2 rounded-full bg-slate-500"></span>Desconectado
+         </span>`;
+
+    const statusBadgeClass = u.estado === 'ACTIVO'
+      ? 'bg-primary/15 text-primary border-primary/30'
+      : u.estado === 'PENDIENTE'
+        ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+        : 'bg-error/15 text-error border-error/30';
+
+    const lastLoginStr = u.ultimo_login ? new Date(u.ultimo_login).toLocaleString() : 'Nunca';
+
+    return `
+      <tr class="hover:bg-surface-container-high/50 transition-colors">
+        <td class="py-2.5 px-3">
+          <div class="font-bold text-on-surface">${u.nombre_completo} ${isMe ? '<span class="text-[10px] font-mono text-primary">(Tú)</span>' : ''}</div>
+          <div class="text-[11px] font-mono text-primary">@${u.username} <span class="text-outline">· ${u.email || 'Sin correo'}</span></div>
+        </td>
+        <td class="py-2.5 px-3 font-mono">
+          <div class="font-bold text-on-surface">${u.rol}</div>
+          <div class="text-[10px] text-outline">${u.sede_nombre || (u.rol === 'ADMINISTRADOR' ? 'Red Central' : 'Sin sede')}</div>
+        </td>
+        <td class="py-2.5 px-3">
+          <span class="px-2 py-0.5 rounded border text-[10px] font-mono font-bold ${statusBadgeClass}">${u.estado}</span>
+        </td>
+        <td class="py-2.5 px-3">${presenceBadge}</td>
+        <td class="py-2.5 px-3 font-mono text-[11px] text-outline">${lastLoginStr}</td>
+        <td class="py-2.5 px-3 text-right">
+          <button
+            type="button"
+            onclick="forceLogoutUser(${u.id}, '${u.username}')"
+            ${isMe ? 'disabled title="Usa el botón Salir para tu propia sesión"' : ''}
+            class="px-3 py-1.5 rounded-lg bg-error/15 hover:bg-error text-error hover:text-white border border-error/40 font-mono text-[11px] font-bold transition-all inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span class="material-symbols-outlined text-[14px]">power_settings_new</span>
+            <span data-i18n="btn_force_logout">Cerrar Sesión</span>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+};
+
+window.forceLogoutUser = async function(userId, username) {
+  if (!confirm(`¿Deseas cerrar forzosamente la sesión de @${username} e invalidar su token en la Blacklist?`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/auth/users/${userId}/force-logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
+      },
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast(data.message || `Sesión de @${username} cerrada exitosamente.`, 'success');
+      await loadAdminUsers();
+    } else {
+      alert(data.message || 'Error al cerrar la sesión del usuario.');
+    }
+  } catch (err) {
+    console.error('Error cerrando sesión de usuario:', err);
+    alert('Error de red al intentar cerrar la sesión.');
+  }
 };
 
 

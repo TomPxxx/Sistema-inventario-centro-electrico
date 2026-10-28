@@ -31,6 +31,19 @@ export const authenticateJWT = async (req, res, next) => {
     // 2. Verificar la firma del JWT
     const decoded = jwt.verify(token, config.jwt.secret);
 
+    // 2.1 Verificar si el sessionToken interno fue revocado en la blacklist por un administrador
+    if (decoded.sessionToken) {
+      const isSessionBlacklisted = await UserRepository.isTokenBlacklisted(decoded.sessionToken);
+      if (isSessionBlacklisted) {
+        res.clearCookie('token', { httpOnly: true, secure: config.nodeEnv === 'production', sameSite: 'strict' });
+        return res.status(401).json({
+          success: false,
+          message: 'Tu sesión ha sido cerrada por un administrador.',
+          code: 'TOKEN_BLACKLISTED'
+        });
+      }
+    }
+
     // 3. Verificar que el usuario siga existiendo y esté ACTIVO usando el Repositorio
     const user = await UserRepository.findById(decoded.id);
 
@@ -38,6 +51,15 @@ export const authenticateJWT = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'El usuario asociado a esta sesión ya no existe.'
+      });
+    }
+
+    if (decoded.sessionToken && !user.current_session_token) {
+      res.clearCookie('token', { httpOnly: true, secure: config.nodeEnv === 'production', sameSite: 'strict' });
+      return res.status(401).json({
+        success: false,
+        message: 'Tu sesión ha sido finalizada o revocada. Ingresa nuevamente.',
+        code: 'TOKEN_BLACKLISTED'
       });
     }
 

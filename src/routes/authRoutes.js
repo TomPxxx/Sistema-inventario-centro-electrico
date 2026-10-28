@@ -15,7 +15,9 @@ import {
   getPendingUsers,
   approveUser,
   rejectUser,
-  getAuditLogs
+  getAuditLogs,
+  getAllUsers,
+  forceLogoutUser
 } from '../controllers/authController.js';
 import { authenticateJWT } from '../middlewares/authMiddleware.js';
 import { authorizeRoles } from '../middlewares/roleMiddleware.js';
@@ -47,10 +49,12 @@ router.get('/me', authenticateJWT, getProfile);
 router.post('/accept-policy', authenticateJWT, acceptPolicy);
 router.post('/verify-password', authenticateJWT, verifyPassword);
 
-// Rutas protegidas para aprobaciones (Solo Administrador)
+// Rutas protegidas para aprobaciones y gestión de usuarios (Solo Administrador)
 router.get('/pending-users', authenticateJWT, authorizeRoles('ADMINISTRADOR'), getPendingUsers);
 router.post('/approve', authenticateJWT, authorizeRoles('ADMINISTRADOR'), approveUser);
 router.post('/reject', authenticateJWT, authorizeRoles('ADMINISTRADOR'), rejectUser);
+router.get('/users', authenticateJWT, authorizeRoles('ADMINISTRADOR'), getAllUsers);
+router.post('/users/:id/force-logout', authenticateJWT, authorizeRoles('ADMINISTRADOR'), forceLogoutUser);
 
 // Ruta para ver logs de auditoría
 router.get('/audit-logs', authenticateJWT, authorizeRoles('ADMINISTRADOR'), getAuditLogs);

@@ -83,6 +83,19 @@ class UserRepository {
     return result.rows;
   }
 
+  async findAllUsers() {
+    const query = `
+      SELECT u.id, u.nombre_completo, u.username, u.email, u.rol, u.sede_id, u.estado,
+             u.auth_provider, u.ultimo_login, u.current_session_token, u.created_at,
+             s.nombre AS sede_nombre
+      FROM usuarios u
+      LEFT JOIN sedes s ON u.sede_id = s.id
+      ORDER BY u.id ASC
+    `;
+    const result = await pool.query(query);
+    return result.rows;
+  }
+
   async approveUser(userId, rol, sedeId, adminAprobadorId) {
     const query = `
       UPDATE usuarios 
