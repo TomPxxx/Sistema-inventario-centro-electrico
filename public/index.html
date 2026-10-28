@@ -998,6 +998,10 @@
                   <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-outline text-[18px]">search</span>
                   <input type="text" id="adminSearchInput" onkeyup="filterAdminSearch(this.value)" placeholder="Buscar producto por nombre o SKU..." data-i18n-placeholder="search_placeholder" class="w-full bg-white dark:bg-surface-container-lowest text-slate-900 dark:text-on-surface pl-10 pr-4 py-2.5 rounded-lg border-2 border-slate-300 dark:border-outline-variant/60 focus:border-primary focus:outline-none font-sans text-xs shadow-sm transition-all" />
                 </div>
+                <button type="button" onclick="openBarcodeScannerModal('adminSearchInput')" class="px-3 py-2.5 bg-secondary hover:bg-yellow-400 text-on-secondary rounded-lg font-mono text-xs font-bold flex items-center gap-1 shadow-sm shrink-0" title="Escanear Código de Barras / SKU con Cámara">
+                  <span class="material-symbols-outlined text-[18px]">barcode_scanner</span>
+                  <span class="hidden sm:inline" data-i18n="btn_scan">Escanear</span>
+                </button>
               </div>
 
               <!-- Filtro de Sedes -->
@@ -2499,6 +2503,70 @@
       </div>
     </div>
   </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: LECTOR DE CÓDIGO DE BARRAS CON CÁMARA (BarcodeDetector + Fallback) -->
+  <!-- ========================================================================= -->
+  <div id="barcodeScannerModal" class="hidden fixed inset-0 z-[90] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="w-full max-w-lg bg-surface-container border border-outline-variant/50 rounded-2xl shadow-2xl p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-outline-variant/30 pb-3">
+        <div class="flex items-center gap-2 text-secondary">
+          <span class="material-symbols-outlined">barcode_scanner</span>
+          <div>
+            <h3 class="font-headline font-bold text-base text-on-surface" data-i18n="barcode_modal_title">Lector de Código de Barras / SKU</h3>
+            <span id="barcodeEngineBadge" class="text-[10px] font-mono text-primary">Inicializando cámara...</span>
+          </div>
+        </div>
+        <button type="button" onclick="closeBarcodeScannerModal()" class="text-outline hover:text-error transition-colors">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Aviso de Contexto Seguro (HTTPS o localhost) -->
+      <div id="barcodeSecureContextWarning" class="hidden p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-xs text-amber-300 font-sans space-y-1">
+        <div class="font-bold flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-sm">https</span>
+          <span data-i18n="barcode_https_warning_title">Se requiere HTTPS o localhost para usar la cámara</span>
+        </div>
+        <p class="text-[11px] text-on-surface-variant" data-i18n="barcode_https_warning_desc">
+          Por seguridad del navegador, el acceso a la cámara web solo está habilitado bajo conexiones seguras (<strong>HTTPS</strong>) o desde <strong>localhost</strong>. Puedes usar el campo manual inferior o un lector láser USB.
+        </p>
+      </div>
+
+      <!-- Visor de Cámara (Nativo BarcodeDetector o Fallback html5-qrcode) -->
+      <div class="relative rounded-xl overflow-hidden bg-black border border-outline-variant/40 aspect-video flex items-center justify-center">
+        <video id="barcodeVideoPreview" class="w-full h-full object-cover hidden" playsinline muted></video>
+        <div id="barcodeFallbackReader" class="w-full h-full hidden"></div>
+        <div id="barcodeScannerOverlay" class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <div class="w-3/4 h-24 border-2 border-secondary/80 rounded-lg shadow-[0_0_25px_rgba(255,238,0,0.3)] relative">
+            <div class="absolute inset-x-0 top-1/2 h-0.5 bg-red-500/80 animate-pulse"></div>
+          </div>
+          <span class="mt-2 px-2 py-0.5 rounded bg-black/70 text-[10px] font-mono text-white" data-i18n="barcode_align_hint">Alinea el código de barras o QR dentro del recuadro</span>
+        </div>
+      </div>
+
+      <!-- Entrada Manual / Lector USB Fallback -->
+      <div class="flex items-center gap-2">
+        <input
+          type="text"
+          id="barcodeManualSkuInput"
+          placeholder="O digita / escanea el código SKU manualmente..."
+          data-i18n-placeholder="barcode_manual_placeholder"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();handleBarcodeDetected(this.value);}"
+          class="flex-1 bg-surface-container-low text-on-surface font-mono text-xs p-2.5 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-secondary uppercase"
+        />
+        <button type="button" onclick="handleBarcodeDetected(document.getElementById('barcodeManualSkuInput').value)" class="px-3.5 py-2.5 bg-primary hover:bg-emerald-400 text-on-primary font-headline font-bold text-xs rounded-lg transition-all flex items-center gap-1">
+          <span class="material-symbols-outlined text-sm">search</span>
+          <span data-i18n="btn_search_code">Buscar</span>
+        </button>
+      </div>
+
+      <!-- Tarjeta de Resultado Escaneado -->
+      <div id="barcodeScannedResultCard" class="hidden p-3.5 rounded-xl bg-surface-container-low border border-primary/40 space-y-2 text-xs font-mono"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
 
   <script>
     function openPendingUsersModal() {

@@ -1985,14 +1985,223 @@ function handleQuickPriceSearch(query) {
   });
 }
 
+// =============================================================================
+// 6.2 LECTOR DE CÓDIGO DE BARRAS CON CÁMARA (BarcodeDetector Nativo + Fallback html5-qrcode)
+// =============================================================================
+let barcodeMediaStream = null;
+let barcodeDetectionFrameId = null;
+let html5QrCodeInstance = null;
+let barcodeTargetInputId = null;
+
 function simulateBarcodeScan() {
-  if (liveProducts.length === 0) {
-    alert('No hay productos en inventario para escanear.');
+  openBarcodeScannerModal('quickPriceInput');
+}
+
+async function openBarcodeScannerModal(targetInputId = null) {
+  barcodeTargetInputId = targetInputId;
+  const modal = document.getElementById('barcodeScannerModal');
+  const videoEl = document.getElementById('barcodeVideoPreview');
+  const fallbackEl = document.getElementById('barcodeFallbackReader');
+  const engineBadge = document.getElementById('barcodeEngineBadge');
+  const secureWarning = document.getElementById('barcodeSecureContextWarning');
+  const resultCard = document.getElementById('barcodeScannedResultCard');
+  const manualInput = document.getElementById('barcodeManualSkuInput');
+
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  if (resultCard) {
+    resultCard.classList.add('hidden');
+    resultCard.innerHTML = '';
+  }
+  if (manualInput) manualInput.value = '';
+
+  const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+  const isSecure = Boolean(window.isSecureContext || window.location.protocol === 'https:' || isLocalhost);
+
+  if (!isSecure || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+    if (secureWarning) secureWarning.classList.remove('hidden');
+    if (engineBadge) engineBadge.textContent = 'Modo Manual / Lector USB (Requiere HTTPS o localhost para cámara)';
+    if (manualInput) manualInput.focus();
     return;
   }
-  const random = liveProducts[Math.floor(Math.random() * liveProducts.length)];
-  alert(`⚡ Lector de Código de Barras:\n\nProducto: ${random.nombre}\nSKU: ${random.codigo_sku}\nStock Total en las 4 Sedes: ${random.total_stock} unidades.`);
+
+  if (secureWarning) secureWarning.classList.add('hidden');
+
+  // 1. Intentar primero con la API nativa BarcodeDetector si el navegador la soporta
+  if ('BarcodeDetector' in window) {
+    try {
+      if (engineBadge) engineBadge.textContent = 'Motor activo: BarcodeDetector Nativo';
+      if (fallbackEl) fallbackEl.classList.add('hidden');
+      if (videoEl) videoEl.classList.remove('hidden');
+
+      barcodeMediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false
+      });
+      videoEl.srcObject = barcodeMediaStream;
+      await videoEl.play();
+
+      const detector = new window.BarcodeDetector({
+        formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code']
+      });
+
+      const scanFrame = async () => {
+        if (!barcodeMediaStream || modal.classList.contains('hidden')) return;
+        try {
+          const barcodes = await detector.detect(videoEl);
+          if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+            handleBarcodeDetected(barcodes[0].rawValue);
+            return;
+          }
+        } catch (err) {
+          // Continuar escaneando siguiente frame
+        }
+        barcodeDetectionFrameId = requestAnimationFrame(scanFrame);
+      };
+      barcodeDetectionFrameId = requestAnimationFrame(scanFrame);
+      return;
+    } catch (nativeErr) {
+      console.warn('[BarcodeScanner] Falló BarcodeDetector nativo, cambiando a fallback html5-qrcode:', nativeErr);
+      await stopBarcodeScannerStreams();
+    }
+  }
+
+  // 2. Fallback universal con librería html5-qrcode
+  if (typeof window.Html5Qrcode !== 'undefined') {
+    try {
+      if (engineBadge) engineBadge.textContent = 'Motor activo: Fallback html5-qrcode';
+      if (videoEl) videoEl.classList.add('hidden');
+      if (fallbackEl) fallbackEl.classList.remove('hidden');
+
+      html5QrCodeInstance = new window.Html5Qrcode('barcodeFallbackReader');
+      await html5QrCodeInstance.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 110 } },
+        (decodedText) => {
+          if (decodedText) {
+            handleBarcodeDetected(decodedText);
+          }
+        },
+        () => {}
+      );
+      return;
+    } catch (fallbackErr) {
+      console.warn('[BarcodeScanner] No se pudo iniciar la cámara con html5-qrcode:', fallbackErr);
+      if (engineBadge) engineBadge.textContent = 'Cámara no disponible — Usa entrada manual o lector USB';
+      if (manualInput) manualInput.focus();
+    }
+  } else {
+    if (engineBadge) engineBadge.textContent = 'Modo Manual / Lector USB';
+    if (manualInput) manualInput.focus();
+  }
 }
+
+async function stopBarcodeScannerStreams() {
+  if (barcodeDetectionFrameId) {
+    cancelAnimationFrame(barcodeDetectionFrameId);
+    barcodeDetectionFrameId = null;
+  }
+  if (barcodeMediaStream) {
+    barcodeMediaStream.getTracks().forEach((track) => track.stop());
+    barcodeMediaStream = null;
+  }
+  const videoEl = document.getElementById('barcodeVideoPreview');
+  if (videoEl) {
+    videoEl.srcObject = null;
+  }
+  if (html5QrCodeInstance) {
+    try {
+      await html5QrCodeInstance.stop();
+      await html5QrCodeInstance.clear();
+    } catch (e) {}
+    html5QrCodeInstance = null;
+  }
+}
+
+async function closeBarcodeScannerModal() {
+  await stopBarcodeScannerStreams();
+  const modal = document.getElementById('barcodeScannerModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function handleBarcodeDetected(rawCode) {
+  const code = (rawCode || '').trim();
+  if (!code) return;
+
+  const manualInput = document.getElementById('barcodeManualSkuInput');
+  if (manualInput) manualInput.value = code;
+
+  // Rellenar buscador activo si aplica
+  if (barcodeTargetInputId) {
+    const targetInput = document.getElementById(barcodeTargetInputId);
+    if (targetInput) {
+      targetInput.value = code;
+      if (barcodeTargetInputId === 'adminSearchInput') filterAdminSearch(code);
+      if (barcodeTargetInputId === 'quickPriceInput') handleQuickPriceSearch(code);
+    }
+  } else {
+    const quickInput = document.getElementById('quickPriceInput');
+    if (quickInput) {
+      quickInput.value = code;
+      handleQuickPriceSearch(code);
+    }
+  }
+
+  // Buscar coincidencia exacta o parcial por codigo_sku o nombre en liveProducts
+  const normalized = code.toLowerCase();
+  const product = (liveProducts || []).find(
+    (p) => (p.codigo_sku && p.codigo_sku.toLowerCase() === normalized)
+  ) || (liveProducts || []).find(
+    (p) => (p.codigo_sku && p.codigo_sku.toLowerCase().includes(normalized)) ||
+           (p.nombre && p.nombre.toLowerCase().includes(normalized))
+  );
+
+  const resultCard = document.getElementById('barcodeScannedResultCard');
+  if (!resultCard) return;
+  resultCard.classList.remove('hidden');
+
+  if (!product) {
+    resultCard.innerHTML = `
+      <div class="text-amber-400 font-bold flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-sm">warning</span>
+        <span>Código leído: <strong>${code}</strong> — No se encontró ningún producto con ese SKU.</span>
+      </div>
+    `;
+    return;
+  }
+
+  const s1 = product.sedes?.[1]?.stock_actual ?? 0;
+  const s2 = product.sedes?.[2]?.stock_actual ?? 0;
+  const s3 = product.sedes?.[3]?.stock_actual ?? 0;
+  const s4 = product.sedes?.[4]?.stock_actual ?? 0;
+  const precio = product.precio_referencia ?? product.sedes?.[1]?.precio_venta ?? 0;
+
+  resultCard.innerHTML = `
+    <div class="flex items-start justify-between gap-2 border-b border-outline-variant/30 pb-2">
+      <div>
+        <div class="text-primary font-bold text-xs">✓ SKU: ${product.codigo_sku}</div>
+        <div class="text-on-surface font-sans font-bold text-sm">${product.nombre}</div>
+      </div>
+      <div class="text-right">
+        <span class="text-[10px] text-outline block">Precio Venta</span>
+        <span class="text-secondary font-bold text-sm">$${Number(precio).toLocaleString()}</span>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 text-[11px]">
+      <div class="p-1.5 rounded bg-surface-container border border-outline-variant/30">Centro EP: <strong class="text-primary">${s1}</strong></div>
+      <div class="p-1.5 rounded bg-surface-container border border-outline-variant/30">EP1: <strong class="text-primary">${s2}</strong></div>
+      <div class="p-1.5 rounded bg-surface-container border border-outline-variant/30">EP3: <strong class="text-primary">${s3}</strong></div>
+      <div class="p-1.5 rounded bg-surface-container border border-outline-variant/30">EP6: <strong class="text-primary">${s4}</strong></div>
+    </div>
+    <div class="text-right text-[11px] text-outline pt-1">
+      Stock Total Red: <strong class="text-on-surface">${product.total_stock ?? (s1 + s2 + s3 + s4)} ${product.unidad_medida || 'un.'}</strong>
+    </div>
+  `;
+}
+
+window.openBarcodeScannerModal = openBarcodeScannerModal;
+window.closeBarcodeScannerModal = closeBarcodeScannerModal;
+window.handleBarcodeDetected = handleBarcodeDetected;
 
 // =============================================================================
 // 7. MODAL Y CREACIÓN DE PRODUCTOS EN MYSQL (SUPERADMIN)
