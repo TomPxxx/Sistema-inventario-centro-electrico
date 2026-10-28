@@ -573,53 +573,26 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="text-xs font-mono text-on-surface-variant uppercase tracking-wider block mb-1 font-semibold" for="regPassword" data-i18n="lbl_password">
-                  Contraseña
-                </label>
-                <div class="relative flex items-center">
-                  <span class="material-symbols-outlined text-outline absolute left-3 text-[18px] pointer-events-none">lock</span>
-                  <input class="w-full bg-surface-container-low text-on-surface font-mono text-xs pl-10 pr-10 py-2 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary shadow-inner" id="regPassword" placeholder="Mínimo 12 caracteres" required minlength="12" type="password"/>
-                  <button type="button" onclick="togglePassVisibility('regPassword', 'regEyeIcon')" class="absolute right-3 text-outline hover:text-on-surface">
-                    <span class="material-symbols-outlined text-[16px]" id="regEyeIcon">visibility</span>
-                  </button>
-                </div>
-                <p class="text-[10px] text-on-surface-variant font-mono mt-1" data-i18n="lbl_password_policy_hint">Mín. 12 caracteres (1 mayúscula, 1 minúscula, 3 números y 1 símbolo especial).</p>
+            <div>
+              <label class="text-xs font-mono text-on-surface-variant uppercase tracking-wider block mb-1 font-semibold" for="regPassword" data-i18n="lbl_password">
+                Contraseña
+              </label>
+              <div class="relative flex items-center">
+                <span class="material-symbols-outlined text-outline absolute left-3 text-[18px] pointer-events-none">lock</span>
+                <input class="w-full bg-surface-container-low text-on-surface font-mono text-xs pl-10 pr-10 py-2 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary shadow-inner" id="regPassword" placeholder="Mínimo 12 caracteres" required minlength="12" type="password"/>
+                <button type="button" onclick="togglePassVisibility('regPassword', 'regEyeIcon')" class="absolute right-3 text-outline hover:text-on-surface">
+                  <span class="material-symbols-outlined text-[16px]" id="regEyeIcon">visibility</span>
+                </button>
               </div>
-
-              <div>
-                <label class="text-xs font-mono text-on-surface-variant uppercase tracking-wider block mb-1 font-semibold" for="regRol" data-i18n="lbl_role">
-                  Cargo / Rol
-                </label>
-                <div class="relative flex items-center">
-                  <span class="material-symbols-outlined text-outline absolute left-3 text-[18px] pointer-events-none">shield_person</span>
-                  <select id="regRol" onchange="handleRoleChange()" class="w-full bg-surface-container-low text-on-surface text-xs pl-10 pr-8 py-2 rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary appearance-none cursor-pointer">
-                    <option value="ENCARGADO" selected>ENCARGADO (Sede)</option>
-                    <option value="EMPLEADO">EMPLEADO (Operador)</option>
-                    <option value="ADMINISTRADOR">ADMINISTRADOR (Global)</option>
-                  </select>
-                  <span class="material-symbols-outlined text-outline absolute right-2 text-sm pointer-events-none">expand_more</span>
-                </div>
-              </div>
+              <p class="text-[10px] text-on-surface-variant font-mono mt-1" data-i18n="lbl_password_policy_hint">Mín. 12 caracteres (1 mayúscula, 1 minúscula, 3 números y 1 símbolo especial).</p>
             </div>
 
-            <!-- Selección de Sede Obligatoria para Encargados -->
-            <div id="sedeSelectContainer" class="p-3 bg-surface-container-lowest rounded-lg border border-primary/40 space-y-1.5 transition-all">
-              <div class="flex items-center justify-between">
-                <label class="text-xs font-mono text-primary uppercase font-bold flex items-center gap-1" for="regSedeId" data-i18n="lbl_assigned_branch">
-                  <span class="material-symbols-outlined text-[15px]">warehouse</span> Sede Asignada
-                </label>
-                <span class="text-[10px] font-mono text-secondary bg-secondary/10 px-1.5 py-0.2 rounded">Requerido</span>
-              </div>
-              <div class="relative flex items-center">
-                <select id="regSedeId" class="w-full bg-surface-container text-on-surface text-xs p-2 rounded border border-outline-variant/40 focus:outline-none focus:border-primary cursor-pointer">
-                  <option value="1">Centro Eléctrico EP (Crr 20 # 12-30)</option>
-                  <option value="2">Centro Eléctrico EP1 (Crr 20 # 12-04)</option>
-                  <option value="3">Grupo Eléctrico EP3 (Crr 20 # 12-10)</option>
-                  <option value="4">EP6 Ecoiluminación (Crr 19 # 12-51)</option>
-                </select>
-              </div>
+            <!-- Aviso de Aprobación Obligatoria por Administrador -->
+            <div class="p-3 bg-surface-container-lowest rounded-lg border border-amber-500/40 flex items-start gap-2.5">
+              <span class="material-symbols-outlined text-amber-400 text-[18px] shrink-0 mt-0.5">admin_panel_settings</span>
+              <p class="text-[11px] text-on-surface-variant leading-relaxed" data-i18n="lbl_register_pending_notice">
+                Tu solicitud quedará en estado <strong class="text-amber-400 font-mono">PENDIENTE</strong>. Un Administrador verificará tu identidad y te asignará tu <strong>Rol</strong> y <strong>Sede</strong> antes de habilitar tu acceso.
+              </p>
             </div>
 
             <div class="pt-2">
@@ -2153,7 +2126,7 @@
       <div class="p-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface-container-low rounded-t-xl">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-orange-500">how_to_reg</span>
-          <h2 class="font-headline font-bold text-lg text-on-surface" data-i18n="pending_users_title">Solicitudes de Acceso (Google)</h2>
+          <h2 class="font-headline font-bold text-lg text-on-surface" data-i18n="pending_users_title">Solicitudes de Acceso Pendientes</h2>
         </div>
         <button type="button" onclick="document.getElementById('pendingUsersModal').classList.add('hidden')" class="text-on-surface-variant hover:text-error transition-colors">
           <span class="material-symbols-outlined">close</span>
@@ -2163,8 +2136,8 @@
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="bg-surface-container border-b border-outline-variant/30">
-              <th class="py-2 px-3 text-xs font-mono text-on-surface-variant uppercase" data-i18n="th_name">Nombre</th>
-              <th class="py-2 px-3 text-xs font-mono text-on-surface-variant uppercase" data-i18n="th_email">Correo</th>
+              <th class="py-2 px-3 text-xs font-mono text-on-surface-variant uppercase" data-i18n="th_name">Nombre / Usuario</th>
+              <th class="py-2 px-3 text-xs font-mono text-on-surface-variant uppercase" data-i18n="th_email">Correo / Origen</th>
               <th class="py-2 px-3 text-xs font-mono text-on-surface-variant uppercase" data-i18n="th_date">Fecha</th>
               <th class="py-2 px-3 text-xs font-mono text-on-surface-variant uppercase" data-i18n="th_assign_role_branch">Asignar Rol / Sede</th>
               <th class="py-2 px-3 text-xs font-mono text-on-surface-variant uppercase text-right" data-i18n="th_actions">Acciones</th>

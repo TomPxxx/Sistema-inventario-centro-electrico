@@ -148,6 +148,13 @@ function initSocketConnection() {
       forceLocalLogout('Tu sesión ha sido finalizada porque iniciaste sesión en otro dispositivo o navegador.');
     }
   });
+
+  globalSocket.on('nuevo_usuario_pendiente', (data) => {
+    if (currentUser && currentUser.rol === 'ADMINISTRADOR') {
+      showToast(`Nueva solicitud de acceso pendiente: ${data.nombre_completo} (@${data.username})`, 'info');
+      if (typeof loadPendingUsers === 'function') loadPendingUsers();
+    }
+  });
 }
 
 function showToast(message, type = 'info') {
@@ -693,8 +700,6 @@ async function handleRegisterSubmit(e) {
   const username = document.getElementById('regUsername').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPassword').value;
-  const rol = document.getElementById('regRol').value;
-  const sede_id = rol === 'ENCARGADO' ? document.getElementById('regSedeId').value : null;
   const honey = document.getElementById('registerHoney') ? document.getElementById('registerHoney').value : '';
 
   // Validar política de contraseña antes de enviar
@@ -708,13 +713,13 @@ async function handleRegisterSubmit(e) {
   const btnText = document.getElementById('btnRegisterText');
 
   btn.disabled = true;
-  btnText.textContent = 'Registrando usuario...';
+  btnText.textContent = 'Registrando solicitud...';
 
   try {
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre_completo, username, email, password, rol, sede_id, _honey: honey })
+      body: JSON.stringify({ nombre_completo, username, email, password, _honey: honey })
     });
 
     const data = await res.json();
@@ -729,18 +734,11 @@ async function handleRegisterSubmit(e) {
       return;
     }
 
-    // sessionStorage.setItem('token_inventario_ce', data.token); // Eliminado para forzar cierre de sesión al recargar
-    currentUser = data.user;
-    currentToken = data.token;
-    announceSessionStart(data.user);
-
-    showAuthAlert(`¡Cuenta creada con éxito! Bienvenido ${data.user.nombre_completo}.`, 'success');
-
-    setTimeout(() => {
-      launchSoftwareView(data.user);
-      btn.disabled = false;
-      btnText.textContent = 'Registrarse';
-    }, 600);
+    // El usuario queda en estado PENDIENTE sin sesión ni cookie JWT
+    document.getElementById('registerForm').reset();
+    showAuthAlert(data.message || 'Tu cuenta ha sido registrada y está pendiente de aprobación por un administrador.', 'success');
+    btn.disabled = false;
+    btnText.textContent = 'Registrarse';
 
   } catch (error) {
     showAuthAlert('Error al procesar la solicitud de registro.');
@@ -3203,10 +3201,19 @@ window.renderPendingUsers = function(users) {
 
   tbody.innerHTML = '';
   users.forEach(u => {
+    const providerBadge = u.auth_provider === 'GOOGLE'
+      ? '<span class="px-1.5 py-0.5 text-[10px] font-mono rounded bg-sky-500/15 text-sky-400 border border-sky-500/30">GOOGLE</span>'
+      : '<span class="px-1.5 py-0.5 text-[10px] font-mono rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">MANUAL</span>';
     tbody.innerHTML += `
       <tr class="border-b border-outline-variant/20 hover:bg-surface-container-high transition-colors">
-        <td class="py-2 px-3 text-sm">${u.nombre_completo}</td>
-        <td class="py-2 px-3 text-sm text-outline">${u.email}</td>
+        <td class="py-2 px-3 text-sm">
+          <div class="font-semibold text-on-surface">${u.nombre_completo}</div>
+          <div class="text-xs font-mono text-primary">@${u.username}</div>
+        </td>
+        <td class="py-2 px-3 text-sm text-outline">
+          <div>${u.email || 'Sin correo'}</div>
+          <div class="mt-0.5">${providerBadge}</div>
+        </td>
         <td class="py-2 px-3 text-xs font-mono">${new Date(u.created_at).toLocaleDateString()}</td>
         <td class="py-2 px-3">
           <select id="roleSelect_${u.id}" class="bg-surface-container-low border border-outline-variant rounded p-1 text-xs text-on-surface" onchange="toggleSedeSelect(${u.id})">
@@ -3219,8 +3226,8 @@ window.renderPendingUsers = function(users) {
           </select>
         </td>
         <td class="py-2 px-3 text-right">
-          <button onclick="approveUser(${u.id})" class="text-primary hover:text-primary-container p-1"><span class="material-symbols-outlined text-[18px]">check_circle</span></button>
-          <button onclick="rejectUser(${u.id})" class="text-error hover:text-error-container p-1"><span class="material-symbols-outlined text-[18px]">cancel</span></button>
+          <button onclick="approveUser(${u.id})" title="Aprobar y Asignar Rol" class="text-primary hover:text-primary-container p-1"><span class="material-symbols-outlined text-[18px]">check_circle</span></button>
+          <button onclick="rejectUser(${u.id})" title="Rechazar Solicitud" class="text-error hover:text-error-container p-1"><span class="material-symbols-outlined text-[18px]">cancel</span></button>
         </td>
       </tr>
     `;

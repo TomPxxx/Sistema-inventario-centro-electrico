@@ -14,18 +14,7 @@ export const registerSchema = z.object({
     email: z.string().email('Debe ser un correo válido').optional().or(z.literal('')),
     password: passwordSchema,
     _honey: z.string().optional(),
-    rol: z.enum(['ADMINISTRADOR', 'ENCARGADO', 'EMPLEADO'], {
-      errorMap: () => ({ message: 'Rol inválido. Debe ser ADMINISTRADOR, ENCARGADO o EMPLEADO' })
-    }),
-    sede_id: z.union([z.string(), z.number()]).optional()
-  }).refine((data) => {
-    // Regla de negocio: ENCARGADO requiere sede
-    if (data.rol === 'ENCARGADO' && !data.sede_id) {
-      return false;
-    }
-    return true;
-  }, {
-    message: 'Los usuarios con cargo ENCARGADO deben tener una sede asignada obligatoriamente.',
-    path: ['sede_id']
+    rol: z.string().optional(),
+    sede_id: z.union([z.string(), z.number(), z.null()]).optional()
   })
 });

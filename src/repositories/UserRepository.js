@@ -46,9 +46,9 @@ class UserRepository {
       user.username, 
       user.email, 
       user.password_hash, 
-      user.rol, 
-      user.sede_id,
-      user.estado || 'ACTIVO',
+      user.rol || 'PENDIENTE', 
+      user.sede_id ?? null,
+      user.estado || 'PENDIENTE',
       user.auth_provider || 'LOCAL'
     ];
     const result = await pool.query(query, values);
@@ -74,7 +74,7 @@ class UserRepository {
 
   async findPendingUsers() {
     const query = `
-      SELECT id, nombre_completo, username, email, created_at, auth_provider 
+      SELECT id, nombre_completo, username, email, rol, sede_id, estado, created_at, auth_provider 
       FROM usuarios 
       WHERE estado = 'PENDIENTE'
       ORDER BY created_at DESC

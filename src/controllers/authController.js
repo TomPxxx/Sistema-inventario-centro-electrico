@@ -91,8 +91,37 @@ export const login = async (req, res) => {
       return res.status(401).json({ success: false, error_type: 'USER_NOT_FOUND', message: 'Usuario no encontrado.' });
     }
 
+    if (user.estado === 'PENDIENTE') {
+      return res.status(403).json({
+        success: false,
+        status: 'PENDIENTE',
+        error_type: 'ACCOUNT_PENDING',
+        message: 'Tu cuenta está pendiente de aprobación por un administrador.',
+        user: {
+          id: user.id,
+          username: user.username,
+          nombre_completo: user.nombre_completo,
+          email: user.email,
+          estado: 'PENDIENTE'
+        }
+      });
+    }
+
+    if (user.estado === 'RECHAZADO') {
+      return res.status(403).json({
+        success: false,
+        status: 'RECHAZADO',
+        error_type: 'ACCOUNT_REJECTED',
+        message: 'Tu solicitud fue rechazada, contacta al administrador.'
+      });
+    }
+
     if (user.estado !== 'ACTIVO') {
-      return res.status(403).json({ success: false, message: 'Tu cuenta está desactivada.' });
+      return res.status(403).json({ success: false, error_type: 'ACCOUNT_INACTIVE', message: 'Tu cuenta está desactivada.' });
+    }
+
+    if (!user.password_hash) {
+      return res.status(401).json({ success: false, error_type: 'INVALID_PASSWORD', message: 'Contraseña incorrecta.' });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
@@ -162,14 +191,54 @@ export const googleLogin = async (req, res) => {
     let user = await UserRepository.findByUsernameOrEmail(email);
 
     if (!user) {
-      // Primer login -> crear en estado PENDIENTE
+      // Primer login -> crear en estado PENDIENTE sin rol ni sede ni cookie JWT
       const newUserId = await UserRepository.createGoogleUser(name, email);
       user = await UserRepository.findById(newUserId);
-      return res.status(403).json({ success: false, status: 'PENDIENTE', message: 'Tu cuenta ha sido registrada y está pendiente de aprobación por un administrador.' });
+      await AuditRepository.logAction(user.id, user.username, 'REGISTRO_PENDIENTE', 'Nuevo registro por Google pendiente de aprobación', req.ip);
+      if (req.app.get('io')) {
+        req.app.get('io').emit('nuevo_usuario_pendiente', {
+          id: user.id,
+          username: user.username,
+          nombre_completo: user.nombre_completo,
+          email: user.email,
+          auth_provider: 'GOOGLE'
+        });
+      }
+      return res.status(403).json({
+        success: false,
+        status: 'PENDIENTE',
+        requires_approval: true,
+        message: 'Tu cuenta ha sido registrada y está pendiente de aprobación por un administrador.',
+        user: {
+          id: user.id,
+          username: user.username,
+          nombre_completo: user.nombre_completo,
+          email: user.email,
+          rol: null,
+          sede_id: null,
+          estado: 'PENDIENTE',
+          auth_provider: 'GOOGLE'
+        }
+      });
     }
 
     if (user.estado === 'PENDIENTE') {
-      return res.status(403).json({ success: false, status: 'PENDIENTE', message: 'Tu cuenta está pendiente de aprobación por un administrador.' });
+      return res.status(403).json({
+        success: false,
+        status: 'PENDIENTE',
+        requires_approval: true,
+        message: 'Tu cuenta está pendiente de aprobación por un administrador.',
+        user: {
+          id: user.id,
+          username: user.username,
+          nombre_completo: user.nombre_completo,
+          email: user.email,
+          rol: null,
+          sede_id: null,
+          estado: 'PENDIENTE',
+          auth_provider: user.auth_provider
+        }
+      });
     }
 
     if (user.estado === 'RECHAZADO') {
@@ -254,24 +323,17 @@ export const logout = async (req, res) => {
 };
 
 /**
- * Registro de nuevo usuario según cargo
+ * Registro de nuevo usuario (siempre en estado PENDIENTE, sin rol ni sede ni cookie JWT)
  * POST /api/auth/register
  */
 export const register = async (req, res) => {
   try {
-    const { nombre_completo, username, email, password, rol, sede_id, _honey } = req.body;
+    const { nombre_completo, username, email, password, _honey } = req.body;
 
     // Validación Honeypot en el registro
     if (_honey) {
       console.warn(`[Seguridad] Intento de registro bloqueado por Honeypot. IP: ${req.ip}`);
       return res.status(400).json({ success: false, message: 'Solicitud inválida.' });
-    }
-
-    const selectedRol = rol.toUpperCase();
-
-    let finalSedeId = null;
-    if (selectedRol === 'ENCARGADO') {
-      finalSedeId = Number(sede_id);
     }
 
     const cleanUsername = username.trim();
@@ -282,32 +344,54 @@ export const register = async (req, res) => {
 
     const password_hash = await bcrypt.hash(password, 10);
 
+    // Todo usuario nuevo se crea en estado PENDIENTE, sin rol asignado ('PENDIENTE' en BD) ni sede (NULL)
     const insertId = await UserRepository.create({
-      nombre_completo: nombre_completo.trim(), username: cleanUsername, email: cleanEmail,
-      password_hash, rol: selectedRol, sede_id: finalSedeId
+      nombre_completo: nombre_completo.trim(),
+      username: cleanUsername,
+      email: cleanEmail,
+      password_hash,
+      rol: 'PENDIENTE',
+      sede_id: null,
+      estado: 'PENDIENTE',
+      auth_provider: 'LOCAL'
     });
 
     const newUser = await UserRepository.findById(insertId);
 
-    const payload = {
-      id: newUser.id, username: newUser.username, rol: newUser.rol,
-      sede_id: newUser.sede_id, sede_nombre: newUser.sede_nombre,
-      sede_direccion: newUser.sede_direccion, nombre_completo: newUser.nombre_completo,
-      email: newUser.email,
-      sessionToken: crypto.randomUUID()
-    };
+    await AuditRepository.logAction(
+      newUser.id,
+      newUser.username,
+      'REGISTRO_PENDIENTE',
+      'Nuevo usuario registrado en espera de aprobación del administrador',
+      req.ip
+    );
 
-    await UserRepository.updateSessionToken(newUser.id, payload.sessionToken);
+    if (req.app.get('io')) {
+      req.app.get('io').emit('nuevo_usuario_pendiente', {
+        id: newUser.id,
+        username: newUser.username,
+        nombre_completo: newUser.nombre_completo,
+        email: newUser.email,
+        auth_provider: 'LOCAL'
+      });
+    }
 
-    const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
-    
-    // Iniciar sesión automáticamente tras el registro
-    res.cookie('token', token, cookieOptions);
-
+    // NO se genera token JWT ni se asigna cookie de sesión hasta que el administrador lo apruebe
     return res.status(201).json({
       success: true,
-      message: 'Usuario registrado exitosamente.',
-      user: newUser
+      status: 'PENDIENTE',
+      requires_approval: true,
+      message: 'Tu cuenta ha sido registrada y está pendiente de aprobación por un administrador.',
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        nombre_completo: newUser.nombre_completo,
+        email: newUser.email,
+        rol: null,
+        sede_id: null,
+        estado: 'PENDIENTE',
+        auth_provider: newUser.auth_provider
+      }
     });
   } catch (error) {
     console.error('[Register Error]:', error);
@@ -579,10 +663,17 @@ export const getPendingUsers = async (req, res) => {
 export const approveUser = async (req, res) => {
   try {
     const { userId, rol, sedeId } = req.body;
-    let finalSedeId = (rol === 'ENCARGADO') ? Number(sedeId) : null;
+    const validRoles = ['ADMINISTRADOR', 'ENCARGADO', 'EMPLEADO'];
+    if (!userId || !validRoles.includes(rol)) {
+      return res.status(400).json({ success: false, message: 'Debes seleccionar un rol válido (ADMINISTRADOR, ENCARGADO o EMPLEADO).' });
+    }
+    if (rol === 'ENCARGADO' && !sedeId) {
+      return res.status(400).json({ success: false, message: 'El rol ENCARGADO requiere asignar una sede obligatoriamente.' });
+    }
+    const finalSedeId = (rol === 'ENCARGADO') ? Number(sedeId) : null;
     
     await UserRepository.approveUser(userId, rol, finalSedeId, req.user.id);
-    await AuditRepository.logAction(req.user.id, req.user.username, 'APROBAR_USUARIO', `Aprobó al usuario ID ${userId} con rol ${rol}`, req.ip);
+    await AuditRepository.logAction(req.user.id, req.user.username, 'APROBAR_USUARIO', `Aprobó al usuario ID ${userId} con rol ${rol}${finalSedeId ? ` y sede ${finalSedeId}` : ''}`, req.ip);
     return res.status(200).json({ success: true, message: 'Usuario aprobado exitosamente.' });
   } catch (error) {
     console.error('Error approving user:', error);
