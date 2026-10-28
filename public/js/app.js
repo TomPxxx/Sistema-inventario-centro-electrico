@@ -686,25 +686,22 @@ async function submitPolicyAcceptance() {
   }
 }
 
-// Validación de política de contraseñas (Mín. 12 caracteres, 1 mayús, 1 minús, 3 números, 1 carácter especial)
+// Validación de política de contraseñas delegada a la fuente única compartida (public/js/passwordPolicy.js)
 function validatePasswordPolicy(password) {
-  if (!password || password.length < 12) {
-    return 'La contraseña debe tener al menos 12 caracteres.';
-  }
-  if (!/[A-Z]/.test(password)) {
-    return 'La contraseña debe incluir al menos una letra mayúscula.';
-  }
-  if (!/[a-z]/.test(password)) {
-    return 'La contraseña debe incluir al menos una letra minúscula.';
-  }
-  const digitMatches = password.match(/\d/g) || [];
-  if (digitMatches.length < 3) {
-    return 'La contraseña debe contener al menos 3 números.';
-  }
-  if (!/[^a-zA-Z0-9]/.test(password)) {
-    return 'La contraseña debe contener al menos un carácter especial (ej: !@#$%^&*).';
+  if (window.PasswordPolicy && typeof window.PasswordPolicy.evaluatePassword === 'function') {
+    const result = window.PasswordPolicy.evaluatePassword(password);
+    if (!result.isValid) {
+      return `${result.firstErrorMessage}. (Falta: ${result.missingLabels.join(', ')})`;
+    }
+    return null;
   }
   return null;
+}
+
+function updatePasswordChecklist(inputId, containerId) {
+  if (window.PasswordPolicy && typeof window.PasswordPolicy.renderPasswordChecklistUI === 'function') {
+    window.PasswordPolicy.renderPasswordChecklistUI(inputId, containerId);
+  }
 }
 
 // =============================================================================
@@ -755,6 +752,7 @@ async function handleRegisterSubmit(e) {
 
     // El usuario queda en estado PENDIENTE sin sesión ni cookie JWT; abrimos ventana de espera en tiempo real
     document.getElementById('registerForm').reset();
+    updatePasswordChecklist('regPassword', 'regPasswordChecklist');
     showAuthAlert(data.message || 'Tu cuenta ha sido registrada y está pendiente de aprobación por un administrador.', 'success');
     openPendingApprovalModal(data.user || { username, nombre_completo, email });
     btn.disabled = false;
@@ -921,6 +919,9 @@ function openForgotPasswordModal() {
   document.getElementById('recoveryStep1').classList.remove('hidden');
   document.getElementById('recoveryStep2').classList.add('hidden');
   document.getElementById('recoveryIdentifier').value = document.getElementById('loginUsername').value;
+  const newPassInput = document.getElementById('recoveryNewPassword');
+  if (newPassInput) newPassInput.value = '';
+  updatePasswordChecklist('recoveryNewPassword', 'recoveryPasswordChecklist');
 }
 
 function closeForgotPasswordModal() {

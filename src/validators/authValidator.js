@@ -1,11 +1,10 @@
 import { z } from 'zod';
+import { PASSWORD_RULES } from '../../public/js/passwordPolicy.js';
 
-export const passwordSchema = z.string()
-  .min(12, 'La contraseña debe tener al menos 12 caracteres')
-  .refine(val => /[A-Z]/.test(val), { message: 'La contraseña debe contener al menos una letra mayúscula' })
-  .refine(val => /[a-z]/.test(val), { message: 'La contraseña debe contener al menos una letra minúscula' })
-  .refine(val => (val.match(/\d/g) || []).length >= 3, { message: 'La contraseña debe contener al menos 3 números' })
-  .refine(val => /[^a-zA-Z0-9]/.test(val), { message: 'La contraseña debe contener al menos un carácter especial (ej: !@#$%&*...)' });
+export const passwordSchema = PASSWORD_RULES.reduce(
+  (schema, rule) => schema.refine(rule.test, { message: rule.message }),
+  z.string()
+);
 
 export const registerSchema = z.object({
   body: z.object({
