@@ -1151,8 +1151,8 @@ window.openEditCategoryModal = function(categoryId) {
   if (nameInput) nameInput.value = cat.nombre || '';
   if (descInput) descInput.value = cat.descripcion || '';
   if (fileInput) fileInput.value = '';
-  if (titleEl) titleEl.textContent = typeof window.t === 'function' ? window.t('edit_category_title', 'Editar Perfil de Categoría') : 'Editar Perfil de Categoría';
-  if (iconEl) iconEl.textContent = 'add_a_photo';
+  if (titleEl) titleEl.textContent = typeof window.t === 'function' ? window.t('edit_category_title', 'Editar Categoría (Nombre e Imagen)') : 'Editar Categoría (Nombre e Imagen)';
+  if (iconEl) iconEl.textContent = 'edit_square';
 
   if (cat.imagen_url && previewContainer && previewImg) {
     previewImg.src = cat.imagen_url;
@@ -1162,6 +1162,12 @@ window.openEditCategoryModal = function(categoryId) {
   }
 
   document.getElementById('createCategoryModal').classList.remove('hidden');
+};
+
+window.editCurrentFilteredCategory = function() {
+  if (currentAdminCategoryFilter !== null && currentAdminCategoryFilter !== 'uncategorized') {
+    window.openEditCategoryModal(currentAdminCategoryFilter);
+  }
 };
 
 window.previewCategoryImageInput = function(input) {
@@ -1535,11 +1541,11 @@ function renderCategoryCardHtml(cat, count, clickHandler, suffixText) {
     ? `<button
          type="button"
          onclick="event.stopPropagation(); openEditCategoryModal(${cat.id})"
-         title="Cambiar imagen de perfil / editar categoría"
-         class="absolute top-2 right-2 z-20 px-2 py-1 rounded-lg bg-black/75 hover:bg-primary text-white hover:text-slate-950 border border-white/20 font-mono text-[10px] font-bold flex items-center gap-1 shadow-md transition-all"
+         title="Editar nombre, descripción o imagen de perfil de esta categoría"
+         class="absolute top-2 right-2 z-20 px-2.5 py-1 rounded-lg bg-black/80 hover:bg-primary text-white hover:text-slate-950 border border-white/25 font-mono text-[10px] font-bold flex items-center gap-1 shadow-md transition-all"
        >
-         <span class="material-symbols-outlined text-[13px]">add_a_photo</span>
-         <span class="hidden sm:inline">Perfil</span>
+         <span class="material-symbols-outlined text-[13px]">edit</span>
+         <span class="hidden sm:inline">Editar</span>
        </button>`
     : '';
 
@@ -1572,6 +1578,7 @@ function renderAdminView() {
   const tableContainer = document.getElementById('adminInventoryTableContainer');
   const categoriesGrid = document.getElementById('adminCategoriesGrid');
   const btnBack = document.getElementById('btnAdminBackToCategories');
+  const btnEditCurrentCat = document.getElementById('btnAdminEditCurrentCategory');
   
   tableBody.innerHTML = '';
   categoriesGrid.innerHTML = '';
@@ -1583,6 +1590,7 @@ function renderAdminView() {
     tableContainer.classList.add('hidden');
     categoriesGrid.classList.remove('hidden');
     btnBack.classList.add('hidden');
+    if (btnEditCurrentCat) btnEditCurrentCat.classList.add('hidden');
     
     // Contar productos por categoría
     const catCounts = {};
@@ -1639,8 +1647,16 @@ function renderAdminView() {
   
   if (currentAdminSearchFilter === '' && currentAdminCategoryFilter !== null) {
     btnBack.classList.remove('hidden');
+    if (btnEditCurrentCat) {
+      if (currentAdminCategoryFilter !== 'uncategorized') {
+        btnEditCurrentCat.classList.remove('hidden');
+      } else {
+        btnEditCurrentCat.classList.add('hidden');
+      }
+    }
   } else {
     btnBack.classList.add('hidden');
+    if (btnEditCurrentCat) btnEditCurrentCat.classList.add('hidden');
   }
 
   let filteredProducts = (liveProducts || []).filter(p => {
@@ -1688,14 +1704,17 @@ function renderAdminView() {
     `;
 
     paginatedProducts.forEach(p => {
-      const s1 = p.sedes[1] ? p.sedes[1].stock_actual : 0;
-      const s2 = p.sedes[2] ? p.sedes[2].stock_actual : 0;
-      const s3 = p.sedes[3] ? p.sedes[3].stock_actual : 0;
-      const s4 = p.sedes[4] ? p.sedes[4].stock_actual : 0;
-      const s1_min = p.sedes[1] ? p.sedes[1].stock_minimo : 0;
-      const s2_min = p.sedes[2] ? p.sedes[2].stock_minimo : 0;
-      const s3_min = p.sedes[3] ? p.sedes[3].stock_minimo : 0;
-      const s4_min = p.sedes[4] ? p.sedes[4].stock_minimo : 0;
+      const renderBranchCell = (sedeId, activeColorClass) => {
+        const sObj = p.sedes[sedeId] || { stock_actual: 0, stock_minimo: 0, disponible: true };
+        const sVal = sObj.stock_actual || 0;
+        const sMin = sObj.stock_minimo || 0;
+        const disp = sObj.disponible !== false;
+        if (!disp && sVal <= 0) {
+          return `<td class="py-3 px-4 font-mono text-outline/70 text-[11px]" title="Esta sede no maneja este producto (sin alerta de agotado)"><span class="px-1.5 py-0.5 rounded bg-surface-container-low border border-outline-variant/30">No maneja</span></td>`;
+        }
+        const showAlert = disp && sVal <= sMin;
+        return `<td class="py-3 px-4 font-mono ${sVal > 0 ? activeColorClass : 'text-error'}">${showAlert ? alertIcon : ''} ${sVal}</td>`;
+      };
 
       const row = document.createElement('tr');
       row.className = 'hover:bg-surface-container-high/50 transition-colors';
@@ -1708,18 +1727,20 @@ function renderAdminView() {
           </div>
         </td>
         <td class="py-3 px-4 font-mono text-outline">${p.unidad_medida}</td>
-        <td class="py-3 px-4 font-mono ${s1 > 0 ? 'text-primary font-bold' : 'text-error'}">${s1 <= s1_min ? alertIcon : ''} ${s1}</td>
-        <td class="py-3 px-4 font-mono ${s2 > 0 ? 'text-secondary font-bold' : 'text-error'}">${s2 <= s2_min ? alertIcon : ''} ${s2}</td>
-        <td class="py-3 px-4 font-mono ${s3 > 0 ? 'text-on-surface font-bold' : 'text-error'}">${s3 <= s3_min ? alertIcon : ''} ${s3}</td>
-        <td class="py-3 px-4 font-mono ${s4 > 0 ? 'text-on-surface font-bold' : 'text-error'}">${s4 <= s4_min ? alertIcon : ''} ${s4}</td>
+        ${renderBranchCell(1, 'text-primary font-bold')}
+        ${renderBranchCell(2, 'text-secondary font-bold')}
+        ${renderBranchCell(3, 'text-on-surface font-bold')}
+        ${renderBranchCell(4, 'text-on-surface font-bold')}
         <td class="py-3 px-4 text-center font-mono font-bold text-on-surface text-sm">${p.total_stock}</td>
         <td class="py-3 px-4 text-right">
           <div class="flex items-center justify-end gap-1.5">
-            <button type="button" onclick="openTransferForProduct(${p.id}, '${p.codigo_sku}')" class="px-2 py-1 bg-secondary text-on-secondary hover:bg-yellow-400 font-mono text-[10px] font-bold rounded shadow-sm transition-colors" title="${t.menu_transfer || 'Mover Stock'}">
+            <button type="button" onclick="openTransferForProduct(${p.id}, '${p.codigo_sku}')" class="px-2 py-1 bg-secondary text-on-secondary hover:bg-yellow-400 font-mono text-[10px] font-bold rounded shadow-sm transition-colors flex items-center gap-1" title="Trasladar stock de una sede a otra">
               <span class="material-symbols-outlined text-sm align-middle">swap_horiz</span>
+              <span class="hidden xl:inline">Sede</span>
             </button>
-            <button type="button" onclick="openEditProductModal(${p.id})" class="px-2 py-1 bg-surface-container hover:bg-surface-container-high text-primary font-mono text-[10px] font-bold rounded border border-outline-variant/40 shadow-sm transition-colors" title="${t.btn_edit || 'Editar Producto'}">
+            <button type="button" onclick="openEditProductModal(${p.id})" class="px-2 py-1 bg-surface-container hover:bg-surface-container-high text-primary font-mono text-[10px] font-bold rounded border border-primary/40 shadow-sm transition-colors flex items-center gap-1" title="Cambiar de Categoría, precios, disponibilidad por sede o editar producto">
               <span class="material-symbols-outlined text-sm align-middle">edit</span>
+              <span class="hidden xl:inline">Categoría / Editar</span>
             </button>
             <button type="button" onclick="openDeleteProductModal(${p.id})" class="px-2 py-1 bg-surface-container hover:bg-error/20 hover:text-error text-error font-mono text-[10px] font-bold rounded border border-outline-variant/40 shadow-sm transition-colors" title="${t.btn_delete || 'Eliminar Producto'}">
               <span class="material-symbols-outlined text-sm align-middle">delete</span>
@@ -1756,10 +1777,14 @@ function renderAdminView() {
       const itemsInCat = grouped[cat];
 
       itemsInCat.forEach(p => {
-        const sedeInfo = p.sedes[currentAdminSedeFilter] || { stock_actual: 0, stock_minimo: 0, precio_venta: 0 };
+        const sedeInfo = p.sedes[currentAdminSedeFilter] || { stock_actual: 0, stock_minimo: 0, precio_venta: 0, disponible: true };
         const s_actual = sedeInfo.stock_actual;
         const s_min = sedeInfo.stock_minimo;
         const precio = sedeInfo.precio_venta;
+        const disp = sedeInfo.disponible !== false;
+        const stockCellHtml = (!disp && s_actual <= 0)
+          ? `<span class="px-2 py-0.5 rounded bg-surface-container-low border border-outline-variant/30 text-outline text-[11px]" title="Esta sede no maneja este producto">No maneja en esta sede</span>`
+          : `${(disp && s_actual <= s_min) ? alertIcon : ''} ${s_actual}`;
 
         const row = document.createElement('tr');
         row.className = 'hover:bg-surface-container-high/50 transition-colors';
@@ -1772,14 +1797,16 @@ function renderAdminView() {
           </td>
           <td class="py-3 px-4 font-mono text-outline">${p.unidad_medida}</td>
           <td class="py-3 px-4 font-mono text-secondary font-bold">$${precio.toLocaleString()}</td>
-          <td class="py-3 px-4 font-mono ${s_actual > 0 ? 'text-primary font-bold' : 'text-error'}">${s_actual <= s_min ? alertIcon : ''} ${s_actual}</td>
+          <td class="py-3 px-4 font-mono ${(!disp && s_actual <= 0) ? 'text-outline' : (s_actual > 0 ? 'text-primary font-bold' : 'text-error')}">${stockCellHtml}</td>
           <td class="py-3 px-4 text-right">
             <div class="flex items-center justify-end gap-1.5">
-              <button type="button" onclick="openTransferForProduct(${p.id}, '${p.codigo_sku}')" class="px-2 py-1 bg-secondary text-on-secondary hover:bg-yellow-400 font-mono text-[10px] font-bold rounded shadow-sm transition-colors" title="${t.menu_transfer || 'Mover Stock'}">
+              <button type="button" onclick="openTransferForProduct(${p.id}, '${p.codigo_sku}')" class="px-2 py-1 bg-secondary text-on-secondary hover:bg-yellow-400 font-mono text-[10px] font-bold rounded shadow-sm transition-colors flex items-center gap-1" title="Trasladar stock de una sede a otra">
                 <span class="material-symbols-outlined text-sm align-middle">swap_horiz</span>
+                <span class="hidden xl:inline">Sede</span>
               </button>
-              <button type="button" onclick="openEditProductModal(${p.id})" class="px-2 py-1 bg-surface-container hover:bg-surface-container-high text-primary font-mono text-[10px] font-bold rounded border border-outline-variant/40 shadow-sm transition-colors" title="${t.btn_edit || 'Editar Producto'}">
+              <button type="button" onclick="openEditProductModal(${p.id})" class="px-2 py-1 bg-surface-container hover:bg-surface-container-high text-primary font-mono text-[10px] font-bold rounded border border-primary/40 shadow-sm transition-colors flex items-center gap-1" title="Cambiar de Categoría, precios, disponibilidad por sede o editar producto">
                 <span class="material-symbols-outlined text-sm align-middle">edit</span>
+                <span class="hidden xl:inline">Categoría / Editar</span>
               </button>
               <button type="button" onclick="openDeleteProductModal(${p.id})" class="px-2 py-1 bg-surface-container hover:bg-error/20 hover:text-error text-error font-mono text-[10px] font-bold rounded border border-outline-variant/40 shadow-sm transition-colors" title="${t.btn_delete || 'Eliminar Producto'}">
                 <span class="material-symbols-outlined text-sm align-middle">delete</span>
@@ -1934,11 +1961,15 @@ function renderEncargadoView() {
     const itemsInCat = grouped[cat];
 
     itemsInCat.forEach(p => {
-      const sedeInfo = p.sedes[sedeId] || { stock_actual: 0, precio_venta: 0, stock_minimo: 0 };
+      const sedeInfo = p.sedes[sedeId] || { stock_actual: 0, precio_venta: 0, stock_minimo: 0, disponible: true };
       const stock = sedeInfo.stock_actual;
       const precio = sedeInfo.precio_venta;
-      const isLow = stock <= (sedeInfo.stock_minimo || 0);
+      const disp = sedeInfo.disponible !== false;
+      const isLow = disp && stock <= (sedeInfo.stock_minimo || 0);
       const alertIcon = `<span class="material-symbols-outlined text-[12px] text-error align-middle" title="Stock bajo o agotado">warning</span>`;
+      const stockDisplay = (!disp && stock <= 0)
+        ? `<span class="px-2 py-0.5 rounded bg-surface-container-low border border-outline-variant/30 text-outline text-[11px]">No maneja en esta sede</span>`
+        : `${isLow ? alertIcon : ''} ${stock} ${p.unidad_medida}`;
 
       const row = document.createElement('tr');
       row.className = 'hover:bg-surface-container-high/50 transition-colors';
@@ -1946,7 +1977,7 @@ function renderEncargadoView() {
         <td class="py-3 px-4 font-mono text-outline font-bold">${p.codigo_sku}</td>
         <td class="py-3 px-4 font-semibold text-on-surface">${p.nombre}</td>
         <td class="py-3 px-4 font-mono font-bold text-on-surface">$${precio.toLocaleString()}</td>
-        <td class="py-3 px-4 font-mono font-bold ${isLow ? 'text-error' : 'text-primary'}">${isLow ? alertIcon : ''} ${stock} ${p.unidad_medida}</td>
+        <td class="py-3 px-4 font-mono font-bold ${(!disp && stock <= 0) ? 'text-outline' : (isLow ? 'text-error' : 'text-primary')}">${stockDisplay}</td>
         <td class="py-3 px-4 text-right">
           <button type="button" onclick="openTransferForProduct(${p.id}, '${p.codigo_sku}', null, ${sedeId})" class="px-2.5 py-1 bg-secondary text-on-secondary font-mono text-[11px] font-bold rounded shadow-sm hover:bg-yellow-400 transition-colors">
             Enviar a Otra Sede
@@ -2480,7 +2511,26 @@ window.retryBarcodeCamera = retryBarcodeCamera;
 // 7. MODAL Y CREACIÓN DE PRODUCTOS EN MYSQL (SUPERADMIN)
 // =============================================================================
 
+window.toggleBranchAvailabilityInput = function(mode, sedeId, isAvailable) {
+  const prefix = mode === 'edit' ? 'edit_' : '';
+  const stockEl = document.getElementById(`${prefix}stock_sede_${sedeId}`);
+  const wrapper = document.getElementById(`inputs_${mode}_sede_${sedeId}`);
+  if (!isAvailable && stockEl) {
+    stockEl.value = 0;
+  }
+  if (wrapper) {
+    wrapper.classList.toggle('opacity-50', !isAvailable);
+  }
+};
+
 function openCreateProductModal() {
+  for (let i = 1; i <= 4; i++) {
+    const chk = document.getElementById(`disponible_sede_${i}`);
+    if (chk) {
+      chk.checked = true;
+      window.toggleBranchAvailabilityInput('new', i, true);
+    }
+  }
   document.getElementById('createProductModal').classList.remove('hidden');
 }
 
@@ -2497,32 +2547,17 @@ async function handleCreateProductSubmit(e) {
   const desc = document.getElementById('newProdDesc').value.trim();
   const categoryId = document.getElementById('newProdCategory').value;
 
-  const sedesData = [
-    {
-      sede_id: 1,
-      stock_actual: parseFloat(document.getElementById('stock_sede_1').value) || 0,
-      stock_minimo: 5,
-      precio_venta: parseFloat(document.getElementById('precio_sede_1').value) || 0
-    },
-    {
-      sede_id: 2,
-      stock_actual: parseFloat(document.getElementById('stock_sede_2').value) || 0,
-      stock_minimo: 5,
-      precio_venta: parseFloat(document.getElementById('precio_sede_2').value) || 0
-    },
-    {
-      sede_id: 3,
-      stock_actual: parseFloat(document.getElementById('stock_sede_3').value) || 0,
-      stock_minimo: 5,
-      precio_venta: parseFloat(document.getElementById('precio_sede_3').value) || 0
-    },
-    {
-      sede_id: 4,
-      stock_actual: parseFloat(document.getElementById('stock_sede_4').value) || 0,
-      stock_minimo: 5,
-      precio_venta: parseFloat(document.getElementById('precio_sede_4').value) || 0
-    }
-  ];
+  const sedesData = [1, 2, 3, 4].map(sede_id => {
+    const dispChk = document.getElementById(`disponible_sede_${sede_id}`);
+    const disponible_en_sede = dispChk ? dispChk.checked : true;
+    return {
+      sede_id,
+      stock_actual: disponible_en_sede ? (parseFloat(document.getElementById(`stock_sede_${sede_id}`).value) || 0) : 0,
+      stock_minimo: disponible_en_sede ? 5 : 0,
+      precio_venta: parseFloat(document.getElementById(`precio_sede_${sede_id}`).value) || 0,
+      disponible_en_sede
+    };
+  });
 
   const btn = document.getElementById('btnSubmitNewProduct');
   btn.disabled = true;
@@ -2602,8 +2637,14 @@ function openEditProductModal(id) {
   // Poblar sedes
   for (let i = 1; i <= 4; i++) {
     const s = product.sedes[i];
+    const disp = s ? (s.disponible !== false) : true;
     document.getElementById(`edit_stock_sede_${i}`).value = s ? s.stock_actual : 0;
     document.getElementById(`edit_precio_sede_${i}`).value = s ? s.precio_venta : 0;
+    const dispChk = document.getElementById(`edit_disponible_sede_${i}`);
+    if (dispChk) {
+      dispChk.checked = disp;
+      window.toggleBranchAvailabilityInput('edit', i, disp);
+    }
   }
 
   document.getElementById('editProductModal').classList.remove('hidden');
@@ -2624,11 +2665,16 @@ async function handleEditProductSubmit(e) {
   const categoria_id = document.getElementById('editProdCategory')?.value || null;
   const marca = document.getElementById('editProdMarca')?.value.trim() || null;
 
-  const sedesData = [1, 2, 3, 4].map(sede_id => ({
-    sede_id,
-    stock_actual: parseFloat(document.getElementById(`edit_stock_sede_${sede_id}`).value) || 0,
-    precio_venta: parseFloat(document.getElementById(`edit_precio_sede_${sede_id}`).value) || 0
-  }));
+  const sedesData = [1, 2, 3, 4].map(sede_id => {
+    const dispChk = document.getElementById(`edit_disponible_sede_${sede_id}`);
+    const disponible_en_sede = dispChk ? dispChk.checked : true;
+    return {
+      sede_id,
+      stock_actual: parseFloat(document.getElementById(`edit_stock_sede_${sede_id}`).value) || 0,
+      precio_venta: parseFloat(document.getElementById(`edit_precio_sede_${sede_id}`).value) || 0,
+      disponible_en_sede
+    };
+  });
 
   const btn = document.getElementById('btnSubmitEditProduct');
   btn.disabled = true;

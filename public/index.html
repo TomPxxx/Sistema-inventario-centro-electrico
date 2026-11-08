@@ -993,7 +993,7 @@
 
             <div class="p-4 border-b border-outline-variant/30 flex flex-col gap-4">
               <!-- Buscador de Productos -->
-              <div class="relative w-full max-w-lg flex items-center gap-2">
+              <div class="relative w-full max-w-2xl flex items-center gap-2">
                 <button type="button" id="btnAdminBackToCategories" onclick="filterAdminCategory(null)" class="hidden px-2.5 py-2.5 bg-white dark:bg-surface-container hover:bg-slate-100 text-on-surface rounded-lg border-2 border-slate-300 dark:border-outline-variant/60 transition-colors shadow-sm" title="Volver a Categorías">
                   <span class="material-symbols-outlined text-[18px] align-middle">arrow_back</span>
                 </button>
@@ -1004,6 +1004,10 @@
                 <button type="button" onclick="openBarcodeScannerModal('adminSearchInput')" class="px-3 py-2.5 bg-secondary hover:bg-yellow-400 text-on-secondary rounded-lg font-mono text-xs font-bold flex items-center gap-1 shadow-sm shrink-0" title="Escanear Código de Barras / SKU con Cámara">
                   <span class="material-symbols-outlined text-[18px]">barcode_scanner</span>
                   <span class="hidden sm:inline" data-i18n="btn_scan">Escanear</span>
+                </button>
+                <button type="button" id="btnAdminEditCurrentCategory" onclick="editCurrentFilteredCategory()" class="hidden px-3 py-2.5 bg-primary/15 hover:bg-primary text-primary hover:text-on-primary rounded-lg border border-primary/50 font-mono text-xs font-bold flex items-center gap-1 shadow-sm shrink-0 transition-all" title="Editar nombre, descripción o imagen de esta categoría">
+                  <span class="material-symbols-outlined text-[16px]">edit</span>
+                  <span class="hidden sm:inline">Editar Categoría</span>
                 </button>
               </div>
 
@@ -1264,40 +1268,67 @@
 
         <!-- Stock y Precios en las 4 Sedes -->
         <div class="pt-2 border-t border-outline-variant/30 space-y-2">
-          <span class="text-secondary font-bold uppercase block text-[11px]" data-i18n="lbl_stock_price_branches">Stock Inicial y Precio de Venta por Sede:</span>
+          <div>
+            <span class="text-secondary font-bold uppercase block text-[11px]" data-i18n="lbl_stock_price_branches">Disponibilidad, Stock Inicial y Precio por Sede:</span>
+            <p class="text-[10px] text-outline font-sans">Desmarca <strong>"Maneja en esta sede"</strong> si la sucursal no comercializa este material (ej. herrajes o accesorios exclusivos de EP1) para evitar alertas de agotado.</p>
+          </div>
           
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
             <!-- Sede 1 -->
-            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
-              <span class="text-primary font-bold">1. Centro Eléctrico EP</span>
-              <div class="grid grid-cols-2 gap-1.5">
+            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1.5">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-primary font-bold">1. Centro Eléctrico EP</span>
+                <label class="flex items-center gap-1 text-[10px] font-sans text-on-surface cursor-pointer select-none" title="Si se desmarca, no generará alerta de stock agotado en esta sede">
+                  <input id="disponible_sede_1" type="checkbox" checked onchange="toggleBranchAvailabilityInput('new', 1, this.checked)" class="accent-emerald-500 rounded cursor-pointer"/>
+                  <span>Maneja en sede</span>
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5" id="inputs_new_sede_1">
                 <input id="stock_sede_1" type="number" min="0" placeholder="Stock: 100" value="100" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
                 <input id="precio_sede_1" type="number" step="0.01" min="0" placeholder="Precio $: 3500" value="3500" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
               </div>
             </div>
 
             <!-- Sede 2 -->
-            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
-              <span class="text-secondary font-bold">2. Centro Eléctrico EP1</span>
-              <div class="grid grid-cols-2 gap-1.5">
+            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1.5">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-secondary font-bold">2. Centro Eléctrico EP1</span>
+                <label class="flex items-center gap-1 text-[10px] font-sans text-on-surface cursor-pointer select-none" title="Si se desmarca, no generará alerta de stock agotado en esta sede">
+                  <input id="disponible_sede_2" type="checkbox" checked onchange="toggleBranchAvailabilityInput('new', 2, this.checked)" class="accent-emerald-500 rounded cursor-pointer"/>
+                  <span>Maneja en sede</span>
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5" id="inputs_new_sede_2">
                 <input id="stock_sede_2" type="number" min="0" placeholder="Stock: 50" value="50" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
                 <input id="precio_sede_2" type="number" step="0.01" min="0" placeholder="Precio $: 3500" value="3500" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
               </div>
             </div>
 
             <!-- Sede 3 -->
-            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
-              <span class="text-primary font-bold">3. Grupo Eléctrico EP3</span>
-              <div class="grid grid-cols-2 gap-1.5">
+            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1.5">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-primary font-bold">3. Grupo Eléctrico EP3</span>
+                <label class="flex items-center gap-1 text-[10px] font-sans text-on-surface cursor-pointer select-none" title="Si se desmarca, no generará alerta de stock agotado en esta sede">
+                  <input id="disponible_sede_3" type="checkbox" checked onchange="toggleBranchAvailabilityInput('new', 3, this.checked)" class="accent-emerald-500 rounded cursor-pointer"/>
+                  <span>Maneja en sede</span>
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5" id="inputs_new_sede_3">
                 <input id="stock_sede_3" type="number" min="0" placeholder="Stock: 30" value="30" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
                 <input id="precio_sede_3" type="number" step="0.01" min="0" placeholder="Precio $: 3400" value="3400" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
               </div>
             </div>
 
             <!-- Sede 4 -->
-            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
-              <span class="text-yellow-400 font-bold">4. EP6 Ecoiluminación</span>
-              <div class="grid grid-cols-2 gap-1.5">
+            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1.5">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-yellow-400 font-bold">4. EP6 Ecoiluminación</span>
+                <label class="flex items-center gap-1 text-[10px] font-sans text-on-surface cursor-pointer select-none" title="Si se desmarca, no generará alerta de stock agotado en esta sede">
+                  <input id="disponible_sede_4" type="checkbox" checked onchange="toggleBranchAvailabilityInput('new', 4, this.checked)" class="accent-emerald-500 rounded cursor-pointer"/>
+                  <span>Maneja en sede</span>
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5" id="inputs_new_sede_4">
                 <input id="stock_sede_4" type="number" min="0" placeholder="Stock: 20" value="20" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
                 <input id="precio_sede_4" type="number" step="0.01" min="0" placeholder="Precio $: 3600" value="3600" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
               </div>
@@ -1551,9 +1582,12 @@
             <label class="text-outline uppercase block mb-1" data-i18n="lbl_prod_name">Nombre del Material *</label>
             <input id="editProdName" required class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40 font-sans"/>
           </div>
-          <div>
-            <label class="text-primary uppercase font-bold block mb-1" data-i18n="lbl_category">Categoría del Catálogo</label>
-            <select id="editProdCategory" class="w-full bg-surface-container-low text-primary font-bold p-2 rounded border border-primary/40 focus:outline-none">
+          <div class="p-2 rounded-lg bg-primary/10 border border-primary/40">
+            <label class="text-primary uppercase font-bold block mb-1 flex items-center gap-1" data-i18n="lbl_category">
+              <span class="material-symbols-outlined text-[14px]">category</span>
+              <span>Cambiar de Categoría (Clasificación)</span>
+            </label>
+            <select id="editProdCategory" class="w-full bg-surface-container-lowest text-primary font-bold p-1.5 rounded border border-primary/50 focus:outline-none">
               <!-- Opciones dinámicas de categorías -->
             </select>
           </div>
@@ -1575,44 +1609,73 @@
           </div>
         </div>
 
-        <!-- Stock y Precios en las 4 Sedes -->
+        <!-- Stock, Precios y Disponibilidad en las 4 Sedes -->
         <div class="pt-2 border-t border-outline-variant/30 space-y-2">
-          <span class="text-secondary font-bold uppercase block text-[11px]" data-i18n="lbl_stock_price_branches">Stock Actual y Precio de Venta por Sede:</span>
+          <div>
+            <span class="text-secondary font-bold uppercase block text-[11px]" data-i18n="lbl_stock_price_branches">Disponibilidad, Stock y Precios por Sede:</span>
+            <p class="text-[10px] text-outline font-sans">
+              Desmarca <strong>"Maneja en esta sede"</strong> si esa sucursal (ej. EP3) no vende este producto para que <strong>no muestre alerta de agotado</strong>. Para enviar unidades de una sede a otra usa el botón amarillo <strong>"Trasladar Sede"</strong>.
+            </p>
+          </div>
           
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
             <!-- Sede 1 -->
-            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
-              <span class="text-primary font-bold">1. Centro Eléctrico EP</span>
-              <div class="grid grid-cols-2 gap-1.5">
-                <input id="edit_stock_sede_1" type="number" min="0" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
-                <input id="edit_precio_sede_1" type="number" step="0.01" min="0" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1.5">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-primary font-bold">1. Centro Eléctrico EP</span>
+                <label class="flex items-center gap-1 text-[10px] font-sans text-on-surface cursor-pointer select-none" title="Si se desmarca, no generará alerta de stock agotado en esta sede">
+                  <input id="edit_disponible_sede_1" type="checkbox" checked onchange="toggleBranchAvailabilityInput('edit', 1, this.checked)" class="accent-emerald-500 rounded cursor-pointer"/>
+                  <span>Maneja en sede</span>
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5" id="inputs_edit_sede_1">
+                <input id="edit_stock_sede_1" type="number" min="0" placeholder="Stock" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+                <input id="edit_precio_sede_1" type="number" step="0.01" min="0" placeholder="Precio $" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
               </div>
             </div>
 
             <!-- Sede 2 -->
-            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
-              <span class="text-secondary font-bold">2. Centro Eléctrico EP1</span>
-              <div class="grid grid-cols-2 gap-1.5">
-                <input id="edit_stock_sede_2" type="number" min="0" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
-                <input id="edit_precio_sede_2" type="number" step="0.01" min="0" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1.5">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-secondary font-bold">2. Centro Eléctrico EP1</span>
+                <label class="flex items-center gap-1 text-[10px] font-sans text-on-surface cursor-pointer select-none" title="Si se desmarca, no generará alerta de stock agotado en esta sede">
+                  <input id="edit_disponible_sede_2" type="checkbox" checked onchange="toggleBranchAvailabilityInput('edit', 2, this.checked)" class="accent-emerald-500 rounded cursor-pointer"/>
+                  <span>Maneja en sede</span>
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5" id="inputs_edit_sede_2">
+                <input id="edit_stock_sede_2" type="number" min="0" placeholder="Stock" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+                <input id="edit_precio_sede_2" type="number" step="0.01" min="0" placeholder="Precio $" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
               </div>
             </div>
 
             <!-- Sede 3 -->
-            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
-              <span class="text-primary font-bold">3. Grupo Eléctrico EP3</span>
-              <div class="grid grid-cols-2 gap-1.5">
-                <input id="edit_stock_sede_3" type="number" min="0" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
-                <input id="edit_precio_sede_3" type="number" step="0.01" min="0" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1.5">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-primary font-bold">3. Grupo Eléctrico EP3</span>
+                <label class="flex items-center gap-1 text-[10px] font-sans text-on-surface cursor-pointer select-none" title="Si se desmarca, no generará alerta de stock agotado en esta sede">
+                  <input id="edit_disponible_sede_3" type="checkbox" checked onchange="toggleBranchAvailabilityInput('edit', 3, this.checked)" class="accent-emerald-500 rounded cursor-pointer"/>
+                  <span>Maneja en sede</span>
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5" id="inputs_edit_sede_3">
+                <input id="edit_stock_sede_3" type="number" min="0" placeholder="Stock" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+                <input id="edit_precio_sede_3" type="number" step="0.01" min="0" placeholder="Precio $" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
               </div>
             </div>
 
             <!-- Sede 4 -->
-            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1">
-              <span class="text-yellow-400 font-bold">4. EP6 Ecoiluminación</span>
-              <div class="grid grid-cols-2 gap-1.5">
-                <input id="edit_stock_sede_4" type="number" min="0" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
-                <input id="edit_precio_sede_4" type="number" step="0.01" min="0" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+            <div class="p-2 bg-surface-container-low rounded border border-outline-variant/30 space-y-1.5">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-yellow-400 font-bold">4. EP6 Ecoiluminación</span>
+                <label class="flex items-center gap-1 text-[10px] font-sans text-on-surface cursor-pointer select-none" title="Si se desmarca, no generará alerta de stock agotado en esta sede">
+                  <input id="edit_disponible_sede_4" type="checkbox" checked onchange="toggleBranchAvailabilityInput('edit', 4, this.checked)" class="accent-emerald-500 rounded cursor-pointer"/>
+                  <span>Maneja en sede</span>
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5" id="inputs_edit_sede_4">
+                <input id="edit_stock_sede_4" type="number" min="0" placeholder="Stock" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
+                <input id="edit_precio_sede_4" type="number" step="0.01" min="0" placeholder="Precio $" class="bg-surface-container p-1.5 rounded border border-outline-variant/40 text-on-surface"/>
               </div>
             </div>
           </div>

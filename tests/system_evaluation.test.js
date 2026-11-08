@@ -459,5 +459,92 @@ describe('Evaluación Integral Automatizada del Sistema (Frontend + Seguridad + 
       );
       expect(parseFloat(stockAfterDist.rows[0].stock_actual)).toBe(32);
     });
+
+    it('Edición administrativa completa: Renombrar categoría, cambiar producto de categoría y desactivar manejo en sedes específicas (disponible_en_sede)', async () => {
+      const admin = await issueSessionTokenForUser('tomas_admin');
+
+      // 1. Crear dos categorías
+      const resCatA = await request(app)
+        .post('/api/inventory/categories')
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({ nombre: `CAT-HERRAJES-${Date.now()}`, descripcion: 'Herrajes iniciales' });
+      expect(resCatA.status).toBe(201);
+      const catAId = resCatA.body.category.id;
+      createdCategoryIds.push(catAId);
+
+      const resCatB = await request(app)
+        .post('/api/inventory/categories')
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({ nombre: `CAT-TRANSFORMADORES-${Date.now()}`, descripcion: 'Transformadores' });
+      expect(resCatB.status).toBe(201);
+      const catBId = resCatB.body.category.id;
+      createdCategoryIds.push(catBId);
+
+      // 2. El Admin cambia el nombre y descripción de la categoría A
+      const nuevoNombreCatA = `Herrajes y Tornillería Pesada ${Date.now()}`;
+      const resUpdateCat = await request(app)
+        .put(`/api/inventory/categories/${catAId}`)
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({
+          nombre: nuevoNombreCatA,
+          descripcion: 'Pernos, tuercas y herrajes tipo L para transformadores',
+          imagen_url: '/uploads/herrajes-perfil.png'
+        });
+      expect(resUpdateCat.status).toBe(200);
+      expect(resUpdateCat.body.category.nombre).toBe(nuevoNombreCatA);
+
+      // 3. Crear producto (ej. Herraje L para Transformador) exclusivo de EP1 (Sede 2), sin manejo en EP3 (Sede 3)
+      const testSku = `SKU-HERRAJE-L-${Date.now()}`;
+      const resCreateProd = await request(app)
+        .post('/api/inventory/products')
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({
+          codigo_sku: testSku,
+          nombre: '[EVAL-TEST] Herraje L para Transformador 15kVA',
+          categoria_id: catAId,
+          unidad_medida: 'UNIDAD',
+          sedesData: [
+            { sede_id: 1, stock_actual: 10, stock_minimo: 5, precio_venta: 45000, disponible_en_sede: true },
+            { sede_id: 2, stock_actual: 80, stock_minimo: 5, precio_venta: 45000, disponible_en_sede: true },
+            { sede_id: 3, stock_actual: 0, stock_minimo: 0, precio_venta: 45000, disponible_en_sede: false },
+            { sede_id: 4, stock_actual: 0, stock_minimo: 0, precio_venta: 45000, disponible_en_sede: false }
+          ]
+        });
+      expect(resCreateProd.status).toBe(201);
+      const prodId = resCreateProd.body.productId;
+      createdProductIds.push(prodId);
+
+      // 4. Editar el producto para cambiarlo a la Categoría B y actualizar disponibilidad por sede
+      const resUpdateProd = await request(app)
+        .put(`/api/inventory/products/${prodId}`)
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({
+          codigo_sku: testSku,
+          nombre: '[EVAL-TEST] Herraje L para Transformador 15kVA (Reforzado)',
+          categoria_id: catBId,
+          unidad_medida: 'UNIDAD',
+          marca: 'Grupo Eléctrico',
+          sedesData: [
+            { sede_id: 1, stock_actual: 0, precio_venta: 48000, disponible_en_sede: false },
+            { sede_id: 2, stock_actual: 95, precio_venta: 48000, disponible_en_sede: true },
+            { sede_id: 3, stock_actual: 0, precio_venta: 48000, disponible_en_sede: false },
+            { sede_id: 4, stock_actual: 0, precio_venta: 48000, disponible_en_sede: false }
+          ]
+        });
+      expect(resUpdateProd.status).toBe(200);
+
+      // 5. Verificar en el listado general que el producto cambió a Categoría B y que EP3 tiene disponible === false
+      const resList = await request(app)
+        .get('/api/inventory/products')
+        .set('Authorization', `Bearer ${admin.token}`);
+      expect(resList.status).toBe(200);
+      const updatedProd = resList.body.products.find(p => Number(p.id) === Number(prodId));
+      expect(updatedProd).toBeDefined();
+      expect(Number(updatedProd.categoria_id)).toBe(Number(catBId));
+      expect(updatedProd.sedes[2].disponible).toBe(true);
+      expect(updatedProd.sedes[2].stock_actual).toBe(95);
+      expect(updatedProd.sedes[3].disponible).toBe(false);
+      expect(updatedProd.sedes[3].stock_actual).toBe(0);
+    });
   });
 });

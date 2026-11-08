@@ -152,13 +152,14 @@ export const createProduct = async (req, res) => {
         ? sedesData.find(s => Number(s.sede_id) === Number(sede.id)) : null;
 
       const stockActual = dataForSede ? parseFloat(dataForSede.stock_actual) || 0 : 0;
-      const stockMinimo = dataForSede ? parseFloat(dataForSede.stock_minimo) || 0 : 5;
+      const stockMinimo = dataForSede && dataForSede.stock_minimo !== undefined ? parseFloat(dataForSede.stock_minimo) || 0 : 5;
       const precioVenta = dataForSede ? parseFloat(dataForSede.precio_venta) || 0 : 0;
+      const disponibleEnSede = dataForSede && dataForSede.disponible_en_sede !== undefined ? Boolean(dataForSede.disponible_en_sede) : true;
 
       await client.query(
         `INSERT INTO producto_sede (producto_id, sede_id, stock_actual, stock_minimo, precio_venta, disponible_en_sede)
-         VALUES ($1, $2, $3, $4, $5, TRUE)`,
-        [productId, sede.id, stockActual, stockMinimo, precioVenta]
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [productId, sede.id, stockActual, stockMinimo, precioVenta, disponibleEnSede]
       );
 
       if (stockActual > 0) {
@@ -333,19 +334,26 @@ export const updateProduct = async (req, res) => {
       for (const s of sedesData) {
         const stockActual = parseFloat(s.stock_actual) || 0;
         const precioVenta = parseFloat(s.precio_venta) || 0;
+        const hasDisponible = s.disponible_en_sede !== undefined;
+        const disponibleEnSede = hasDisponible ? Boolean(s.disponible_en_sede) : true;
+        const hasStockMinimo = s.stock_minimo !== undefined;
+        const stockMinimo = hasStockMinimo ? (parseFloat(s.stock_minimo) || 0) : 5;
 
         const existingSede = await client.query(
-          `SELECT stock_actual, precio_venta FROM producto_sede WHERE producto_id = $1 AND sede_id = $2 FOR UPDATE`,
+          `SELECT stock_actual, precio_venta, disponible_en_sede, stock_minimo FROM producto_sede WHERE producto_id = $1 AND sede_id = $2 FOR UPDATE`,
           [productId, s.sede_id]
         );
 
         if (existingSede.rows.length > 0) {
           const oldStock = parseFloat(existingSede.rows[0].stock_actual);
+          const finalDisponible = hasDisponible ? disponibleEnSede : existingSede.rows[0].disponible_en_sede;
+          const finalStockMinimo = hasStockMinimo ? stockMinimo : parseFloat(existingSede.rows[0].stock_minimo) || 0;
+
           await client.query(
             `UPDATE producto_sede 
-             SET stock_actual = $1, precio_venta = $2
-             WHERE producto_id = $3 AND sede_id = $4`,
-            [stockActual, precioVenta, productId, s.sede_id]
+             SET stock_actual = $1, precio_venta = $2, disponible_en_sede = $3, stock_minimo = $4
+             WHERE producto_id = $5 AND sede_id = $6`,
+            [stockActual, precioVenta, finalDisponible, finalStockMinimo, productId, s.sede_id]
           );
 
           if (oldStock !== stockActual) {
@@ -360,8 +368,8 @@ export const updateProduct = async (req, res) => {
         } else {
           await client.query(
             `INSERT INTO producto_sede (producto_id, sede_id, stock_actual, stock_minimo, precio_venta, disponible_en_sede)
-             VALUES ($1, $2, $3, 5, $4, TRUE)`,
-            [productId, s.sede_id, stockActual, precioVenta]
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [productId, s.sede_id, stockActual, stockMinimo, precioVenta, disponibleEnSede]
           );
 
           if (stockActual > 0) {
