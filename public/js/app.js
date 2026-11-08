@@ -583,9 +583,7 @@ async function handleLoginSubmit(e) {
       return;
     }
 
-    if (data.token) {
-      sessionStorage.setItem('token_inventario_ce', data.token);
-    }
+    // sessionStorage.setItem('token_inventario_ce', data.token); // Eliminado para forzar cierre de sesión al recargar y no auto-loguear otras pestañas
     currentUser = data.user;
     currentToken = data.token;
     announceSessionStart(data.user);
@@ -3499,27 +3497,9 @@ async function verifySessionIdentity() {
 }
 
 async function checkSavedSession() {
-  const token = sessionStorage.getItem('token_inventario_ce');
-
-  try {
-    const res = await fetch(`${API_BASE}/auth/me`, {
-      credentials: 'include',
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    });
-    const data = await res.json().catch(() => ({}));
-
-    if (res.ok && data.user) {
-      currentUser = data.user;
-      if (token) currentToken = token;
-      resetInactivityTimer();
-      connectNotifications();
-      launchSoftwareView(data.user);
-    } else {
-      sessionStorage.removeItem('token_inventario_ce');
-    }
-  } catch (e) {
-    sessionStorage.removeItem('token_inventario_ce');
-  }
+  // Forzar que no haya auto-login al abrir otra pestaña o recargar la página
+  sessionStorage.removeItem('token_inventario_ce');
+  return;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
