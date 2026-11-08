@@ -5,15 +5,6 @@
 
 const API_BASE = '/api';
 
-// PWA: Registrar Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(reg => console.log('ServiceWorker registrado con éxito:', reg.scope))
-      .catch(err => console.error('Error registrando ServiceWorker:', err));
-  });
-}
-
 // PWA: Indicador Offline
 window.addEventListener('online', () => {
   showAuthAlert('Conexión restaurada. Sincronizando datos pendientes...', 'success');
@@ -592,12 +583,13 @@ async function handleLoginSubmit(e) {
       return;
     }
 
-    // sessionStorage.setItem('token_inventario_ce', data.token); // Eliminado para forzar cierre de sesión al recargar
+    if (data.token) {
+      sessionStorage.setItem('token_inventario_ce', data.token);
+    }
     currentUser = data.user;
     currentToken = data.token;
     announceSessionStart(data.user);
     resetInactivityTimer();
-    connectNotifications();
     connectNotifications();
 
     btnText.textContent = 'Sincronizando vistas...';
@@ -982,10 +974,9 @@ async function requestRecoveryPin() {
 
     document.getElementById('recoveryStep1').classList.add('hidden');
     document.getElementById('recoveryStep2').classList.remove('hidden');
-    document.getElementById('recoveryNotice').innerHTML = `
-      ✓ Código generado y vinculado a <strong>${data.emailTarget}</strong>.<br/>
-      <span class="text-primary font-bold">Código PIN simulado para pruebas: ${data.recoveryCodePreview}</span>
-    `;
+    document.getElementById('recoveryNotice').innerHTML = data.recoveryCodePreview
+      ? `✓ Código generado y vinculado a <strong>${data.emailTarget}</strong>.<br/><span class="text-primary font-bold">Código PIN: ${data.recoveryCodePreview}</span>`
+      : `✓ Código de 6 dígitos generado para <strong>${data.emailTarget}</strong>.<br/><span class="text-primary font-bold">Revisa tu correo corporativo o solicítalo al Administrador en el Registro de Auditoría.</span>`;
     document.getElementById('recoveryPin').value = data.recoveryCodePreview || '';
 
   } catch (e) {
@@ -1786,8 +1777,14 @@ function renderAdminView() {
           <td class="py-3 px-4 font-mono ${s_actual > 0 ? 'text-primary font-bold' : 'text-error'}">${s_actual <= s_min ? alertIcon : ''} ${s_actual}</td>
           <td class="py-3 px-4 text-right">
             <div class="flex items-center justify-end gap-1.5">
-              <button type="button" onclick="openTransferForProduct(${p.id}, '${p.codigo_sku}')" class="px-2 py-1 bg-secondary text-on-secondary hover:bg-yellow-400 font-mono text-[10px] font-bold rounded shadow-sm transition-colors" title="Mover Stock">
+              <button type="button" onclick="openTransferForProduct(${p.id}, '${p.codigo_sku}')" class="px-2 py-1 bg-secondary text-on-secondary hover:bg-yellow-400 font-mono text-[10px] font-bold rounded shadow-sm transition-colors" title="${t.menu_transfer || 'Mover Stock'}">
                 <span class="material-symbols-outlined text-sm align-middle">swap_horiz</span>
+              </button>
+              <button type="button" onclick="openEditProductModal(${p.id})" class="px-2 py-1 bg-surface-container hover:bg-surface-container-high text-primary font-mono text-[10px] font-bold rounded border border-outline-variant/40 shadow-sm transition-colors" title="${t.btn_edit || 'Editar Producto'}">
+                <span class="material-symbols-outlined text-sm align-middle">edit</span>
+              </button>
+              <button type="button" onclick="openDeleteProductModal(${p.id})" class="px-2 py-1 bg-surface-container hover:bg-error/20 hover:text-error text-error font-mono text-[10px] font-bold rounded border border-outline-variant/40 shadow-sm transition-colors" title="${t.btn_delete || 'Eliminar Producto'}">
+                <span class="material-symbols-outlined text-sm align-middle">delete</span>
               </button>
             </div>
           </td>
@@ -2143,6 +2140,10 @@ let barcodeMediaStream = null;
 let barcodeDetectionFrameId = null;
 let html5QrCodeInstance = null;
 let barcodeTargetInputId = null;
+let selectedBarcodeCameraId = null;
+let availableBarcodeCameras = [];
+let lastScannedCodeValue = '';
+let lastScannedCodeTime = 0;
 
 function simulateBarcodeScan() {
   openBarcodeScannerModal('quickPriceInput');
@@ -2151,12 +2152,11 @@ function simulateBarcodeScan() {
 async function openBarcodeScannerModal(targetInputId = null) {
   barcodeTargetInputId = targetInputId;
   const modal = document.getElementById('barcodeScannerModal');
-  const videoEl = document.getElementById('barcodeVideoPreview');
-  const fallbackEl = document.getElementById('barcodeFallbackReader');
   const engineBadge = document.getElementById('barcodeEngineBadge');
   const secureWarning = document.getElementById('barcodeSecureContextWarning');
   const resultCard = document.getElementById('barcodeScannedResultCard');
   const manualInput = document.getElementById('barcodeManualSkuInput');
+  const cameraControls = document.getElementById('barcodeCameraControls');
 
   if (!modal) return;
   modal.classList.remove('hidden');
@@ -2171,22 +2171,148 @@ async function openBarcodeScannerModal(targetInputId = null) {
 
   if (!isSecure || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
     if (secureWarning) secureWarning.classList.remove('hidden');
+    if (cameraControls) cameraControls.classList.add('hidden');
     if (engineBadge) engineBadge.textContent = 'Modo Manual / Lector USB (Requiere HTTPS o localhost para cámara)';
     if (manualInput) manualInput.focus();
     return;
   }
 
   if (secureWarning) secureWarning.classList.add('hidden');
+  await enumerateAndStartBarcodeCamera(selectedBarcodeCameraId);
+}
 
-  // 1. Intentar primero con la API nativa BarcodeDetector si el navegador la soporta
-  if ('BarcodeDetector' in window) {
+async function enumerateAndStartBarcodeCamera(preferredDeviceId = null) {
+  const engineBadge = document.getElementById('barcodeEngineBadge');
+  const cameraControls = document.getElementById('barcodeCameraControls');
+  const cameraSelect = document.getElementById('barcodeCameraSelect');
+  const manualInput = document.getElementById('barcodeManualSkuInput');
+
+  await stopBarcodeScannerStreams();
+
+  // Enumerar cámaras disponibles en cualquier dispositivo (PC, Portátil, Celular Android/iOS, Tablet)
+  availableBarcodeCameras = [];
+  if (typeof window.Html5Qrcode !== 'undefined' && typeof window.Html5Qrcode.getCameras === 'function') {
+    try {
+      const cams = await window.Html5Qrcode.getCameras();
+      if (Array.isArray(cams)) availableBarcodeCameras = cams;
+    } catch (e) {
+      console.warn('[BarcodeScanner] No se pudieron enumerar cámaras vía Html5Qrcode:', e);
+    }
+  }
+
+  if (availableBarcodeCameras.length === 0 && navigator.mediaDevices?.enumerateDevices) {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      availableBarcodeCameras = devices
+        .filter((d) => d.kind === 'videoinput')
+        .map((d, idx) => ({ id: d.deviceId, label: d.label || `Cámara ${idx + 1}` }));
+    } catch (e) {}
+  }
+
+  if (cameraSelect && availableBarcodeCameras.length > 0) {
+    // Preferir cámara trasera (back / environment / trasera) por defecto si no se eligió una
+    if (!preferredDeviceId || !availableBarcodeCameras.some((c) => c.id === preferredDeviceId)) {
+      const rearCam = availableBarcodeCameras.find((c) => /back|rear|trasera|environment|posterior/i.test(c.label || ''));
+      selectedBarcodeCameraId = rearCam ? rearCam.id : availableBarcodeCameras[0].id;
+    } else {
+      selectedBarcodeCameraId = preferredDeviceId;
+    }
+
+    cameraSelect.innerHTML = availableBarcodeCameras
+      .map((c, idx) => `<option value="${c.id}" ${c.id === selectedBarcodeCameraId ? 'selected' : ''}>📷 ${c.label || `Cámara #${idx + 1}`}</option>`)
+      .join('');
+    if (cameraControls) cameraControls.classList.remove('hidden');
+  } else if (cameraControls) {
+    cameraControls.classList.add('hidden');
+  }
+
+  await startBarcodeScannerStream(selectedBarcodeCameraId);
+  if (manualInput && !barcodeMediaStream && !html5QrCodeInstance) {
+    manualInput.focus();
+  }
+}
+
+async function startBarcodeScannerStream(deviceId = null) {
+  const modal = document.getElementById('barcodeScannerModal');
+  const videoEl = document.getElementById('barcodeVideoPreview');
+  const fallbackEl = document.getElementById('barcodeFallbackReader');
+  const engineBadge = document.getElementById('barcodeEngineBadge');
+  const manualInput = document.getElementById('barcodeManualSkuInput');
+
+  await stopBarcodeScannerStreams();
+
+  // Verificar si BarcodeDetector soporta realmente códigos de barras 1D (evita el falso positivo en Windows Desktop)
+  let supportsNative1D = false;
+  if ('BarcodeDetector' in window && typeof window.BarcodeDetector.getSupportedFormats === 'function') {
+    try {
+      const formats = await window.BarcodeDetector.getSupportedFormats();
+      supportsNative1D = Array.isArray(formats) && formats.includes('code_128') && formats.includes('ean_13');
+    } catch (e) {
+      supportsNative1D = false;
+    }
+  }
+
+  // 1. Usar motor universal html5-qrcode (compatible con PC, Android e iOS y usa BarcodeDetector internamente si existe)
+  if (typeof window.Html5Qrcode !== 'undefined') {
+    try {
+      if (engineBadge) {
+        engineBadge.textContent = supportsNative1D
+          ? 'Motor activo: Escáner Óptimo Multi-Dispositivo (Nativo + ZXing)'
+          : 'Motor activo: Escáner Universal Multi-Dispositivo (PC / Móvil)';
+      }
+      if (videoEl) videoEl.classList.add('hidden');
+      if (fallbackEl) fallbackEl.classList.remove('hidden');
+
+      html5QrCodeInstance = new window.Html5Qrcode('barcodeFallbackReader', {
+        useBarCodeDetectorIfSupported: supportsNative1D
+      });
+
+      const cameraConfig = deviceId
+        ? { deviceId: { exact: deviceId } }
+        : { facingMode: 'environment' };
+
+      try {
+        await html5QrCodeInstance.start(
+          cameraConfig,
+          { fps: 12, qrbox: { width: 260, height: 115 }, aspectRatio: 1.777778 },
+          (decodedText) => {
+            if (decodedText) handleBarcodeDetected(decodedText);
+          },
+          () => {}
+        );
+        return;
+      } catch (firstCamErr) {
+        // Si falló con facingMode environment en un PC sin cámara trasera, intentar con la cámara predeterminada del equipo
+        if (deviceId) throw firstCamErr;
+        await html5QrCodeInstance.start(
+          { facingMode: 'user' },
+          { fps: 12, qrbox: { width: 260, height: 115 }, aspectRatio: 1.777778 },
+          (decodedText) => {
+            if (decodedText) handleBarcodeDetected(decodedText);
+          },
+          () => {}
+        );
+        return;
+      }
+    } catch (fallbackErr) {
+      console.warn('[BarcodeScanner] No se pudo iniciar la cámara con html5-qrcode:', fallbackErr);
+      await stopBarcodeScannerStreams();
+    }
+  }
+
+  // 2. Respaldo directo con BarcodeDetector + getUserMedia si html5-qrcode no cargó
+  if (supportsNative1D && 'BarcodeDetector' in window) {
     try {
       if (engineBadge) engineBadge.textContent = 'Motor activo: BarcodeDetector Nativo';
       if (fallbackEl) fallbackEl.classList.add('hidden');
       if (videoEl) videoEl.classList.remove('hidden');
 
+      const videoConstraints = deviceId
+        ? { deviceId: { exact: deviceId } }
+        : { facingMode: { ideal: 'environment' } };
+
       barcodeMediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
+        video: videoConstraints,
         audio: false
       });
       videoEl.srcObject = barcodeMediaStream;
@@ -2197,54 +2323,36 @@ async function openBarcodeScannerModal(targetInputId = null) {
       });
 
       const scanFrame = async () => {
-        if (!barcodeMediaStream || modal.classList.contains('hidden')) return;
+        if (!barcodeMediaStream || !modal || modal.classList.contains('hidden')) return;
         try {
           const barcodes = await detector.detect(videoEl);
           if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
             handleBarcodeDetected(barcodes[0].rawValue);
-            return;
           }
-        } catch (err) {
-          // Continuar escaneando siguiente frame
-        }
+        } catch (err) {}
         barcodeDetectionFrameId = requestAnimationFrame(scanFrame);
       };
       barcodeDetectionFrameId = requestAnimationFrame(scanFrame);
       return;
     } catch (nativeErr) {
-      console.warn('[BarcodeScanner] Falló BarcodeDetector nativo, cambiando a fallback html5-qrcode:', nativeErr);
+      console.warn('[BarcodeScanner] Falló stream nativo:', nativeErr);
       await stopBarcodeScannerStreams();
     }
   }
 
-  // 2. Fallback universal con librería html5-qrcode
-  if (typeof window.Html5Qrcode !== 'undefined') {
-    try {
-      if (engineBadge) engineBadge.textContent = 'Motor activo: Fallback html5-qrcode';
-      if (videoEl) videoEl.classList.add('hidden');
-      if (fallbackEl) fallbackEl.classList.remove('hidden');
-
-      html5QrCodeInstance = new window.Html5Qrcode('barcodeFallbackReader');
-      await html5QrCodeInstance.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 110 } },
-        (decodedText) => {
-          if (decodedText) {
-            handleBarcodeDetected(decodedText);
-          }
-        },
-        () => {}
-      );
-      return;
-    } catch (fallbackErr) {
-      console.warn('[BarcodeScanner] No se pudo iniciar la cámara con html5-qrcode:', fallbackErr);
-      if (engineBadge) engineBadge.textContent = 'Cámara no disponible — Usa entrada manual o lector USB';
-      if (manualInput) manualInput.focus();
-    }
-  } else {
-    if (engineBadge) engineBadge.textContent = 'Modo Manual / Lector USB';
-    if (manualInput) manualInput.focus();
+  if (engineBadge) {
+    engineBadge.textContent = 'Cámara no detectada o ocupada en este equipo — Usa entrada manual o lector USB';
   }
+  if (manualInput) manualInput.focus();
+}
+
+async function switchBarcodeCamera(cameraId) {
+  selectedBarcodeCameraId = cameraId;
+  await startBarcodeScannerStream(cameraId);
+}
+
+async function retryBarcodeCamera() {
+  await enumerateAndStartBarcodeCamera(selectedBarcodeCameraId);
 }
 
 async function stopBarcodeScannerStreams() {
@@ -2279,24 +2387,15 @@ function handleBarcodeDetected(rawCode) {
   const code = (rawCode || '').trim();
   if (!code) return;
 
+  const now = Date.now();
+  if (code === lastScannedCodeValue && now - lastScannedCodeTime < 1500) {
+    return;
+  }
+  lastScannedCodeValue = code;
+  lastScannedCodeTime = now;
+
   const manualInput = document.getElementById('barcodeManualSkuInput');
   if (manualInput) manualInput.value = code;
-
-  // Rellenar buscador activo si aplica
-  if (barcodeTargetInputId) {
-    const targetInput = document.getElementById(barcodeTargetInputId);
-    if (targetInput) {
-      targetInput.value = code;
-      if (barcodeTargetInputId === 'adminSearchInput') filterAdminSearch(code);
-      if (barcodeTargetInputId === 'quickPriceInput') handleQuickPriceSearch(code);
-    }
-  } else {
-    const quickInput = document.getElementById('quickPriceInput');
-    if (quickInput) {
-      quickInput.value = code;
-      handleQuickPriceSearch(code);
-    }
-  }
 
   // Buscar coincidencia exacta o parcial por codigo_sku o nombre en liveProducts
   const normalized = code.toLowerCase();
@@ -2306,6 +2405,29 @@ function handleBarcodeDetected(rawCode) {
     (p) => (p.codigo_sku && p.codigo_sku.toLowerCase().includes(normalized)) ||
            (p.nombre && p.nombre.toLowerCase().includes(normalized))
   );
+
+  // Rellenar buscador o formulario activo según la vista desde donde se abrió la cámara
+  if (barcodeTargetInputId) {
+    const targetInput = document.getElementById(barcodeTargetInputId);
+    if (targetInput) {
+      targetInput.value = product ? product.codigo_sku : code;
+      if (barcodeTargetInputId === 'adminSearchInput') filterAdminSearch(targetInput.value);
+      if (barcodeTargetInputId === 'encargadoSearchInput') filterEncargadoSearch(targetInput.value);
+      if (barcodeTargetInputId === 'quickPriceInput') handleQuickPriceSearch(targetInput.value);
+      if (barcodeTargetInputId === 'conteoCodigoSku' && product) {
+        const inputNombre = document.getElementById('conteoNombreProducto');
+        const inputMarca = document.getElementById('conteoMarca');
+        if (inputNombre) inputNombre.value = product.nombre || '';
+        if (inputMarca) inputMarca.value = product.marca || 'Genérica';
+      }
+    }
+  } else {
+    const quickInput = document.getElementById('quickPriceInput');
+    if (quickInput) {
+      quickInput.value = code;
+      handleQuickPriceSearch(code);
+    }
+  }
 
   const resultCard = document.getElementById('barcodeScannedResultCard');
   if (!resultCard) return;
@@ -2353,6 +2475,8 @@ function handleBarcodeDetected(rawCode) {
 window.openBarcodeScannerModal = openBarcodeScannerModal;
 window.closeBarcodeScannerModal = closeBarcodeScannerModal;
 window.handleBarcodeDetected = handleBarcodeDetected;
+window.switchBarcodeCamera = switchBarcodeCamera;
+window.retryBarcodeCamera = retryBarcodeCamera;
 
 // =============================================================================
 // 7. MODAL Y CREACIÓN DE PRODUCTOS EN MYSQL (SUPERADMIN)
@@ -3206,16 +3330,42 @@ window.verDetalleRecepcionModal = async function(recepcionId) {
     });
     const data = await res.json();
     if (res.ok && data.productos) {
-      const itemsList = data.productos.map(p => 
-        `• ${p.nombre_producto || 'SKU: ' + p.codigo_sku} [Marca: ${p.marca || 'N/A'}] - Cantidad: ${p.cantidad_recibida} (SKU: ${p.codigo_sku})`
-      ).join('\n');
-      alert(`Detalle de Mercancía Recibida (Recepción #${recepcionId}):\n\n${itemsList || 'Sin productos registrados.'}`);
-    } else {
-      alert('No se pudo cargar el detalle de la recepción.');
+      const modal = document.getElementById('detalleRecepcionModal');
+      const titleEl = document.getElementById('detalleRecepcionModalTitle');
+      const subEl = document.getElementById('detalleRecepcionModalSub');
+      const tbody = document.getElementById('detalleRecepcionModalTbody');
+      if (modal && tbody) {
+        if (titleEl) titleEl.textContent = `Detalle de Mercancía Recibida — Recepción #${recepcionId}`;
+        if (subEl) {
+          const estadoStr = data.recepcion?.estado || '';
+          const obsStr = data.recepcion?.observaciones ? ` · Obs: ${data.recepcion.observaciones}` : '';
+          subEl.textContent = `${data.productos.length} ítem(s) contabilizado(s) · Estado: ${estadoStr}${obsStr}`;
+        }
+        if (data.productos.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-outline">Sin productos registrados en esta recepción.</td></tr>';
+        } else {
+          tbody.innerHTML = data.productos.map(p => `
+            <tr class="hover:bg-surface-container-high/50 transition-colors">
+              <td class="py-2.5 px-3 font-bold text-primary">${p.codigo_sku || '--'}</td>
+              <td class="py-2.5 px-3 font-sans font-semibold text-on-surface">${p.nombre_producto || 'Producto'}</td>
+              <td class="py-2.5 px-3 font-sans text-on-surface-variant">${p.marca || 'Genérica'}</td>
+              <td class="py-2.5 px-3 text-right font-bold text-secondary">${p.cantidad_recibida}</td>
+            </tr>
+          `).join('');
+        }
+        modal.classList.remove('hidden');
+        return;
+      }
     }
+    alert('No se pudo cargar el detalle de la recepción.');
   } catch (err) {
     alert('Error cargando detalle: ' + err.message);
   }
+};
+
+window.closeDetalleRecepcionModal = function() {
+  const modal = document.getElementById('detalleRecepcionModal');
+  if (modal) modal.classList.add('hidden');
 };
 
 async function handleAdminDistribuir(recepcionId) {
@@ -3349,19 +3499,20 @@ async function verifySessionIdentity() {
 }
 
 async function checkSavedSession() {
-  // const token = sessionStorage.getItem('token_inventario_ce');
-  // if (!token) return;
-  return; // Forzar que no haya auto-login al recargar la página
+  const token = sessionStorage.getItem('token_inventario_ce');
 
   try {
     const res = await fetch(`${API_BASE}/auth/me`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      credentials: 'include',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
     if (res.ok && data.user) {
       currentUser = data.user;
-      currentToken = token;
+      if (token) currentToken = token;
+      resetInactivityTimer();
+      connectNotifications();
       launchSoftwareView(data.user);
     } else {
       sessionStorage.removeItem('token_inventario_ce');
@@ -4050,12 +4201,15 @@ window.closeNewProductModal = function() {
   document.getElementById('newProductUnit').value = '';
   document.getElementById('newProductPrice').value = '';
   document.getElementById('newProductStock').value = '0';
-  document.getElementById('btnSubmitNewProduct').disabled = false;
-  document.getElementById('btnSubmitNewProduct').textContent = 'Guardar Producto';
+  const btn = document.getElementById('btnSubmitLegacyNewProduct');
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = 'Guardar Producto';
+  }
 };
 
 window.submitNewProduct = async function() {
-  const btn = document.getElementById('btnSubmitNewProduct');
+  const btn = document.getElementById('btnSubmitLegacyNewProduct');
   const sku = document.getElementById('newProductSku').value.trim();
   const name = document.getElementById('newProductName').value.trim();
   const unit = document.getElementById('newProductUnit').value.trim();
@@ -4749,8 +4903,16 @@ window.openPedirMaterialModal = function() {
   if (!modal || !currentUser) return;
 
   const destLabel = document.getElementById('pedirMaterialDestinoLabel');
-  if (destLabel) {
-    destLabel.value = `${currentUser.sede_nombre || 'Tu Sede Asignada'} (Sede #${currentUser.sede_id || 1})`;
+  const destSelect = document.getElementById('pedirMaterialSedeSelect');
+  if (currentUser.rol === 'ADMINISTRADOR' && destSelect) {
+    if (destLabel) destLabel.classList.add('hidden');
+    destSelect.classList.remove('hidden');
+  } else {
+    if (destSelect) destSelect.classList.add('hidden');
+    if (destLabel) {
+      destLabel.classList.remove('hidden');
+      destLabel.value = `${currentUser.sede_nombre || 'Tu Sede Asignada'} (Sede #${currentUser.sede_id || 1})`;
+    }
   }
 
   // Reiniciar contenedor a una fila limpia
@@ -4960,6 +5122,10 @@ window.handleEmitirPeticionRed = async function(e) {
   }
 
   const motivo = document.getElementById('pedirMaterialMotivo').value.trim();
+  const destSelect = document.getElementById('pedirMaterialSedeSelect');
+  const sedeSolicitanteAdmin = (currentUser?.rol === 'ADMINISTRADOR' && destSelect)
+    ? Number(destSelect.value)
+    : undefined;
   const btn = document.getElementById('btnEmitirPeticionSubmit');
   btn.disabled = true;
 
@@ -4972,7 +5138,8 @@ window.handleEmitirPeticionRed = async function(e) {
         producto_id: items[0].producto_id,
         cantidad: items[0].cantidad,
         items: items,
-        motivo
+        motivo,
+        ...(sedeSolicitanteAdmin ? { sede_solicitante_id: sedeSolicitanteAdmin } : {})
       })
     });
 

@@ -43,7 +43,7 @@ router.post('/register', authLimiter, validate(registerSchema), register);
 router.post('/forgot-password', authLimiter, forgotPassword);
 router.post('/reset-password', authLimiter, resetPassword);
 router.get('/sedes', getSedesList);
-router.post('/init-db', handleInitDb);
+router.post('/init-db', authenticateJWT, authorizeRoles('ADMINISTRADOR'), handleInitDb);
 
 // Rutas protegidas por JWT
 router.get('/me', authenticateJWT, getProfile);

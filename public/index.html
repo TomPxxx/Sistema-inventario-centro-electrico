@@ -980,7 +980,7 @@
                   <span class="material-symbols-outlined text-sm">create_new_folder</span>
                   <span data-i18n="btn_new_category">+ Categoría</span>
                 </button>
-                <button type="button" onclick="openNewProductModal()" class="text-xs font-mono px-3.5 py-1.5 rounded-lg bg-primary hover:bg-emerald-600 text-white border-2 border-emerald-700 flex items-center gap-1.5 transition-all shadow-md font-bold ml-1">
+                <button type="button" onclick="openCreateProductModal()" class="text-xs font-mono px-3.5 py-1.5 rounded-lg bg-primary hover:bg-emerald-600 text-white border-2 border-emerald-700 flex items-center gap-1.5 transition-all shadow-md font-bold ml-1">
                   <span class="material-symbols-outlined text-sm">add</span>
                   <span data-i18n="btn_new_entry">+ Nueva Entrada</span>
                 </button>
@@ -1205,7 +1205,7 @@
   <!-- MODAL: CREAR NUEVO PRODUCTO CON PRECIOS POR SEDE (SUPERADMIN) -->
   <!-- ========================================================================= -->
   <div id="createProductModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="w-full max-w-xl bg-surface-container rounded-xl p-6 border border-outline-variant/60 shadow-2xl space-y-4">
+    <div class="w-full max-w-xl max-h-[90vh] overflow-y-auto bg-surface-container rounded-xl p-6 border border-outline-variant/60 shadow-2xl space-y-4">
       <div class="flex items-center justify-between border-b border-outline-variant/30 pb-3">
         <div class="flex items-center gap-2 text-primary">
           <span class="material-symbols-outlined">add_circle</span>
@@ -1373,7 +1373,7 @@
 
       <div class="pt-3 border-t border-outline-variant/30 flex justify-end gap-2">
         <button type="button" onclick="closeNewProductModal()" class="px-4 py-2 font-mono text-xs text-outline hover:text-on-surface rounded" data-i18n="btn_cancel">Cancelar</button>
-        <button type="button" onclick="submitNewProduct()" class="px-4 py-2 font-mono text-xs bg-primary hover:bg-emerald-400 text-on-primary font-bold rounded shadow-sm transition-colors" id="btnSubmitNewProduct" data-i18n="btn_save_product">Guardar Producto</button>
+        <button type="button" onclick="submitNewProduct()" class="px-4 py-2 font-mono text-xs bg-primary hover:bg-emerald-400 text-on-primary font-bold rounded shadow-sm transition-colors" id="btnSubmitLegacyNewProduct" data-i18n="btn_save_product">Guardar Producto</button>
       </div>
     </div>
   </div>
@@ -1517,7 +1517,7 @@
   <!-- MODAL: EDITAR PRODUCTO (ADMIN) -->
   <!-- ========================================================================= -->
   <div id="editProductModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="w-full max-w-xl bg-surface-container rounded-xl p-6 border border-outline-variant/60 shadow-2xl space-y-4">
+    <div class="w-full max-w-xl max-h-[90vh] overflow-y-auto bg-surface-container rounded-xl p-6 border border-outline-variant/60 shadow-2xl space-y-4">
       <div class="flex items-center justify-between border-b border-outline-variant/30 pb-3">
         <div class="flex items-center gap-2 text-primary">
           <span class="material-symbols-outlined">edit</span>
@@ -1730,6 +1730,12 @@
         <div>
           <label class="text-outline uppercase block mb-1" data-i18n="lbl_receiving_branch_dest">Sede Receptora (Destino)</label>
           <input type="text" id="pedirMaterialDestinoLabel" readonly class="w-full bg-surface-container-low text-primary font-bold p-2.5 rounded-lg border border-outline-variant/30 cursor-not-allowed" value="Tu Sede Asignada" />
+          <select id="pedirMaterialSedeSelect" class="hidden w-full bg-surface-container-low text-primary font-bold p-2.5 rounded-lg border border-outline-variant/40">
+            <option value="1">1. Centro Eléctrico EP (Sede #1)</option>
+            <option value="2">2. Centro Eléctrico EP1 (Sede #2)</option>
+            <option value="3">3. Grupo Eléctrico EP3 (Sede #3)</option>
+            <option value="4">4. EP6 Ecoiluminación (Sede #4)</option>
+          </select>
         </div>
 
         <!-- Lista dinámica de materiales pedidos -->
@@ -2056,23 +2062,6 @@
     </button>
   </div>
 
-  <script>
-    function checkCookies() {
-      if (!localStorage.getItem('cookies_accepted')) {
-        setTimeout(() => {
-          document.getElementById('cookieBanner').classList.remove('translate-y-full');
-        }, 1000);
-      }
-    }
-    
-    function acceptCookies() {
-      localStorage.setItem('cookies_accepted', 'true');
-      document.getElementById('cookieBanner').classList.add('translate-y-full');
-    }
-    
-    document.addEventListener('DOMContentLoaded', checkCookies);
-  </script>
-
   <!-- SECCIÓN 3: DASHBOARD Y ESTADÍSTICAS (ADMIN) -->
   <div id="dashboardSection" class="hidden min-h-screen bg-background relative overflow-hidden flex flex-col z-[100] fixed inset-0">
     <!-- Header -->
@@ -2381,10 +2370,15 @@
         </div>
 
         <div class="flex flex-wrap items-end gap-2.5 pt-1 border-t border-outline-variant/20">
-          <!-- SKU (Opcional) -->
+          <!-- SKU (Opcional + Escáner de Cámara) -->
           <div class="flex-1 min-w-[160px]">
             <label class="text-[10px] text-outline font-mono block mb-1 uppercase" data-i18n="lbl_sku_code">Código SKU</label>
-            <input type="text" id="conteoCodigoSku" placeholder="Digitar SKU si existe..." class="w-full bg-surface-container text-on-surface p-2 rounded-lg border border-outline-variant/40 uppercase text-xs font-mono focus:border-primary focus:outline-none" />
+            <div class="flex items-center gap-1.5">
+              <input type="text" id="conteoCodigoSku" placeholder="Digitar o escanear SKU..." class="w-full bg-surface-container text-on-surface p-2 rounded-lg border border-outline-variant/40 uppercase text-xs font-mono focus:border-primary focus:outline-none" />
+              <button type="button" onclick="openBarcodeScannerModal('conteoCodigoSku')" class="p-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-secondary border border-outline-variant/40 transition-colors shrink-0" title="Escanear código de barras con cámara">
+                <span class="material-symbols-outlined text-base">barcode_scanner</span>
+              </button>
+            </div>
           </div>
 
           <!-- Cantidad (Obligatorio) -->
@@ -2533,10 +2527,49 @@
   </div>
 
   <!-- ========================================================================= -->
+  <!-- MODAL: DETALLE DE PRODUCTOS DE UNA RECEPCIÓN -->
+  <!-- ========================================================================= -->
+  <div id="detalleRecepcionModal" class="hidden fixed inset-0 z-[85] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-surface-container border border-outline-variant/50 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="p-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface-container-low">
+        <div class="flex items-center gap-2 text-primary">
+          <span class="material-symbols-outlined">inventory</span>
+          <div>
+            <h3 id="detalleRecepcionModalTitle" class="font-headline font-bold text-base text-on-surface">Detalle de Mercancía Recibida</h3>
+            <p id="detalleRecepcionModalSub" class="text-[11px] text-outline font-mono">--</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeDetalleRecepcionModal()" class="text-outline hover:text-error transition-colors">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="p-4 overflow-y-auto flex-1">
+        <table class="w-full text-left border-collapse text-xs font-mono">
+          <thead>
+            <tr class="bg-surface-container-lowest border-b border-outline-variant/30 text-outline uppercase text-[11px]">
+              <th class="py-2 px-3">SKU</th>
+              <th class="py-2 px-3">Producto</th>
+              <th class="py-2 px-3">Marca</th>
+              <th class="py-2 px-3 text-right">Cantidad Contada</th>
+            </tr>
+          </thead>
+          <tbody id="detalleRecepcionModalTbody" class="divide-y divide-outline-variant/20">
+          </tbody>
+        </table>
+      </div>
+      <div class="p-3 border-t border-outline-variant/30 bg-surface-container-low flex justify-end">
+        <button type="button" onclick="closeDetalleRecepcionModal()" class="px-4 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-mono text-xs font-bold transition-colors">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
   <!-- MODAL: LECTOR DE CÓDIGO DE BARRAS CON CÁMARA (BarcodeDetector + Fallback) -->
   <!-- ========================================================================= -->
   <div id="barcodeScannerModal" class="hidden fixed inset-0 z-[90] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="w-full max-w-lg bg-surface-container border border-outline-variant/50 rounded-2xl shadow-2xl p-5 space-y-4">
+    <div class="w-full max-w-lg max-h-[92vh] overflow-y-auto bg-surface-container border border-outline-variant/50 rounded-2xl shadow-2xl p-5 space-y-4">
       <div class="flex items-center justify-between border-b border-outline-variant/30 pb-3">
         <div class="flex items-center gap-2 text-secondary">
           <span class="material-symbols-outlined">barcode_scanner</span>
@@ -2547,6 +2580,17 @@
         </div>
         <button type="button" onclick="closeBarcodeScannerModal()" class="text-outline hover:text-error transition-colors">
           <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Selector de Cámara para Dispositivos con Múltiples Cámaras (PC / Celular / Tablet) -->
+      <div id="barcodeCameraControls" class="hidden flex items-center gap-2 bg-surface-container-low p-2 rounded-xl border border-outline-variant/30 text-xs font-mono">
+        <span class="material-symbols-outlined text-primary text-base">videocam</span>
+        <select id="barcodeCameraSelect" onchange="switchBarcodeCamera(this.value)" class="flex-1 bg-surface-container text-on-surface p-1.5 rounded border border-outline-variant/40 text-xs focus:outline-none focus:border-primary">
+        </select>
+        <button type="button" onclick="retryBarcodeCamera()" class="px-2.5 py-1.5 rounded bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface text-[11px] font-bold transition-colors flex items-center gap-1" title="Reiniciar Cámara">
+          <span class="material-symbols-outlined text-sm">cameraswitch</span>
+          <span>Reiniciar</span>
         </button>
       </div>
 
@@ -2594,7 +2638,7 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
+  <script src="./js/html5-qrcode.min.js?v=26"></script>
 
   <script>
     function openPendingUsersModal() {
@@ -2620,14 +2664,14 @@
   </script>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="./js/passwordPolicy.js?v=25"></script>
-  <script src="./js/i18n.js?v=25"></script>
-  <script src="./js/app.js?v=25"></script>
+  <script type="module" src="./js/passwordPolicy.js?v=26"></script>
+  <script src="./js/i18n.js?v=26"></script>
+  <script src="./js/app.js?v=26"></script>
   <!-- Registro PWA Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js?v=25')
+        navigator.serviceWorker.register('/service-worker.js?v=26')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registrado con éxito con el scope: ', registration.scope);

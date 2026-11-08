@@ -141,6 +141,9 @@ export const distribuirRecepcion = async (req, res) => {
     // Lógica para distribuir la recepción: Añadimos el stock al almacén destino (sede_receptora_id)
     const productos = await RecepcionRepository.getProductosByRecepcion(id);
     await RecepcionRepository.distribuirProductosEnInventario(id, recepcion.sede_receptora_id, productos, req.user.id);
+    if (req.user) {
+      await AuditRepository.logAction(req.user.id, req.user.username, 'DISTRIBUIR_RECEPCION', `Distribuyó al inventario la recepción ID ${id} (${productos.length} ítem(s)) en Sede #${recepcion.sede_receptora_id}`, req.ip);
+    }
 
     res.json({
       message: 'Recepción distribuida exitosamente al inventario',

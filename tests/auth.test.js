@@ -212,4 +212,30 @@ describe('Auth Endpoints & Mandatory Admin Approval', () => {
       expect(resWrongPass.body.message).toBe('Contraseña incorrecta.');
     });
   });
+
+  describe('Security Hardening (init-db & forgot-password)', () => {
+    it('debería bloquear POST /api/auth/init-db sin autenticación de Administrador (401)', async () => {
+      const res = await request(app).post('/api/auth/init-db');
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+    });
+
+    it('NO debería exponer recoveryCodePreview en la respuesta pública de POST /api/auth/forgot-password', async () => {
+      jest.spyOn(UserRepository, 'findByUsernameOrEmail').mockResolvedValueOnce({
+        id: 1,
+        username: 'tomas_admin',
+        email: 'tomas@grupoelectrico.com'
+      });
+      jest.spyOn(UserRepository, 'setRecoveryToken').mockResolvedValueOnce();
+      jest.spyOn(AuditRepository, 'logAction').mockResolvedValueOnce();
+
+      const res = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ identifier: 'tomas_admin' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.recoveryCodePreview).toBeUndefined();
+    });
+  });
 });

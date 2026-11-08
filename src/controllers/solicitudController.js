@@ -599,6 +599,20 @@ export const completarRecepcion = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Solo se puede confirmar mercancía que esté en estado EN_TRANSITO.' });
     }
 
+    // Validar que solo el Administrador, el Encargado de la sede receptora o el Corredor asignado puedan confirmar la entrega
+    if (req.user.rol === 'ENCARGADO' && Number(req.user.sede_id) !== Number(sol.sede_solicitante_id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo el encargado de la sede receptora, el corredor asignado o el Administrador pueden confirmar la recepción.'
+      });
+    }
+    if (req.user.rol === 'EMPLEADO' && sol.empleado_corredor_id && Number(sol.empleado_corredor_id) !== Number(req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Esta entrega está asignada a otro corredor logístico.'
+      });
+    }
+
     await client.query('BEGIN');
 
     // Procesar todos los items recibidos (soporta items_json y producto_id único)

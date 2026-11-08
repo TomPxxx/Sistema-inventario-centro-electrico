@@ -44,7 +44,7 @@ app.use('/api', globalLimiter);
 
 // Middlewares globales
 app.use(cors({
-  origin: 'http://localhost:5173', // Cambiado temporalmente a un origen explícito para permitir cookies (credentials: true)
+  origin: true,
   credentials: true, // Importante para enviar/recibir cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']

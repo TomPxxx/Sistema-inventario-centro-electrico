@@ -178,6 +178,7 @@ class RecepcionRepository {
         }
 
         // Si el producto aún no existe en catálogo porque es nuevo, crearlo automáticamente
+        let esProductoNuevo = false;
         if (!productoId) {
           const skuParaCrear = prod.codigo_sku || `SKU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
           const nombreParaCrear = prod.nombre_producto || `Producto ${skuParaCrear}`;
@@ -190,10 +191,25 @@ class RecepcionRepository {
           `, [skuParaCrear, nombreParaCrear, marcaParaCrear]);
 
           productoId = nuevoProdRes.rows[0].id;
+          esProductoNuevo = true;
         }
 
         const qty = parseFloat(prod.cantidad_recibida);
         if (qty <= 0 || isNaN(qty)) continue;
+
+        if (esProductoNuevo) {
+          // Inicializar en las 4 sedes activas para mantener la matriz multisede íntegra
+          const sedesRes = await client.query('SELECT id FROM sedes WHERE activo = TRUE ORDER BY id ASC');
+          for (const s of sedesRes.rows) {
+            const stockInicialSede = Number(s.id) === Number(sedeId) ? qty : 0;
+            await client.query(
+              `INSERT INTO producto_sede (producto_id, sede_id, stock_actual, stock_minimo, precio_venta, disponible_en_sede)
+               VALUES ($1, $2, $3, 5, 0, TRUE)
+               ON CONFLICT (producto_id, sede_id) DO UPDATE SET stock_actual = producto_sede.stock_actual + EXCLUDED.stock_actual`,
+              [productoId, s.id, stockInicialSede]
+            );
+          }
+        }
 
         // Verificar existencias en producto_sede
         const resStock = await client.query(
@@ -205,7 +221,11 @@ class RecepcionRepository {
         let stock_posterior = qty;
         let precio_venta = 0.00;
 
-        if (resStock.rows.length > 0) {
+        if (esProductoNuevo) {
+          stock_anterior = 0;
+          stock_posterior = qty;
+          precio_venta = 0.00;
+        } else if (resStock.rows.length > 0) {
           stock_anterior = parseFloat(resStock.rows[0].stock_actual) || 0;
           stock_posterior = stock_anterior + qty;
           precio_venta = parseFloat(resStock.rows[0].precio_venta) || 0.00;
@@ -216,7 +236,7 @@ class RecepcionRepository {
           );
         } else {
           await client.query(
-            'INSERT INTO producto_sede (producto_id, sede_id, stock_actual, stock_minimo, precio_venta) VALUES ($1, $2, $3, 0, 0)',
+            'INSERT INTO producto_sede (producto_id, sede_id, stock_actual, stock_minimo, precio_venta, disponible_en_sede) VALUES ($1, $2, $3, 5, 0, TRUE)',
             [productoId, sedeId, qty]
           );
         }

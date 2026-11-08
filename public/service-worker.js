@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inventario-ce-v25';
+const CACHE_NAME = 'inventario-ce-v26';
 const API_CACHE_NAME = 'inventario-api-v3';
 const ASSETS_TO_CACHE = [
   '/',
@@ -8,6 +8,7 @@ const ASSETS_TO_CACHE = [
   '/css/material-symbols.css',
   '/fonts/material-symbols-outlined.woff2',
   '/js/tailwindcss.js',
+  '/js/html5-qrcode.min.js',
   '/js/passwordPolicy.js',
   '/js/i18n.js',
   '/js/app.js',

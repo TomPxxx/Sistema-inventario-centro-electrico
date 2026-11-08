@@ -460,11 +460,18 @@ export const forgotPassword = async (req, res) => {
 
     await UserRepository.setRecoveryToken(user.id, recoveryPin, expiresAt);
 
+    await AuditRepository.logAction(
+      user.id,
+      user.username,
+      'RECUPERACION_CLAVE',
+      `Solicitó PIN de recuperación de contraseña (PIN generado: ${recoveryPin}, expira en 30 min)`,
+      req.ip
+    );
+
     return res.status(200).json({
       success: true,
-      message: `Se ha generado el código de recuperación para ${user.email || user.username}. En caso de que se te olvide, se envía al correo registrado.`,
-      emailTarget: user.email || `${user.username}@grupoelectrico.com`,
-      recoveryCodePreview: recoveryPin
+      message: `Se ha generado el código de recuperación para ${user.email || user.username}. Solicítalo al Administrador o revisa el correo corporativo registrado.`,
+      emailTarget: user.email || `${user.username}@grupoelectrico.com`
     });
   } catch (error) {
     console.error('[Forgot Password Error]:', error);
