@@ -546,5 +546,29 @@ describe('Evaluación Integral Automatizada del Sistema (Frontend + Seguridad + 
       expect(updatedProd.sedes[3].disponible).toBe(false);
       expect(updatedProd.sedes[3].stock_actual).toBe(0);
     });
+
+    it('Dashboard: Paginación exacta de 15 movimientos por página y optimización de almacenamiento histórico (Cold Storage)', async () => {
+      const admin = await issueSessionTokenForUser('tomas_admin');
+
+      // 1. Consultar página 1 con límite 15
+      const resMovs = await request(app)
+        .get('/api/dashboard/movements?page=1&limit=15')
+        .set('Authorization', `Bearer ${admin.token}`);
+      expect(resMovs.status).toBe(200);
+      expect(resMovs.body.success).toBe(true);
+      expect(Array.isArray(resMovs.body.movements)).toBe(true);
+      expect(resMovs.body.movements.length).toBeLessThanOrEqual(15);
+      expect(resMovs.body.pagination.limit).toBe(15);
+      expect(resMovs.body.pagination.page).toBe(1);
+
+      // 2. Ejecutar optimización de almacenamiento (archivar > 24 meses + ANALYZE)
+      const resOpt = await request(app)
+        .post('/api/dashboard/movements/optimize')
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({ retentionMonths: 24 });
+      expect(resOpt.status).toBe(200);
+      expect(resOpt.body.success).toBe(true);
+      expect(typeof resOpt.body.archivedCount).toBe('number');
+    });
   });
 });

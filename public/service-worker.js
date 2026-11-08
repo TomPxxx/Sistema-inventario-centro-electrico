@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inventario-ce-v28';
+const CACHE_NAME = 'inventario-ce-v29';
 const API_CACHE_NAME = 'inventario-api-v3';
 const ASSETS_TO_CACHE = [
   '/',

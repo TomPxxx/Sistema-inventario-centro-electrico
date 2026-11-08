@@ -2165,28 +2165,54 @@
         </div>
       </div>
 
-      <!-- Historial de Movimientos Exactos -->
+      <!-- Historial de Movimientos Exactos (Colapsable / Bajo Demanda + En Vivo + Paginado de 15 en 15) -->
       <div class="bg-surface-container rounded-2xl border border-outline-variant/30 shadow-sm overflow-hidden flex flex-col">
-        <div class="bg-surface-container-high px-4 py-3 border-b border-outline-variant/30 flex justify-between items-center">
-          <h2 class="text-md font-bold text-on-surface uppercase tracking-wider text-xs">Historial de Movimientos Exactos</h2>
+        <div class="bg-surface-container-high px-4 py-3.5 border-b border-outline-variant/30 flex flex-wrap justify-between items-center gap-3">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-primary animate-ping"></span>
+            <div>
+              <h2 class="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
+                <span>Historial de Movimientos Exactos</span>
+                <span id="movementsTotalCountBadge" class="px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-mono text-[10px]">En Vivo</span>
+              </h2>
+              <p class="text-[11px] text-outline font-mono">15 movimientos por página · Actualización automática en tiempo real (Socket.IO)</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <button type="button" onclick="optimizeMovementsHistory()" class="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-highest text-cyan-400 border border-cyan-500/40 font-mono text-xs font-bold flex items-center gap-1.5 transition-all" title="Archivar movimientos antiguos (> 24 meses) y optimizar índices SQL">
+              <span class="material-symbols-outlined text-[16px]">database</span>
+              <span>Optimizar Historial (+2 años)</span>
+            </button>
+            <button type="button" id="btnToggleMovementsPanel" onclick="toggleExactMovementsPanel()" class="px-4 py-2 rounded-lg bg-primary hover:bg-emerald-400 text-on-primary font-headline font-bold text-xs uppercase flex items-center gap-1.5 shadow-md transition-all active:scale-95">
+              <span class="material-symbols-outlined text-[18px]" id="iconToggleMovementsPanel">visibility</span>
+              <span id="lblToggleMovementsPanel">Revisar Últimos Movimientos</span>
+            </button>
+          </div>
         </div>
-        <div class="overflow-x-auto flex-1">
-          <table class="w-full text-left text-sm whitespace-nowrap">
-            <thead class="text-xs uppercase bg-surface-container text-on-surface-variant font-mono tracking-wider sticky top-0 z-10 border-b border-outline-variant/50 shadow-sm">
-              <tr>
-                <th class="py-3 px-4 w-[150px]">Fecha y Hora</th>
-                <th class="py-3 px-4">Tipo</th>
-                <th class="py-3 px-4">Producto</th>
-                <th class="py-3 px-4 text-center">Cantidad</th>
-                <th class="py-3 px-4 text-center">Stk Ant -> Post</th>
-                <th class="py-3 px-4">Sede / Origen</th>
-                <th class="py-3 px-4">Usuario Responsable</th>
-              </tr>
-            </thead>
-            <tbody id="movementsTableBody" class="divide-y divide-outline-variant/20">
-              <!-- Renderizado dinámico -->
-            </tbody>
-          </table>
+
+        <!-- Cuerpo Colapsable (Oculto por defecto hasta que el Admin decida abrirlo) -->
+        <div id="exactMovementsCollapsible" class="hidden flex-col">
+          <div class="overflow-x-auto flex-1">
+            <table class="w-full text-left text-sm whitespace-nowrap">
+              <thead class="text-xs uppercase bg-surface-container text-on-surface-variant font-mono tracking-wider sticky top-0 z-10 border-b border-outline-variant/50 shadow-sm">
+                <tr>
+                  <th class="py-3 px-4 w-[150px]">Fecha y Hora</th>
+                  <th class="py-3 px-4">Tipo</th>
+                  <th class="py-3 px-4">Producto</th>
+                  <th class="py-3 px-4 text-center">Cantidad</th>
+                  <th class="py-3 px-4 text-center">Stk Ant -> Post</th>
+                  <th class="py-3 px-4">Sede / Origen</th>
+                  <th class="py-3 px-4">Usuario Responsable</th>
+                </tr>
+              </thead>
+              <tbody id="movementsTableBody" class="divide-y divide-outline-variant/20">
+                <!-- Renderizado dinámico (15 por página) -->
+              </tbody>
+            </table>
+          </div>
+          <!-- Barra de Paginación de Movimientos (15 por página) -->
+          <div id="dashboardMovementsPagination" class="p-3 border-t border-outline-variant/30 bg-surface-container-low/60"></div>
         </div>
       </div>
     </main>

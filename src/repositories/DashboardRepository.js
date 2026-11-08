@@ -62,7 +62,9 @@ class DashboardRepository {
   /**
    * Obtiene todos los movimientos exactos con fecha, hora, cantidades y sedes.
    */
-  async getExactMovements() {
+  async getExactMovements(limit = 15, offset = 0) {
+    const safeLimit = Math.max(1, Math.min(Number(limit) || 15, 200));
+    const safeOffset = Math.max(0, Number(offset) || 0);
     const query = `
       SELECT 
         m.id, m.tipo_movimiento, m.cantidad, m.stock_anterior, m.stock_posterior,
@@ -74,11 +76,74 @@ class DashboardRepository {
       JOIN productos p ON m.producto_id = p.id
       JOIN sedes s ON m.sede_id = s.id
       JOIN usuarios u ON m.usuario_id = u.id
-      ORDER BY m.fecha_movimiento DESC
-      LIMIT 100
+      ORDER BY m.fecha_movimiento DESC, m.id DESC
+      LIMIT $1 OFFSET $2
     `;
-    const { rows } = await pool.query(query);
+    const { rows } = await pool.query(query, [safeLimit, safeOffset]);
     return rows;
+  }
+
+  /**
+   * Obtiene el conteo total de movimientos registrados y métricas de almacenamiento.
+   */
+  async getMovementsTotalCount() {
+    const { rows } = await pool.query('SELECT COUNT(*)::int AS total FROM movimientos_inventario');
+    return rows[0]?.total || 0;
+  }
+
+  /**
+   * Crea índices compuestos de alto rendimiento para consultas paginadas (20+ años de operación)
+   * y tabla de archivo histórico (Cold Storage).
+   */
+  async ensurePerformanceIndexes() {
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_mov_inv_fecha_id_desc 
+      ON movimientos_inventario (fecha_movimiento DESC, id DESC);
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_mov_inv_created_at 
+      ON movimientos_inventario (created_at DESC);
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS movimientos_inventario_archivo (
+        LIKE movimientos_inventario INCLUDING ALL
+      );
+    `).catch(() => {});
+  }
+
+  /**
+   * Archiva y purga movimientos antiguos (mayores a retentionMonths meses) hacia movimientos_inventario_archivo
+   * y ejecuta ANALYZE para mantener el motor rápido por décadas.
+   */
+  async archiveOldMovements(retentionMonths = 24) {
+    const safeMonths = Math.max(6, Math.min(Number(retentionMonths) || 24, 120));
+    await this.ensurePerformanceIndexes();
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const moveRes = await client.query(
+        `WITH moved AS (
+           DELETE FROM movimientos_inventario
+           WHERE fecha_movimiento < NOW() - ($1 || ' months')::interval
+           RETURNING *
+         )
+         INSERT INTO movimientos_inventario_archivo
+         SELECT * FROM moved`,
+        [safeMonths]
+      );
+      await client.query('COMMIT');
+      await pool.query('ANALYZE movimientos_inventario').catch(() => {});
+      return {
+        archivedCount: moveRes.rowCount || 0,
+        retentionMonths: safeMonths
+      };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 }
 

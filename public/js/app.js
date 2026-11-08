@@ -109,6 +109,12 @@ function initSocketConnection() {
     if (currentUser.rol === 'ADMINISTRADOR' || currentUser.rol === 'ENCARGADO') {
       showNotificationToast('🔔 Se ha detectado un movimiento. Inventario actualizado en tiempo real.');
       loadRealInventory();
+      if (currentUser.rol === 'ADMINISTRADOR') {
+        const dashSec = document.getElementById('dashboardSection');
+        if (dashSec && !dashSec.classList.contains('hidden')) {
+          loadDashboardData(currentDashboardMovementsPage);
+        }
+      }
     }
   });
 
@@ -134,6 +140,12 @@ function initSocketConnection() {
     if (typeof loadNetworkRequests === 'function') loadNetworkRequests();
     if (currentUser.rol === 'ADMINISTRADOR' || currentUser.rol === 'ENCARGADO') {
       loadRealInventory();
+      if (currentUser.rol === 'ADMINISTRADOR') {
+        const dashSec = document.getElementById('dashboardSection');
+        if (dashSec && !dashSec.classList.contains('hidden')) {
+          loadDashboardData(currentDashboardMovementsPage);
+        }
+      }
     }
     if (currentUser.rol === 'EMPLEADO') {
       loadEmployeeTransfers();
@@ -3611,6 +3623,10 @@ window.acceptCookies = function() {
 
 let chartMovementsInstance = null;
 let chartStockInstance = null;
+let currentDashboardMovementsPage = 1;
+const DASHBOARD_MOVEMENTS_PAGE_SIZE = 15;
+let isExactMovementsPanelOpen = false;
+let dashboardLiveRefreshTimer = null;
 
 // =============================================================================
 // 9. DASHBOARD (ADMINISTRADOR)
@@ -3621,22 +3637,127 @@ async function openDashboard() {
   if (!stillValid) return;
   document.getElementById('appSection').classList.add('hidden');
   document.getElementById('dashboardSection').classList.remove('hidden');
-  await loadDashboardData();
+
+  // Asegurar que el panel de movimientos inicie cerrado por defecto hasta que el usuario pulse el botón
+  isExactMovementsPanelOpen = false;
+  syncExactMovementsPanelUI();
+  currentDashboardMovementsPage = 1;
+
+  await loadDashboardData(1);
+
+  if (dashboardLiveRefreshTimer) clearInterval(dashboardLiveRefreshTimer);
+  dashboardLiveRefreshTimer = setInterval(() => {
+    const dashSec = document.getElementById('dashboardSection');
+    if (dashSec && !dashSec.classList.contains('hidden') && isExactMovementsPanelOpen) {
+      loadDashboardMovementsPage(currentDashboardMovementsPage, true);
+    }
+  }, 8000);
 }
 
 function closeDashboard() {
   document.getElementById('dashboardSection').classList.add('hidden');
   document.getElementById('appSection').classList.remove('hidden');
+  if (dashboardLiveRefreshTimer) {
+    clearInterval(dashboardLiveRefreshTimer);
+    dashboardLiveRefreshTimer = null;
+  }
 }
 
-async function loadDashboardData() {
+function syncExactMovementsPanelUI() {
+  const panel = document.getElementById('exactMovementsCollapsible');
+  const icon = document.getElementById('iconToggleMovementsPanel');
+  const label = document.getElementById('lblToggleMovementsPanel');
+  if (!panel) return;
+
+  if (isExactMovementsPanelOpen) {
+    panel.classList.remove('hidden');
+    panel.classList.add('flex');
+    if (icon) icon.textContent = 'visibility_off';
+    if (label) label.textContent = 'Ocultar Últimos Movimientos';
+  } else {
+    panel.classList.add('hidden');
+    panel.classList.remove('flex');
+    if (icon) icon.textContent = 'visibility';
+    if (label) label.textContent = 'Revisar Últimos Movimientos';
+  }
+}
+
+window.toggleExactMovementsPanel = async function() {
+  isExactMovementsPanelOpen = !isExactMovementsPanelOpen;
+  syncExactMovementsPanelUI();
+  if (isExactMovementsPanelOpen) {
+    await loadDashboardMovementsPage(currentDashboardMovementsPage);
+  }
+};
+
+window.goToDashboardMovementsPage = async function(page) {
+  currentDashboardMovementsPage = Math.max(1, Number(page) || 1);
+  await loadDashboardMovementsPage(currentDashboardMovementsPage);
+};
+
+async function loadDashboardMovementsPage(page = 1, isSilent = false) {
+  currentDashboardMovementsPage = Math.max(1, Number(page) || 1);
   const tbody = document.getElementById('movementsTableBody');
-  tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-outline text-sm">Cargando datos...</td></tr>`;
+  if (tbody && !isSilent) {
+    tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-outline text-sm">Cargando página ${currentDashboardMovementsPage} de movimientos en vivo...</td></tr>`;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/dashboard/movements?page=${currentDashboardMovementsPage}&limit=${DASHBOARD_MOVEMENTS_PAGE_SIZE}`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` },
+      cache: 'no-store'
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      renderExactMovements(data.movements, data.pagination);
+    } else if (!isSilent) {
+      showDashboardError(data.message || 'No se pudo cargar la página de movimientos.');
+    }
+  } catch (err) {
+    if (!isSilent) {
+      showDashboardError('Error de conexión al cargar movimientos en vivo.');
+    }
+  }
+}
+
+window.optimizeMovementsHistory = async function() {
+  if (!confirm('⚡ ¿Deseas optimizar el almacenamiento del Historial de Movimientos?\n\nLos movimientos con más de 24 meses (2 años) de antigüedad se moverán automáticamente a la tabla de archivo histórico (Cold Storage) sin perder trazabilidad, liberando memoria y reconstruyendo los índices B-Tree para máxima velocidad.')) {
+    return;
+  }
+
+  try {
+    showToast('Optimizando índices y archivando historial antiguo...', 'info');
+    const res = await fetch(`${API_BASE}/dashboard/movements/optimize`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ retentionMonths: 24 })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast('✓ ' + data.message, 'success');
+      await loadDashboardData(1);
+    } else {
+      alert(data.message || 'No se pudo ejecutar la optimización.');
+    }
+  } catch (err) {
+    alert('Error de red al optimizar el historial.');
+  }
+};
+
+async function loadDashboardData(page = 1) {
+  currentDashboardMovementsPage = Math.max(1, Number(page) || 1);
+  const tbody = document.getElementById('movementsTableBody');
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-outline text-sm">Cargando datos...</td></tr>`;
+  }
 
   let data = null;
   let res = null;
   try {
-    res = await fetch(`${API_BASE}/dashboard/summary`, {
+    res = await fetch(`${API_BASE}/dashboard/summary?page=${currentDashboardMovementsPage}&limit=${DASHBOARD_MOVEMENTS_PAGE_SIZE}`, {
       headers: { 'Authorization': `Bearer ${currentToken}` },
       cache: 'no-store'
     });
@@ -3658,7 +3779,7 @@ async function loadDashboardData() {
 
   // Tabla y gráficos se renderizan por separado para que un fallo no bloquee al otro
   try {
-    renderExactMovements(data.dashboard.exactMovements);
+    renderExactMovements(data.dashboard.exactMovements, data.dashboard.movementsPagination);
   } catch (err) {
     console.error('Error renderizando historial', err);
     showDashboardError('Error mostrando el historial de movimientos: ' + err.message);
@@ -3722,12 +3843,24 @@ function renderDashboardCharts(dashData) {
   });
 }
 
-function renderExactMovements(movements) {
+function renderExactMovements(movements, pagination) {
   const tbody = document.getElementById('movementsTableBody');
+  const badge = document.getElementById('movementsTotalCountBadge');
+  const pagContainer = document.getElementById('dashboardMovementsPagination');
+  if (!tbody) return;
   tbody.innerHTML = '';
+
+  const totalItems = pagination?.totalItems ?? (movements ? movements.length : 0);
+  const currentPage = pagination?.page ?? currentDashboardMovementsPage ?? 1;
+  const pageSize = pagination?.limit ?? DASHBOARD_MOVEMENTS_PAGE_SIZE;
+
+  if (badge) {
+    badge.textContent = `En Vivo · ${totalItems} reg.`;
+  }
   
   if (!movements || movements.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-outline text-sm">No hay movimientos registrados.</td></tr>`;
+    if (pagContainer) pagContainer.innerHTML = '';
     return;
   }
 
@@ -3747,6 +3880,8 @@ function renderExactMovements(movements) {
       </tr>
     `;
   });
+
+  renderPaginationControls('dashboardMovementsPagination', currentPage, totalItems, pageSize, 'goToDashboardMovementsPage');
 }
 
 // =============================================================================
@@ -3755,7 +3890,7 @@ function renderExactMovements(movements) {
 
 window.exportReport = async function(type) {
   try {
-    const res = await fetch(`${API_BASE}/dashboard/summary`, {
+    const res = await fetch(`${API_BASE}/dashboard/summary?page=1&limit=200`, {
       headers: { 'Authorization': `Bearer ${currentToken}` }
     });
     const data = await res.json();
