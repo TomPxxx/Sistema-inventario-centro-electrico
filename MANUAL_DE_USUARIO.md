@@ -86,3 +86,4 @@
 ![Lector de Código de Barras](./public/assets/manual/manual_11_empleado_escaner.png)
 
 * Funciona con la **cámara de celulares, tablets o portátiles** (selector de cámara frontal/trasera incluido) y también cuenta con **entrada directa para pistolas láser USB o teclado**.
+
