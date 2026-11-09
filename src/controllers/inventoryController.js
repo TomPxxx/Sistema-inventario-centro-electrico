@@ -123,6 +123,47 @@ export const updateCategory = async (req, res) => {
   }
 };
 
+export const deleteCategory = async (req, res) => {
+  try {
+    const categoryId = Number(req.params.id);
+    if (!categoryId) {
+      return res.status(400).json({ success: false, message: 'ID de categoría inválido.' });
+    }
+
+    const result = await InventoryRepository.deleteCategoryAndReassignProducts(categoryId);
+    if (result.notFound) {
+      return res.status(404).json({ success: false, message: 'Categoría no encontrada.' });
+    }
+    if (result.isProtected) {
+      return res.status(400).json({
+        success: false,
+        message: `La categoría "${result.categoryName}" es la categoría contenedora de respaldo del sistema y no puede eliminarse (pero sí puedes editar su nombre e imagen).`
+      });
+    }
+
+    if (req.user) {
+      await AuditRepository.logAction(
+        req.user.id,
+        req.user.username,
+        'ELIMINAR_CATEGORIA',
+        `Eliminó la categoría "${result.deleted.nombre}" (ID: ${categoryId}) — ${result.movedProductsCount} producto(s) movidos a "${result.targetCategoryName}"`,
+        req.ip
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Categoría "${result.deleted.nombre}" eliminada exitosamente. ${result.movedProductsCount} producto(s) fueron trasladados a "${result.targetCategoryName}".`,
+      movedProductsCount: result.movedProductsCount,
+      targetCategoryId: result.targetCategoryId,
+      targetCategoryName: result.targetCategoryName
+    });
+  } catch (error) {
+    console.error('[Inventory Error] deleteCategory:', error);
+    return res.status(500).json({ success: false, message: 'Error al eliminar categoría: ' + error.message });
+  }
+};
+
 /**
  * Crear producto transaccional (PostgreSQL)
  */

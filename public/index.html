@@ -782,7 +782,7 @@
     <header class="fixed top-0 left-0 right-0 h-16 z-50 bg-[#04110e]/95 backdrop-blur-xl border-b border-outline-variant/40 px-4 md:px-6 shadow-[0_2px_12px_rgba(0,0,0,0.6)] flex items-center justify-between gap-4">
       
       <div class="flex items-center gap-4">
-        <div class="h-10 w-auto flex items-center text-white">
+        <button type="button" onclick="resetToMainPanel()" class="h-10 w-auto flex items-center text-white hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer" title="Ir al Panel Principal">
           <svg class="h-10 w-auto" viewBox="0 0 420 80" fill="none" xmlns="http://www.w3.org/2000/svg">
             <svg x="0" y="0" width="80" height="80" viewBox="80 60 240 200">
               <g stroke-width="14" stroke-linejoin="round" stroke-linecap="round">
@@ -796,7 +796,7 @@
             <text x="90" y="42" font-family="'Space Grotesk', sans-serif" font-weight="800" font-size="28" fill="currentColor" letter-spacing="-0.5">GRUPO <tspan fill="var(--primary)">ELÉCTRICO</tspan></text>
             <text x="90" y="65" font-family="'Inter', sans-serif" font-weight="700" font-size="12" fill="currentColor" letter-spacing="1">SOFTWARE DE INVENTARIO</text>
           </svg>
-        </div>
+        </button>
 
         <div class="hidden sm:flex items-center bg-surface-container px-3 py-1.5 rounded-lg border border-outline-variant/50">
           <span class="material-symbols-outlined text-primary text-[18px] mr-1.5">domain</span>
@@ -852,15 +852,15 @@
     <aside class="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-low z-40 flex flex-col justify-between p-4 border-r border-outline-variant/40 shadow-[4px_0_24px_rgba(0,0,0,0.4)]">
       <div class="flex flex-col gap-4">
         <div class="px-2 pt-1 flex items-center justify-between">
-          <span class="text-[10px] uppercase font-mono tracking-widest text-primary font-bold" data-i18n="menu_main">Panel Principal</span>
+          <button type="button" onclick="resetToMainPanel()" class="text-[10px] uppercase font-mono tracking-widest text-primary hover:text-emerald-300 font-bold cursor-pointer transition-colors" data-i18n="menu_main" title="Ir al Panel Principal">Panel Principal</button>
           <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-primary/10 text-primary border border-primary/20" data-i18n="online">ONLINE</span>
         </div>
 
         <nav class="flex flex-col gap-1 text-xs font-mono">
-          <a href="#" class="sidebar-link active flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/15 text-primary border border-primary/40 font-bold transition-all">
+          <button type="button" onclick="resetToMainPanel()" class="sidebar-link active flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/15 text-primary border border-primary/40 font-bold transition-all text-left w-full">
             <span class="material-symbols-outlined text-[18px]">dashboard</span>
             <span class="font-sans font-semibold" data-i18n="menu_dashboard">Panel Operativo</span>
-          </a>
+          </button>
           <button type="button" onclick="toggleQuickTransferModal()" class="sidebar-link flex items-center justify-between px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all text-left">
             <div class="flex items-center gap-3">
               <span class="material-symbols-outlined text-[18px]">swap_horiz</span>
@@ -954,36 +954,35 @@
           <!-- Matriz de Existencias Multi-Sede (Directo de MySQL) -->
           <div class="bg-surface-container rounded-xl border border-outline-variant/40 shadow-sm mt-6 block min-h-[300px] visible relative z-10 w-full" style="display: block !important; visibility: visible !important;">
             <div class="p-4 border-b border-outline-variant/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div>
-                <h3 class="font-headline font-semibold text-sm text-on-surface" data-i18n="inv_title">Catálogo y Existencias</h3>
+              <div class="flex items-center gap-2.5 flex-wrap">
+                <h3 id="adminCatalogTitle" class="font-headline font-semibold text-sm text-on-surface" data-i18n="inv_title">Catálogo y Existencias</h3>
+                <span id="adminActiveCategoryBadge" class="hidden px-2.5 py-1 rounded-lg bg-primary/15 text-primary border border-primary/40 font-mono text-xs font-bold flex items-center gap-1.5"></span>
               </div>
               <div class="flex items-center gap-2 flex-wrap">
-                <button type="button" onclick="downloadBackup()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border-2 border-slate-300 dark:bg-surface-container-high dark:hover:bg-surface-container-highest dark:border-outline-variant/40 text-slate-800 dark:text-on-surface font-bold flex items-center gap-1.5 transition-all shadow-sm" title="Exportar Copia de Seguridad SQL">
-                  <span class="material-symbols-outlined text-sm">download</span>
-                  <span data-i18n="btn_backup">Backup</span>
-                </button>
-                <input type="file" id="restoreBackupFile" accept=".sql" class="hidden" onchange="restoreBackup(event)" />
-                <button type="button" onclick="restoreLatestBackup()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-950 border-2 border-emerald-600 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-500/50 font-bold flex items-center gap-1.5 transition-all shadow-sm" title="Restaurar automáticamente al último respaldo seguro (1-clic)">
-                  <span class="material-symbols-outlined text-sm">history</span>
-                  <span data-i18n="btn_restore_latest">Restaurar Último</span>
-                </button>
-                <button type="button" onclick="document.getElementById('restoreBackupFile').click()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border-2 border-slate-300 dark:bg-surface-container-high dark:hover:bg-surface-container-highest text-slate-800 dark:text-on-surface dark:border-outline-variant/40 font-bold flex items-center gap-1.5 transition-all shadow-sm" title="Restaurar desde archivo de tu computador">
-                  <span class="material-symbols-outlined text-sm">upload_file</span>
-                  <span data-i18n="btn_upload_sql">Subir .SQL</span>
-                </button>
-                <button type="button" onclick="syncWithNeon()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-950 border-2 border-sky-600 dark:bg-cyan-950/40 dark:hover:bg-cyan-900/50 dark:text-cyan-300 dark:border-cyan-500/40 font-bold flex items-center gap-1.5 transition-all shadow-sm" title="Sincronizar base de datos Docker con NEON en la nube">
-                  <span class="material-symbols-outlined text-sm">cloud_sync</span>
-                  <span data-i18n="btn_sync_neon">Sync Neon</span>
-                </button>
+                <div id="adminGlobalToolbarButtons" class="flex items-center gap-2 flex-wrap">
+                  <button type="button" onclick="downloadBackup()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border-2 border-slate-300 dark:bg-surface-container-high dark:hover:bg-surface-container-highest dark:border-outline-variant/40 text-slate-800 dark:text-on-surface font-bold flex items-center gap-1.5 transition-all shadow-sm" title="Exportar Copia de Seguridad SQL">
+                    <span class="material-symbols-outlined text-sm">download</span>
+                    <span data-i18n="btn_backup">Backup</span>
+                  </button>
+                  <input type="file" id="restoreBackupFile" accept=".sql" class="hidden" onchange="restoreBackup(event)" />
+                  <button type="button" onclick="restoreLatestBackup()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-950 border-2 border-emerald-600 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-500/50 font-bold flex items-center gap-1.5 transition-all shadow-sm" title="Restaurar automáticamente al último respaldo seguro (1-clic)">
+                    <span class="material-symbols-outlined text-sm">history</span>
+                    <span data-i18n="btn_restore_latest">Restaurar Último</span>
+                  </button>
+                  <button type="button" onclick="document.getElementById('restoreBackupFile').click()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border-2 border-slate-300 dark:bg-surface-container-high dark:hover:bg-surface-container-highest text-slate-800 dark:text-on-surface dark:border-outline-variant/40 font-bold flex items-center gap-1.5 transition-all shadow-sm" title="Restaurar desde archivo de tu computador">
+                    <span class="material-symbols-outlined text-sm">upload_file</span>
+                    <span data-i18n="btn_upload_sql">Subir .SQL</span>
+                  </button>
+                  <button type="button" onclick="syncWithNeon()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-950 border-2 border-sky-600 dark:bg-cyan-950/40 dark:hover:bg-cyan-900/50 dark:text-cyan-300 dark:border-cyan-500/40 font-bold flex items-center gap-1.5 transition-all shadow-sm" title="Sincronizar base de datos Docker con NEON en la nube">
+                    <span class="material-symbols-outlined text-sm">cloud_sync</span>
+                    <span data-i18n="btn_sync_neon">Sync Neon</span>
+                  </button>
 
-                <button type="button" onclick="promptCreateCategory()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border-2 border-amber-500/60 flex items-center gap-1.5 transition-all shadow-sm font-bold">
-                  <span class="material-symbols-outlined text-sm">create_new_folder</span>
-                  <span data-i18n="btn_new_category">+ Categoría</span>
-                </button>
-                <button type="button" onclick="openCreateProductModal()" class="text-xs font-mono px-3.5 py-1.5 rounded-lg bg-primary hover:bg-emerald-600 text-white border-2 border-emerald-700 flex items-center gap-1.5 transition-all shadow-md font-bold ml-1">
-                  <span class="material-symbols-outlined text-sm">add</span>
-                  <span data-i18n="btn_new_entry">+ Nueva Entrada</span>
-                </button>
+                  <button type="button" onclick="promptCreateCategory()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border-2 border-amber-500/60 flex items-center gap-1.5 transition-all shadow-sm font-bold">
+                    <span class="material-symbols-outlined text-sm">create_new_folder</span>
+                    <span data-i18n="btn_new_category">+ Categoría</span>
+                  </button>
+                </div>
                 <button type="button" onclick="loadRealInventory()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-white hover:bg-emerald-50 border-2 border-emerald-600 text-emerald-800 dark:bg-surface-container-lowest dark:text-primary dark:hover:bg-surface-container font-bold flex items-center gap-1.5 transition-all shadow-sm">
                   <span class="material-symbols-outlined text-sm">refresh</span>
                   <span data-i18n="btn_refresh">Actualizar</span>
@@ -1470,10 +1469,10 @@
         <div>
           <label class="text-outline uppercase block mb-1 flex items-center gap-1">
             <span class="material-symbols-outlined text-sm text-secondary">directions_bike</span>
-            <span data-i18n="lbl_courier">Empleado Corredor (Transporta la mercancía)</span>
+            <span data-i18n="lbl_courier">Empleado Corredor (Opcional — deja vacío para traslado directo)</span>
           </label>
           <select id="modalTransferCorredor" class="w-full bg-surface-container-low text-on-surface p-2 rounded border border-outline-variant/40 font-mono text-xs">
-            <option value="">-- Seleccionar Corredor Logístico --</option>
+            <option value="">-- Sin corredor (Traslado directo inmediato) --</option>
             <option value="6">🚴 Corredor Logístico 1 (@corredor_1)</option>
             <option value="7">🚴 Corredor Logístico 2 (@corredor_2)</option>
           </select>
@@ -1534,10 +1533,14 @@
           </div>
         </div>
 
-        <div class="pt-2">
+        <div class="pt-2 space-y-2">
           <button id="btnSubmitNewCategory" type="submit" class="w-full py-3 bg-primary hover:bg-emerald-400 text-on-primary font-headline font-bold text-xs uppercase rounded-lg transition-colors flex items-center justify-center gap-2 custom-glow">
             <span class="material-symbols-outlined text-base">save</span>
             <span data-i18n="btn_save_category">Guardar Categoría</span>
+          </button>
+          <button id="btnDeleteCategoryModal" type="button" onclick="handleDeleteCategory()" class="hidden w-full py-2.5 bg-error/15 hover:bg-error text-error hover:text-white border border-error/40 font-headline font-bold text-xs uppercase rounded-lg transition-all flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-base">delete_forever</span>
+            <span>Eliminar Categoría</span>
           </button>
         </div>
       </form>
@@ -2511,14 +2514,20 @@
   <!-- ========================================================================= -->
   <div id="adminRecepcionesModal" class="hidden fixed inset-0 z-[80] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
     <div class="w-full max-w-4xl bg-surface-container border border-outline-variant/40 rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
-      <div class="p-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface-container-low rounded-t-xl">
+      <div class="p-4 border-b border-outline-variant/30 flex items-center justify-between gap-3 bg-surface-container-low rounded-t-xl">
         <div class="flex items-center gap-2 text-tertiary">
           <span class="material-symbols-outlined">inventory_2</span>
           <h2 class="font-headline font-bold text-lg text-on-surface" data-i18n="arrivals_title">Distribución de Mercancía Recibida</h2>
         </div>
-        <button type="button" onclick="closeAdminRecepcionesModal()" class="text-on-surface-variant hover:text-error transition-colors">
-          <span class="material-symbols-outlined">close</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="closeAdminRecepcionesModal(); openCreateProductModal();" class="text-xs font-mono px-3.5 py-1.5 rounded-lg bg-primary hover:bg-emerald-600 text-white border-2 border-emerald-700 flex items-center gap-1.5 transition-all shadow-md font-bold" title="Registrar nueva entrada de producto directamente al catálogo">
+            <span class="material-symbols-outlined text-sm">add</span>
+            <span data-i18n="btn_new_entry">+ Nueva Entrada</span>
+          </button>
+          <button type="button" onclick="closeAdminRecepcionesModal()" class="text-on-surface-variant hover:text-error transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
       </div>
       <div class="p-6 overflow-y-auto flex-1 bg-surface">
         <table class="w-full text-left border-collapse text-xs font-sans">

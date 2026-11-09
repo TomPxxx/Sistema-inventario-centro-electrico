@@ -8,7 +8,8 @@ import {
   deleteProduct,
   getCategories,
   createCategory,
-  updateCategory
+  updateCategory,
+  deleteCategory
 } from '../controllers/inventoryController.js';
 import { authenticateJWT } from '../middlewares/authMiddleware.js';
 import { authorizeRoles } from '../middlewares/roleMiddleware.js';
@@ -31,5 +32,6 @@ router.put('/products/:id', authorizeRoles('ADMINISTRADOR'), updateProduct);
 router.delete('/products/:id', authorizeRoles('ADMINISTRADOR'), deleteProduct);
 router.post('/categories', authorizeRoles('ADMINISTRADOR'), createCategory);
 router.put('/categories/:id', authorizeRoles('ADMINISTRADOR'), updateCategory);
+router.delete('/categories/:id', authorizeRoles('ADMINISTRADOR'), deleteCategory);
 
 export default router;

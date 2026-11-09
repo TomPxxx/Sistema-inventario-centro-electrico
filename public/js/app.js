@@ -1131,6 +1131,7 @@ window.promptCreateCategory = function() {
   const previewContainer = document.getElementById('categoryImagePreviewContainer');
   const titleEl = document.getElementById('categoryModalTitle');
   const iconEl = document.getElementById('categoryModalIcon');
+  const btnDelete = document.getElementById('btnDeleteCategoryModal');
 
   if (idInput) idInput.value = '';
   if (currentImgInput) currentImgInput.value = '';
@@ -1138,6 +1139,7 @@ window.promptCreateCategory = function() {
   if (descInput) descInput.value = '';
   if (fileInput) fileInput.value = '';
   if (previewContainer) previewContainer.classList.add('hidden');
+  if (btnDelete) btnDelete.classList.add('hidden');
   if (titleEl) titleEl.textContent = typeof window.t === 'function' ? window.t('create_category_title', 'Nueva Categoría') : 'Nueva Categoría';
   if (iconEl) iconEl.textContent = 'create_new_folder';
 
@@ -1157,6 +1159,7 @@ window.openEditCategoryModal = function(categoryId) {
   const previewImg = document.getElementById('categoryImagePreviewImg');
   const titleEl = document.getElementById('categoryModalTitle');
   const iconEl = document.getElementById('categoryModalIcon');
+  const btnDelete = document.getElementById('btnDeleteCategoryModal');
 
   if (idInput) idInput.value = cat.id;
   if (currentImgInput) currentImgInput.value = cat.imagen_url || '';
@@ -1166,6 +1169,11 @@ window.openEditCategoryModal = function(categoryId) {
   if (titleEl) titleEl.textContent = typeof window.t === 'function' ? window.t('edit_category_title', 'Editar Categoría (Nombre e Imagen)') : 'Editar Categoría (Nombre e Imagen)';
   if (iconEl) iconEl.textContent = 'edit_square';
 
+  const isCatchAll = Number(cat.id) === 12 || ['sin categoría', 'sin categoria'].includes((cat.nombre || '').trim().toLowerCase());
+  if (btnDelete) {
+    btnDelete.classList.toggle('hidden', isCatchAll);
+  }
+
   if (cat.imagen_url && previewContainer && previewImg) {
     previewImg.src = cat.imagen_url;
     previewContainer.classList.remove('hidden');
@@ -1174,6 +1182,57 @@ window.openEditCategoryModal = function(categoryId) {
   }
 
   document.getElementById('createCategoryModal').classList.remove('hidden');
+};
+
+window.handleDeleteCategory = async function() {
+  const editingId = document.getElementById('editingCategoryId')?.value;
+  if (!editingId) return;
+
+  const cat = (liveCategories || []).find((c) => Number(c.id) === Number(editingId));
+  const nombreCat = cat ? cat.nombre : document.getElementById('newCategoryName')?.value || 'esta categoría';
+
+  if (!confirm(`¿Seguro que quieres eliminar la categoría "${nombreCat}"?\n\nSi hay productos en esta categoría, pasarán automáticamente a la categoría "Sin Categoría".`)) {
+    return;
+  }
+
+  const btnDel = document.getElementById('btnDeleteCategoryModal');
+  if (btnDel) {
+    btnDel.disabled = true;
+    btnDel.textContent = 'Eliminando...';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/inventory/categories/${editingId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
+      },
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      if (typeof showToast === 'function') {
+        showToast('✓ ' + data.message, 'success');
+      } else {
+        alert(data.message);
+      }
+      closeCreateCategoryModal();
+      if (Number(currentAdminCategoryFilter) === Number(editingId)) {
+        currentAdminCategoryFilter = null;
+      }
+      await loadRealInventory();
+    } else {
+      alert('Error: ' + (data.message || 'No se pudo eliminar la categoría.'));
+    }
+  } catch (err) {
+    alert('Error de conexión al eliminar la categoría.');
+  } finally {
+    if (btnDel) {
+      btnDel.disabled = false;
+      btnDel.innerHTML = '<span class="material-symbols-outlined text-base">delete_forever</span><span>Eliminar Categoría</span>';
+    }
+  }
 };
 
 window.editCurrentFilteredCategory = function() {
@@ -1370,8 +1429,45 @@ function filterAdminSearch(query) {
 function filterAdminCategory(categoryId) {
   currentAdminCategoryFilter = categoryId;
   currentAdminPage = 1;
+  if (categoryId === null) {
+    currentAdminSearchFilter = '';
+    const searchInput = document.getElementById('adminSearchInput');
+    if (searchInput) searchInput.value = '';
+  }
   renderAdminView();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+window.resetToMainPanel = function() {
+  // Cerrar Dashboard si está abierto
+  if (typeof closeDashboard === 'function') {
+    closeDashboard();
+  } else {
+    document.getElementById('dashboardSection')?.classList.add('hidden');
+    document.getElementById('appSection')?.classList.remove('hidden');
+  }
+
+  // Cerrar cualquier modal abierto en el sistema
+  document.querySelectorAll('#appSection ~ .fixed.inset-0, #createProductModal, #newProductModal, #transferModal, #createCategoryModal, #editProductModal, #deleteProductModal, #networkRequestsModal, #pedirMaterialModal, #cederMaterialModal, #responderSolicitudModal, #asignarCorredorModal, #adminAtenderSolicitudModal, #adminRecepcionesModal, #detalleRecepcionModal, #auditLogsModal, #adminUsersModal, #pendingUsersModal').forEach(m => {
+    m.classList.add('hidden');
+  });
+
+  // Limpiar filtros y volver a la galería principal de categorías
+  currentAdminCategoryFilter = null;
+  currentAdminSearchFilter = '';
+  currentAdminPage = 1;
+  const adminInput = document.getElementById('adminSearchInput');
+  if (adminInput) adminInput.value = '';
+
+  currentEncargadoCategoryFilter = null;
+  currentEncargadoSearchFilter = '';
+  currentEncargadoPage = 1;
+  const encInput = document.getElementById('encargadoSearchInput');
+  if (encInput) encInput.value = '';
+
+  renderActiveView();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 function goToAdminPage(page) {
   currentAdminPage = page;
@@ -1511,14 +1607,38 @@ function getCategoryTileConfig(catName) {
   if (name.includes('solar') || name.includes('panel') || name.includes('foto')) {
     return { icon: 'solar_power', gradientLight: 'from-orange-100 via-amber-50 to-orange-50', gradientDark: 'from-orange-950/50 via-amber-900/30 to-slate-900/50', color: 'text-orange-700 dark:text-orange-400', border: 'border-orange-500/40', tag: 'Paneles / Solar' };
   }
+  if (name.includes('clavija') || name.includes('multitoma') || name.includes('aére') || name.includes('aere')) {
+    return { icon: 'power', gradientLight: 'from-amber-100 via-orange-50 to-amber-50', gradientDark: 'from-amber-950/50 via-orange-900/30 to-slate-900/50', color: 'text-amber-700 dark:text-amber-400', border: 'border-amber-500/40', tag: 'Clavijas / Tomas' };
+  }
   if (name.includes('dispositiv') || name.includes('mecanism') || name.includes('toma') || name.includes('interrupt')) {
     return { icon: 'toggle_on', gradientLight: 'from-violet-100 via-indigo-50 to-violet-50', gradientDark: 'from-violet-950/50 via-indigo-900/30 to-slate-900/50', color: 'text-violet-700 dark:text-violet-400', border: 'border-violet-500/40', tag: 'Tomas / Switches' };
   }
   if (name.includes('caja') || name.includes('tabler') || name.includes('gabinete')) {
     return { icon: 'developer_board', gradientLight: 'from-cyan-100 via-teal-50 to-cyan-50', gradientDark: 'from-cyan-950/50 via-teal-900/30 to-slate-900/50', color: 'text-cyan-700 dark:text-cyan-400', border: 'border-cyan-500/40', tag: 'Tableros / Cajas' };
   }
-  if (name.includes('auto') || name.includes('control') || name.includes('rele')) {
-    return { icon: 'precision_manufacturing', gradientLight: 'from-fuchsia-100 via-purple-50 to-fuchsia-50', gradientDark: 'from-fuchsia-950/50 via-purple-900/30 to-slate-900/50', color: 'text-fuchsia-700 dark:text-fuchsia-400', border: 'border-fuchsia-500/40', tag: 'Automatización' };
+  if (name.includes('inform') || name.includes('ups') || name.includes('rack')) {
+    return { icon: 'dns', gradientLight: 'from-indigo-100 via-blue-50 to-indigo-50', gradientDark: 'from-indigo-950/50 via-blue-900/30 to-slate-900/50', color: 'text-indigo-700 dark:text-indigo-400', border: 'border-indigo-500/40', tag: 'UPS / Redes / Rack' };
+  }
+  if (name.includes('auto') || name.includes('control') || name.includes('rele') || name.includes('relé') || name.includes('contactor')) {
+    return { icon: 'precision_manufacturing', gradientLight: 'from-fuchsia-100 via-purple-50 to-fuchsia-50', gradientDark: 'from-fuchsia-950/50 via-purple-900/30 to-slate-900/50', color: 'text-fuchsia-700 dark:text-fuchsia-400', border: 'border-fuchsia-500/40', tag: 'Contactores / Relés' };
+  }
+  if (name.includes('transformador') || name.includes('medidor') || name.includes('contador')) {
+    return { icon: 'electric_meter', gradientLight: 'from-teal-100 via-emerald-50 to-teal-50', gradientDark: 'from-teal-950/50 via-emerald-900/30 to-slate-900/50', color: 'text-teal-700 dark:text-teal-400', border: 'border-teal-500/40', tag: 'Transformadores' };
+  }
+  if (name.includes('chazo') || name.includes('tornill') || name.includes('tuerca')) {
+    return { icon: 'hardware', gradientLight: 'from-zinc-200 via-slate-100 to-zinc-100', gradientDark: 'from-zinc-800/50 via-slate-900/40 to-slate-950/50', color: 'text-zinc-700 dark:text-zinc-300', border: 'border-zinc-500/40', tag: 'Tornillería / Chazos' };
+  }
+  if (name.includes('marquill') || name.includes('espiral') || name.includes('termoencog')) {
+    return { icon: 'label', gradientLight: 'from-yellow-100 via-amber-50 to-yellow-50', gradientDark: 'from-yellow-950/50 via-amber-900/30 to-slate-900/50', color: 'text-yellow-700 dark:text-yellow-400', border: 'border-yellow-500/40', tag: 'Marquillas / Espiral' };
+  }
+  if (name.includes('soldadura') || name.includes('tierra')) {
+    return { icon: 'bolt', gradientLight: 'from-red-100 via-orange-50 to-red-50', gradientDark: 'from-red-950/50 via-orange-900/30 to-slate-900/50', color: 'text-red-700 dark:text-red-400', border: 'border-red-500/40', tag: 'Soldadura / Tierra' };
+  }
+  if (name.includes('terminal') || name.includes('conector') || name.includes('empalme')) {
+    return { icon: 'settings_input_component', gradientLight: 'from-cyan-100 via-sky-50 to-cyan-50', gradientDark: 'from-cyan-950/50 via-sky-900/30 to-slate-900/50', color: 'text-cyan-700 dark:text-cyan-400', border: 'border-cyan-500/40', tag: 'Terminales / Empalme' };
+  }
+  if (name.includes('sin categor') || name.includes('misterio')) {
+    return { icon: 'help', gradientLight: 'from-purple-100 via-slate-100 to-purple-50', gradientDark: 'from-purple-950/50 via-slate-900/40 to-slate-950/50', color: 'text-purple-700 dark:text-purple-300', border: 'border-purple-500/40', tag: 'Por Clasificar (?)' };
   }
   if (name.includes('herraj') || name.includes('red') || name.includes('poste')) {
     return { icon: 'construction', gradientLight: 'from-slate-200 via-zinc-100 to-slate-100', gradientDark: 'from-slate-800/50 via-zinc-900/40 to-slate-950/50', color: 'text-slate-800 dark:text-slate-300', border: 'border-slate-500/40', tag: 'Herrajes / Redes' };
@@ -1591,6 +1711,9 @@ function renderAdminView() {
   const categoriesGrid = document.getElementById('adminCategoriesGrid');
   const btnBack = document.getElementById('btnAdminBackToCategories');
   const btnEditCurrentCat = document.getElementById('btnAdminEditCurrentCategory');
+  const globalToolbar = document.getElementById('adminGlobalToolbarButtons');
+  const catalogTitle = document.getElementById('adminCatalogTitle');
+  const activeCatBadge = document.getElementById('adminActiveCategoryBadge');
   
   tableBody.innerHTML = '';
   categoriesGrid.innerHTML = '';
@@ -1603,6 +1726,12 @@ function renderAdminView() {
     categoriesGrid.classList.remove('hidden');
     btnBack.classList.add('hidden');
     if (btnEditCurrentCat) btnEditCurrentCat.classList.add('hidden');
+    if (globalToolbar) globalToolbar.classList.remove('hidden');
+    if (catalogTitle) catalogTitle.textContent = t.inv_title || 'Catálogo y Existencias';
+    if (activeCatBadge) {
+      activeCatBadge.classList.add('hidden');
+      activeCatBadge.innerHTML = '';
+    }
     
     // Contar productos por categoría
     const catCounts = {};
@@ -1612,10 +1741,17 @@ function renderAdminView() {
       catCounts[cid]++;
     });
 
-    // Renderizar categorías con diseño eléctrico enriquecido y alto contraste
+    // Ordenar categorías poniendo 'Sin Categoría' (ID 12) al final antes del botón '+ Crear Categoría'
     if (liveCategories && liveCategories.length > 0) {
-      liveCategories.forEach(cat => {
-        const count = catCounts[cat.id] || 0;
+      const orderedCats = [...liveCategories].sort((a, b) => {
+        const aIsSinCat = Number(a.id) === 12 || ['sin categoría', 'sin categoria'].includes((a.nombre || '').trim().toLowerCase());
+        const bIsSinCat = Number(b.id) === 12 || ['sin categoría', 'sin categoria'].includes((b.nombre || '').trim().toLowerCase());
+        if (aIsSinCat !== bIsSinCat) return aIsSinCat ? 1 : -1;
+        return Number(a.id) - Number(b.id);
+      });
+
+      orderedCats.forEach(cat => {
+        const count = (catCounts[cat.id] || 0) + (Number(cat.id) === 12 ? (catCounts['uncategorized'] || 0) : 0);
         categoriesGrid.innerHTML += renderCategoryCardHtml(
           cat, 
           count, 
@@ -1625,8 +1761,9 @@ function renderAdminView() {
       });
     }
     
-    // Categoría "Sin Categoría"
-    if (catCounts['uncategorized'] > 0) {
+    // Fallback solo si no existiera categoría 12 en la base de datos y hubiera productos sin categoría
+    const hasSinCatRow = (liveCategories || []).some(c => Number(c.id) === 12 || ['sin categoría', 'sin categoria'].includes((c.nombre || '').trim().toLowerCase()));
+    if (!hasSinCatRow && catCounts['uncategorized'] > 0) {
       categoriesGrid.innerHTML += renderCategoryCardHtml(
         { id: 'uncategorized', nombre: t.uncategorized || 'Sin Categoría' },
         catCounts['uncategorized'],
@@ -1656,9 +1793,22 @@ function renderAdminView() {
   // Modo Tabla de Productos
   tableContainer.classList.remove('hidden');
   categoriesGrid.classList.add('hidden');
+  // Esconder los botones de administración global arriba cuando el usuario está dentro de una categoría o buscando productos
+  if (globalToolbar) globalToolbar.classList.add('hidden');
   
-  if (currentAdminSearchFilter === '' && currentAdminCategoryFilter !== null) {
+  if (currentAdminCategoryFilter !== null) {
     btnBack.classList.remove('hidden');
+    const activeCatObj = (liveCategories || []).find(c => Number(c.id) === Number(currentAdminCategoryFilter));
+    const catNameStr = activeCatObj ? activeCatObj.nombre : (currentAdminCategoryFilter === 'uncategorized' ? 'Sin Categoría' : 'Categoría');
+
+    if (catalogTitle) {
+      catalogTitle.textContent = `Categoría: ${catNameStr}`;
+    }
+    if (activeCatBadge) {
+      activeCatBadge.classList.remove('hidden');
+      activeCatBadge.innerHTML = `<span class="material-symbols-outlined text-[15px]">folder_open</span><span>Modo Búsqueda en "${catNameStr}"</span>`;
+    }
+
     if (btnEditCurrentCat) {
       if (currentAdminCategoryFilter !== 'uncategorized') {
         btnEditCurrentCat.classList.remove('hidden');
@@ -1667,8 +1817,14 @@ function renderAdminView() {
       }
     }
   } else {
-    btnBack.classList.add('hidden');
+    // Búsqueda general desde el panel principal: mostrar también la flecha hacia atrás para volver al instante sin borrar texto
+    btnBack.classList.remove('hidden');
     if (btnEditCurrentCat) btnEditCurrentCat.classList.add('hidden');
+    if (catalogTitle) catalogTitle.textContent = 'Resultados de Búsqueda General';
+    if (activeCatBadge) {
+      activeCatBadge.classList.remove('hidden');
+      activeCatBadge.innerHTML = `<span class="material-symbols-outlined text-[15px]">search</span><span>Buscando en todo el catálogo</span>`;
+    }
   }
 
   let filteredProducts = (liveProducts || []).filter(p => {
@@ -1676,11 +1832,14 @@ function renderAdminView() {
     const n = (p.nombre || '').toLowerCase();
     const s = (p.codigo_sku || '').toLowerCase();
     const c = (p.categoria_nombre || '').toLowerCase();
-    const matchesSearch = n.includes(q) || s.includes(q) || c.includes(q);
+    const matchesSearch = q === '' || n.includes(q) || s.includes(q) || c.includes(q);
     
-    if (currentAdminCategoryFilter !== null && q === '') {
+    if (currentAdminCategoryFilter !== null) {
       if (currentAdminCategoryFilter === 'uncategorized') return !p.categoria_id && matchesSearch;
-      return p.categoria_id === currentAdminCategoryFilter && matchesSearch;
+      if (Number(currentAdminCategoryFilter) === 12) {
+        return (Number(p.categoria_id) === 12 || !p.categoria_id) && matchesSearch;
+      }
+      return Number(p.categoria_id) === Number(currentAdminCategoryFilter) && matchesSearch;
     }
     return matchesSearch;
   });
@@ -1841,12 +2000,20 @@ let currentEncargadoCategoryFilter = null;
 
 function filterEncargadoSearch(query) {
   currentEncargadoSearchFilter = query.toLowerCase();
+  currentEncargadoPage = 1;
   renderEncargadoView();
 }
 
 function filterEncargadoCategory(categoryId) {
   currentEncargadoCategoryFilter = categoryId;
+  currentEncargadoPage = 1;
+  if (categoryId === null) {
+    currentEncargadoSearchFilter = '';
+    const searchInput = document.getElementById('encargadoSearchInput');
+    if (searchInput) searchInput.value = '';
+  }
   renderEncargadoView();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // --- VISTA 2: ENCARGADO DE SEDE ---
@@ -1898,8 +2065,15 @@ function renderEncargadoView() {
 
     // Renderizar categorías con diseño eléctrico enriquecido y alto contraste
     if (liveCategories && liveCategories.length > 0) {
-      liveCategories.forEach(cat => {
-        const count = catCounts[cat.id] || 0;
+      const orderedCats = [...liveCategories].sort((a, b) => {
+        const aIsSinCat = Number(a.id) === 12 || ['sin categoría', 'sin categoria'].includes((a.nombre || '').trim().toLowerCase());
+        const bIsSinCat = Number(b.id) === 12 || ['sin categoría', 'sin categoria'].includes((b.nombre || '').trim().toLowerCase());
+        if (aIsSinCat !== bIsSinCat) return aIsSinCat ? 1 : -1;
+        return Number(a.id) - Number(b.id);
+      });
+
+      orderedCats.forEach(cat => {
+        const count = (catCounts[cat.id] || 0) + (Number(cat.id) === 12 ? (catCounts['uncategorized'] || 0) : 0);
         categoriesGrid.innerHTML += renderCategoryCardHtml(
           cat, 
           count, 
@@ -1909,7 +2083,8 @@ function renderEncargadoView() {
       });
     }
     
-    if (catCounts['uncategorized'] > 0) {
+    const hasSinCatRow = (liveCategories || []).some(c => Number(c.id) === 12 || ['sin categoría', 'sin categoria'].includes((c.nombre || '').trim().toLowerCase()));
+    if (!hasSinCatRow && catCounts['uncategorized'] > 0) {
       categoriesGrid.innerHTML += renderCategoryCardHtml(
         { id: 'uncategorized', nombre: 'Sin Categoría' },
         catCounts['uncategorized'],
@@ -1917,17 +2092,21 @@ function renderEncargadoView() {
         'producto(s)'
       );
     }
+
+    const paginationContainer = document.getElementById('encargadoPaginationContainer');
+    if (paginationContainer) paginationContainer.innerHTML = '';
     return;
   }
 
   // Modo Tabla para Encargado
   tableContainer.classList.remove('hidden');
   categoriesGrid.classList.add('hidden');
-  
-  if (currentEncargadoSearchFilter === '' && currentEncargadoCategoryFilter !== null) {
-    btnBack.classList.remove('hidden');
-  } else {
-    btnBack.classList.add('hidden');
+  btnBack.classList.remove('hidden');
+
+  if (currentEncargadoCategoryFilter !== null) {
+    const activeCatObj = (liveCategories || []).find(c => Number(c.id) === Number(currentEncargadoCategoryFilter));
+    const catNameStr = activeCatObj ? activeCatObj.nombre : 'Sin Categoría';
+    document.getElementById('encargadoTableHeading').textContent = `Categoría: ${catNameStr} — Stock en ${sedeName}`;
   }
 
   const filteredProducts = (liveProducts || []).filter(p => {
@@ -1935,11 +2114,14 @@ function renderEncargadoView() {
     const n = (p.nombre || '').toLowerCase();
     const s = (p.codigo_sku || '').toLowerCase();
     const c = (p.categoria_nombre || '').toLowerCase();
-    const matchesSearch = n.includes(q) || s.includes(q) || c.includes(q);
+    const matchesSearch = q === '' || n.includes(q) || s.includes(q) || c.includes(q);
     
-    if (currentEncargadoCategoryFilter !== null && q === '') {
+    if (currentEncargadoCategoryFilter !== null) {
       if (currentEncargadoCategoryFilter === 'uncategorized') return !p.categoria_id && matchesSearch;
-      return p.categoria_id === currentEncargadoCategoryFilter && matchesSearch;
+      if (Number(currentEncargadoCategoryFilter) === 12) {
+        return (Number(p.categoria_id) === 12 || !p.categoria_id) && matchesSearch;
+      }
+      return Number(p.categoria_id) === Number(currentEncargadoCategoryFilter) && matchesSearch;
     }
     return matchesSearch;
   });
@@ -5572,7 +5754,11 @@ async function obtenerCorredoresDisponibles() {
 async function poblarSelectCorredores(selectElement, valorSeleccionado = null) {
   if (!selectElement) return;
   const corredores = await obtenerCorredoresDisponibles();
-  selectElement.innerHTML = '<option value="">-- Selecciona un Corredor Logístico --</option>' + 
+  const isOptionalTransfer = selectElement.id === 'modalTransferCorredor';
+  const defaultPlaceholder = isOptionalTransfer
+    ? '-- Sin corredor (Traslado directo inmediato) --'
+    : '-- Selecciona un Corredor Logístico --';
+  selectElement.innerHTML = `<option value="">${defaultPlaceholder}</option>` + 
     corredores.map(c => `<option value="${c.id}" ${valorSeleccionado && Number(valorSeleccionado) === Number(c.id) ? 'selected' : ''}>🚴 ${c.nombre_completo} (@${c.username})</option>`).join('');
   if (valorSeleccionado) {
     selectElement.value = valorSeleccionado;

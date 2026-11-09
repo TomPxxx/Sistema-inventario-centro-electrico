@@ -570,5 +570,55 @@ describe('Evaluación Integral Automatizada del Sistema (Frontend + Seguridad + 
       expect(resOpt.body.success).toBe(true);
       expect(typeof resOpt.body.archivedCount).toBe('number');
     });
+
+    it('Eliminación de categoría con reasignación automática a "Sin Categoría" y edición de foto/nombre de "Sin Categoría"', async () => {
+      const admin = await issueSessionTokenForUser('tomas_admin');
+
+      // 1. Crear categoría temporal con un producto adentro
+      const resTempCat = await request(app)
+        .post('/api/inventory/categories')
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({
+          nombre: `CAT-TEMP-DELETE-${Date.now()}`,
+          descripcion: 'Categoría temporal para probar eliminación segura'
+        });
+      expect(resTempCat.status).toBe(201);
+      const tempCatId = resTempCat.body.category.id;
+
+      const testSku = `SKU-DELCAT-${Date.now()}`;
+      const resProd = await request(app)
+        .post('/api/inventory/products')
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({
+          codigo_sku: testSku,
+          nombre: '[EVAL-TEST] Producto que pasa a Sin Categoría',
+          categoria_id: tempCatId,
+          unidad_medida: 'UNIDAD'
+        });
+      expect(resProd.status).toBe(201);
+      const prodId = resProd.body.productId;
+      createdProductIds.push(prodId);
+
+      // 2. Eliminar la categoría temporal -> el producto debe pasar a "Sin Categoría" (ID 12)
+      const resDelCat = await request(app)
+        .delete(`/api/inventory/categories/${tempCatId}`)
+        .set('Authorization', `Bearer ${admin.token}`);
+      expect(resDelCat.status).toBe(200);
+      expect(resDelCat.body.success).toBe(true);
+      expect(resDelCat.body.movedProductsCount).toBeGreaterThanOrEqual(1);
+
+      const resList = await request(app)
+        .get('/api/inventory/products')
+        .set('Authorization', `Bearer ${admin.token}`);
+      const movedProd = resList.body.products.find(p => Number(p.id) === Number(prodId));
+      expect(movedProd).toBeDefined();
+      expect(Number(movedProd.categoria_id)).toBe(Number(resDelCat.body.targetCategoryId));
+
+      // 3. Verificar que "Sin Categoría" (ID 12) se puede editar (foto e información) pero está protegida contra borrado
+      const resProtected = await request(app)
+        .delete(`/api/inventory/categories/${resDelCat.body.targetCategoryId}`)
+        .set('Authorization', `Bearer ${admin.token}`);
+      expect(resProtected.status).toBe(400);
+    });
   });
 });

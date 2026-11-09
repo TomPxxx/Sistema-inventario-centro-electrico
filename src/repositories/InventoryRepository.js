@@ -48,6 +48,73 @@ class InventoryRepository {
     return rows[0] || null;
   }
 
+  async deleteCategoryAndReassignProducts(id) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const existingRes = await client.query(
+        'SELECT id, nombre FROM categorias WHERE id = $1 FOR UPDATE',
+        [id]
+      );
+      if (existingRes.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return { notFound: true };
+      }
+      const deletedCategory = existingRes.rows[0];
+
+      // Find or create the catch-all 'Sin Categoría' row (must not be the category being deleted)
+      let sinCatRes = await client.query(
+        `SELECT id, nombre FROM categorias
+         WHERE (id = 12 OR LOWER(TRIM(nombre)) IN ('sin categoría', 'sin categoria'))
+           AND id <> $1
+         ORDER BY CASE WHEN id = 12 THEN 0 ELSE 1 END, id ASC
+         LIMIT 1`,
+        [id]
+      );
+
+      if (Number(id) === 12 || ['sin categoría', 'sin categoria'].includes(deletedCategory.nombre.trim().toLowerCase())) {
+        await client.query('ROLLBACK');
+        return { isProtected: true, categoryName: deletedCategory.nombre };
+      }
+
+      let sinCatId;
+      let sinCatName = 'Sin Categoría';
+      if (sinCatRes.rowCount > 0) {
+        sinCatId = sinCatRes.rows[0].id;
+        sinCatName = sinCatRes.rows[0].nombre;
+      } else {
+        const createdSinCat = await client.query(
+          `INSERT INTO categorias (nombre, descripcion)
+           VALUES ('Sin Categoría', 'Productos pendientes de clasificación o varios por ubicar')
+           RETURNING id, nombre`
+        );
+        sinCatId = createdSinCat.rows[0].id;
+        sinCatName = createdSinCat.rows[0].nombre;
+      }
+
+      const moveRes = await client.query(
+        'UPDATE productos SET categoria_id = $1 WHERE categoria_id = $2',
+        [sinCatId, id]
+      );
+
+      await client.query('DELETE FROM categorias WHERE id = $1', [id]);
+      await client.query('COMMIT');
+
+      return {
+        deleted: deletedCategory,
+        movedProductsCount: moveRes.rowCount || 0,
+        targetCategoryId: sinCatId,
+        targetCategoryName: sinCatName
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async getStocks() {
     const { rows } = await pool.query(
       `SELECT ps.producto_id, ps.sede_id, ps.stock_actual, ps.stock_minimo, ps.precio_venta, ps.disponible_en_sede, s.nombre AS sede_nombre
