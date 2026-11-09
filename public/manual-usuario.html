@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual Oficial de Usuario por Rol — Grupo Eléctrico (Software de Inventario)</title>
+  <link rel="stylesheet" href="./css/material-symbols.css" />
+  <script src="./js/tailwindcss.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #090d11;
+      color: #e2e8f0;
+    }
+    h1, h2, h3, h4, .font-headline {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .screenshot-frame {
+      border-radius: 0.85rem;
+      border: 1px solid rgba(52, 211, 153, 0.28);
+      box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(16, 185, 129, 0.08);
+      overflow: hidden;
+      background: #0f151b;
+    }
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .role-section {
+        display: block !important;
+        page-break-after: always;
+      }
+      .card-surface {
+        background: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #0f172a !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-emerald-500 selection:text-slate-950">
+
+  <!-- Barra Superior Fija -->
+  <header class="sticky top-0 z-50 bg-[#0b1015]/95 backdrop-blur-md border-b border-emerald-500/20 px-6 py-3.5 no-print">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-headline font-extrabold text-lg">
+          ⚡
+        </div>
+        <div>
+          <h1 class="font-headline font-extrabold text-lg tracking-tight text-white">
+            GRUPO <span class="text-emerald-400">ELÉCTRICO</span> · MANUAL DE USUARIO OFICIAL
+          </h1>
+          <p class="text-xs font-mono text-slate-400">Guía Operativa Ilustrada por Rol · 4 Sedes Conectadas (Centro EP, EP1, EP3, EP6)</p>
+        </div>
+      </div>
+
+      <!-- Selector de Manual por Rol -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="filterRole('ALL')" id="tab-ALL" class="role-tab px-3.5 py-2 rounded-lg text-xs font-mono font-bold bg-emerald-500 text-slate-950 shadow-md transition-all">
+          Todos los Roles
+        </button>
+        <button onclick="filterRole('ADMIN')" id="tab-ADMIN" class="role-tab px-3.5 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800/90 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 transition-all">
+          1. Administrador Global
+        </button>
+        <button onclick="filterRole('ENCARGADO')" id="tab-ENCARGADO" class="role-tab px-3.5 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition-all">
+          2. Encargado de Sede
+        </button>
+        <button onclick="filterRole('EMPLEADO')" id="tab-EMPLEADO" class="role-tab px-3.5 py-2 rounded-lg text-xs font-mono font-bold bg-slate-800/90 hover:bg-slate-700 text-sky-300 border border-sky-500/30 transition-all">
+          3. Empleado / Corredor
+        </button>
+        <button onclick="window.print()" class="px-3.5 py-2 rounded-lg text-xs font-mono font-bold bg-yellow-400 hover:bg-yellow-300 text-slate-950 transition-all flex items-center gap-1.5 ml-2 shadow">
+          <span>🖨️ Imprimir / PDF</span>
+        </button>
+        <a href="/" class="px-3.5 py-2 rounded-lg text-xs font-mono font-bold bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 transition-all">
+          ← Volver al Sistema
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-10 space-y-16">
+
+    <!-- ===================================================================== -->
+    <!-- SECCIÓN COMÚN: INGRESO SEGURO Y NAVEGACIÓN RÁPIDA (PARA TODOS)        -->
+    <!-- ===================================================================== -->
+    <section class="role-section space-y-6" data-role="COMMON">
+      <div class="p-6 rounded-2xl bg-gradient-to-br from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/30 card-surface">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+          <div>
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 uppercase">
+              Módulo Inicial · Común para Todos los Usuarios
+            </span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-2">
+              Acceso Seguro al Sistema y Reglas de Oro de Navegación
+            </h2>
+            <p class="text-sm text-slate-300 mt-1">
+              El sistema cuenta con aislamiento de sesión por pestaña y protección criptográfica para que cada trabajador opere de forma segura.
+            </p>
+          </div>
+          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 font-mono text-xs space-y-1 shrink-0">
+            <div class="text-emerald-400 font-bold">🏢 Sedes Conectadas en Tiempo Real:</div>
+            <div class="text-slate-300">• Sede #1: Centro Eléctrico EP</div>
+            <div class="text-slate-300">• Sede #2: Centro Eléctrico EP1</div>
+            <div class="text-slate-300">• Sede #3: Grupo Eléctrico EP3</div>
+            <div class="text-slate-300">• Sede #4: EP6 Ecoiluminación</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-6 items-center">
+          <div class="lg:col-span-5 space-y-4 text-sm">
+            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+              <h3 class="font-bold text-emerald-400 font-headline text-base">1. ¿Cómo iniciar sesión?</h3>
+              <ol class="list-decimal list-inside space-y-1.5 text-slate-300 text-xs leading-relaxed">
+                <li>Escribe tu <strong>Usuario o Correo</strong> (ej. <code class="text-emerald-300">tomas_admin</code>, <code class="text-amber-300">encargado_ep1</code> o <code class="text-sky-300">corredor_1</code>).</li>
+                <li>Ingresa tu <strong>Contraseña de Seguridad</strong>.</li>
+                <li>Resuelve la suma de verificación rápida (<strong>Captcha anti-bots</strong>) y pulsa <strong>Ingresar</strong>.</li>
+              </ol>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+              <h3 class="font-bold text-yellow-400 font-headline text-base">2. Seguridad por Pestaña (Aislamiento Estricto)</h3>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                Por seguridad, si abres una nueva pestaña o ventana del navegador, el sistema <strong>siempre te pedirá iniciar sesión nuevamente</strong>. Nunca comparte ni hereda la sesión abierta en otra pestaña.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/30 space-y-2">
+              <h3 class="font-bold text-emerald-300 font-headline text-base">3. Atajo Rápido: Volver al Panel Principal al Instante</h3>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                Sin importar en qué categoría, tabla o ventana te encuentres, puedes volver de inmediato a la galería principal con un solo clic en:
+              </p>
+              <ul class="list-disc list-inside text-xs text-emerald-200 font-mono space-y-1">
+                <li>El logo superior izquierdo <strong>"GRUPO ELÉCTRICO"</strong></li>
+                <li>El título <strong>"PANEL PRINCIPAL"</strong> en la barra izquierda</li>
+                <li>El botón verde <strong>"Panel Operativo"</strong> en la barra izquierda</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="lg:col-span-7">
+            <div class="screenshot-frame">
+              <img src="./assets/manual/manual_01_login.png" alt="Pantalla de Inicio de Sesión del Sistema" class="w-full h-auto block" />
+              <div class="p-3 bg-slate-950 border-t border-slate-800 text-xs font-mono text-slate-400 flex justify-between">
+                <span>Figura 1. Pantalla de Ingreso Seguro con Captcha Matemático</span>
+                <span class="text-emerald-400">Todos los Usuarios</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- MANUAL 1: ADMINISTRADOR GLOBAL (CONTROL TOTAL DE LA RED)              -->
+    <!-- ===================================================================== -->
+    <section class="role-section space-y-8" data-role="ADMIN">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-emerald-500/40 pb-4">
+        <div>
+          <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500 text-slate-950 uppercase">
+            Manual de Rol #1 · Nivel de Acceso Total
+          </span>
+          <h2 class="text-3xl font-extrabold text-white mt-2">
+            1. Manual del Administrador Global (<code class="text-emerald-400 text-2xl">@tomas_admin</code>)
+          </h2>
+          <p class="text-sm text-slate-300 mt-1">
+            Control absoluto sobre las 4 sedes, catálogo maestro, categorías con fotografía, precios, disponibilidad por sede, traslados, auditoría y Dashboards.
+          </p>
+        </div>
+      </div>
+
+      <!-- Paso 1.1: Galería de Categorías y Gestión Visual -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start bg-slate-900/70 p-6 rounded-2xl border border-slate-800 card-surface">
+        <div class="lg:col-span-5 space-y-4">
+          <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Módulo 1.1 · Catálogo Maestro y Categorías</span>
+          <h3 class="text-xl font-bold text-white">Galería Visual de Categorías y Filtros por Sede</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Al ingresar, el Administrador visualiza las <strong>19 categorías especializadas</strong> con sus fotografías reales y el conteo exacto de productos activos. Todas las imágenes que subas aquí se sincronizan automáticamente para todos los Encargados de Sede.
+          </p>
+          <div class="space-y-2.5 text-xs text-slate-300">
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-emerald-400 block mb-1">✏️ Editar Nombre, Foto o Eliminar Categoría:</strong>
+              Pulsa el botón del <strong>lápiz (arriba a la derecha de cualquier tarjeta)</strong> —incluyendo <em>"Sin Categoría"</em>— para cambiar su nombre, subir una nueva imagen desde tu PC o eliminar la categoría. Si eliminas una categoría con productos, el sistema te pedirá confirmación y moverá esos productos de forma segura a <strong>"Sin Categoría"</strong>.
+            </div>
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-amber-400 block mb-1">🏢 Pestañas de Sede (Todas / Centro EP / EP1 / EP3 / EP6):</strong>
+              Usa los botones debajo del buscador para ver el stock consolidado de toda la red o inspeccionar los precios y existencias de una sede específica.
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-7">
+          <div class="screenshot-frame">
+            <img src="./assets/manual/manual_02_admin_panel.png" alt="Panel Principal del Administrador con Categorías" class="w-full h-auto block" />
+            <div class="p-3 bg-slate-950 border-t border-slate-800 text-xs font-mono text-slate-400 flex justify-between">
+              <span>Figura 1.1. Galería Principal del Administrador con las fotos reales de cada categoría</span>
+              <span class="text-emerald-400">Rol: ADMINISTRADOR</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 1.2: Búsqueda dentro de Categoría y Limpieza Visual -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start bg-slate-900/70 p-6 rounded-2xl border border-slate-800 card-surface">
+        <div class="lg:col-span-5 space-y-4">
+          <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Módulo 1.2 · Navegación Interna por Categoría</span>
+          <h3 class="text-xl font-bold text-white">Búsqueda Exclusiva dentro de la Categoría</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Cuando haces clic en una categoría (por ejemplo, <strong>Cables y Alambres</strong>), el sistema aplica tres mejoras de experiencia de usuario:
+          </p>
+          <ul class="space-y-2 text-xs text-slate-300">
+            <li class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-emerald-400">1. Auto-Scroll al Inicio:</strong> La pantalla sube automáticamente al primer producto de la categoría para que nunca aparezcas a mitad de página.
+            </li>
+            <li class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-emerald-400">2. Encabezado Despejado:</strong> Se esconden los botones globales de arriba (<em>Backup, Restaurar, + Categoría</em>) para dejar una vista limpia enfocada en tu búsqueda, mostrando el indicador <code class="text-emerald-300">Modo Búsqueda en "Cables y Alambres"</code>.
+            </li>
+            <li class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-emerald-400">3. Buscador Inteligente Acotado:</strong> Todo lo que escribas en la barra de búsqueda filtrará <strong>únicamente productos de esa categoría</strong>. Para regresar a la galería, pulsa la flecha <code class="text-white">←</code> o el logo superior.
+            </li>
+          </ul>
+        </div>
+        <div class="lg:col-span-7">
+          <div class="screenshot-frame">
+            <img src="./assets/manual/manual_03_admin_categoria.png" alt="Vista Interna de Categoría Administrador" class="w-full h-auto block" />
+            <div class="p-3 bg-slate-950 border-t border-slate-800 text-xs font-mono text-slate-400 flex justify-between">
+              <span>Figura 1.2. Modo Búsqueda dentro de una Categoría (encabezado limpio y acciones por fila)</span>
+              <span class="text-emerald-400">Rol: ADMINISTRADOR</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 1.3: Cambiar de Categoría / Disponibilidad por Sede vs Mover Stock -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start bg-slate-900/70 p-6 rounded-2xl border border-slate-800 card-surface">
+        <div class="lg:col-span-6 space-y-4">
+          <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Módulo 1.3 · Edición de Producto y Disponibilidad por Sede</span>
+          <h3 class="text-xl font-bold text-white">Botón <code class="text-emerald-400">[✏️ Categoría / Editar]</code> y Switch "No maneja"</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            En cada producto tienes dos botones claramente diferenciados: el botón verde <strong class="text-emerald-400">Categoría / Editar</strong> (para cambiar el producto de categoría, precio o configurar qué sedes lo venden) y el botón amarillo <strong class="text-yellow-400">Sede</strong> (para trasladar unidades físicas entre sedes).
+          </p>
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-emerald-500/30 text-xs text-slate-300 space-y-1.5">
+            <strong class="text-emerald-400 block">💡 ¿Cómo quitar la alerta roja si una sede no vende cierto producto?</strong>
+            Si un producto (ej. herrajes tipo L o accesorios de transformador) solo se maneja en <strong>EP1</strong> y no quieres que <strong>EP3</strong> marque alerta de agotado, entra a <strong>Categoría / Editar</strong> y desmarca la casilla <code class="text-emerald-300">Se maneja en esta sede</code> en EP3. En la tabla aparecerá la etiqueta gris <strong>"No maneja"</strong> sin alertas falsas.
+          </div>
+          <div class="screenshot-frame">
+            <img src="./assets/manual/manual_04_admin_editar_producto.png" alt="Modal Editar Producto y Disponibilidad por Sede" class="w-full h-auto block" />
+            <div class="p-3 bg-slate-950 border-t border-slate-800 text-xs font-mono text-slate-400">
+              Figura 1.3A. Modal "Categoría / Editar": Cambio de categoría y switch "Se maneja en esta sede"
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-6 space-y-4">
+          <span class="text-xs font-mono font-bold text-yellow-400 uppercase tracking-wider">Módulo 1.4 · Traslados Directos entre Sedes</span>
+          <h3 class="text-xl font-bold text-white">Botón <code class="text-yellow-400">[⇄ Sede / Mover Stock]</code> con Corredor Opcional</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Para pasar mercancía de un almacén a otro, pulsa <strong>Mover Stock</strong> en el menú izquierdo o el botón amarillo <strong>Sede</strong> en la fila del producto.
+          </p>
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-yellow-500/30 text-xs text-slate-300 space-y-1.5">
+            <strong class="text-yellow-400 block">⚡ Corredor / Mensajero 100% Opcional:</strong>
+            El campo <strong>Corredor / Mensajero (Opcional)</strong> viene por defecto en <em>"Sin corredor asignado (Traslado directo / Ya surtido)"</em>. Así puedes registrar traslados inmediatos cuando tú mismo envías a un empleado a tu alcance o cuando la mercancía ya se surtió físicamente.
+          </div>
+          <div class="screenshot-frame">
+            <img src="./assets/manual/manual_05_admin_traslado.png" alt="Modal Mover Stock con Corredor Opcional" class="w-full h-auto block" />
+            <div class="p-3 bg-slate-950 border-t border-slate-800 text-xs font-mono text-slate-400">
+              Figura 1.3B. Modal "Mover Stock": Selección de sede origen, destino y corredor opcional
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 1.5: Dashboard, Historial Paginado y Optimización de Memoria -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start bg-slate-900/70 p-6 rounded-2xl border border-slate-800 card-surface">
+        <div class="lg:col-span-5 space-y-4">
+          <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Módulo 1.5 · Estadísticas, Reportes y Mantenimiento</span>
+          <h3 class="text-xl font-bold text-white">Dashboard en Tiempo Real e Historial Paginado (15 por página)</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Desde el menú izquierdo <strong>Dashboards</strong>, accedes a las gráficas en vivo y a la exportación en <strong>Excel, PDF y CSV</strong>.
+          </p>
+          <ul class="space-y-2 text-xs text-slate-300">
+            <li class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-emerald-400">👁️ Botón "Revisar Últimos Movimientos":</strong> El panel inferior se mantiene cerrado para ahorrar memoria visual y solo se despliega cuando lo necesitas. Muestra <strong>15 movimientos por página</strong> en tiempo real (vía WebSockets) con botones de paginación (<code class="text-emerald-300">1, 2, 3, Siguiente ›</code>).
+            </li>
+            <li class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-cyan-400">🗄️ Botón "Optimizar Historial (+2 años)":</strong> Archiva los movimientos con más de 24 meses en almacenamiento histórico (<em>Cold Storage</em>) sin perder trazabilidad y reconstruye los índices de PostgreSQL para mantener el sistema rápido durante 10 a 20 años.
+            </li>
+            <li class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-sky-400">📦 Distribuir Llegadas (+ Nueva Entrada):</strong> Al pulsar <em>Distribuir Llegadas</em> en la barra izquierda puedes auditar recepciones de proveedores o registrar una <strong>+ Nueva Entrada</strong> directa de mercancía.
+            </li>
+          </ul>
+        </div>
+        <div class="lg:col-span-7">
+          <div class="screenshot-frame">
+            <img src="./assets/manual/manual_06_admin_dashboard.png" alt="Dashboard e Historial Paginado en Vivo" class="w-full h-auto block" />
+            <div class="p-3 bg-slate-950 border-t border-slate-800 text-xs font-mono text-slate-400 flex justify-between">
+              <span>Figura 1.4. Dashboard en Tiempo Real con Historial Paginado (15 movimientos por página)</span>
+              <span class="text-emerald-400">Rol: ADMINISTRADOR</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- MANUAL 2: ENCARGADO DE SEDE (GESTIÓN DE ALMACÉN LOCAL)                -->
+    <!-- ===================================================================== -->
+    <section class="role-section space-y-8" data-role="ENCARGADO">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-amber-500/40 pb-4">
+        <div>
+          <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-400 text-slate-950 uppercase">
+            Manual de Rol #2 · Gestión de Almacén Local
+          </span>
+          <h2 class="text-3xl font-extrabold text-white mt-2">
+            2. Manual del Encargado de Sede (<code class="text-amber-400 text-2xl">EP / EP1 / EP3 / EP6</code>)
+          </h2>
+          <p class="text-sm text-slate-300 mt-1">
+            Diseñado para los jefes de punto de venta: consulta ágil por categorías con fotos, solicitud de material a otras sedes, recepción de proveedores y envío de mercancía.
+          </p>
+        </div>
+      </div>
+
+      <!-- Paso 2.1: Panel Operativo del Encargado -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start bg-slate-900/70 p-6 rounded-2xl border border-slate-800 card-surface">
+        <div class="lg:col-span-5 space-y-4">
+          <span class="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">Módulo 2.1 · Vista Principal de Sede</span>
+          <h3 class="text-xl font-bold text-white">Galería de Categorías Sincronizada y Acciones de Sede</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            El Encargado visualiza exactamente las mismas categorías y fotografías configuradas por el Administrador, pero <strong>sin botones de edición ni borrado de catálogo</strong> para proteger la integridad de la base de datos.
+          </p>
+          <div class="space-y-2 text-xs text-slate-300">
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-sky-400">🚚 1. Botón "Registrar Llegada":</strong>
+              Úsalo cuando llega un camión o proveedor con factura/remisión. Seleccionas los productos y asignas a un empleado de tu sede para que realice el conteo físico.
+            </div>
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-amber-400">📢 2. Botón "Pedir Material a la Red":</strong>
+              Emite una alerta en vivo con sonido a las demás sedes cuando necesitas urgente un material agotado en tu mostrador.
+            </div>
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-emerald-400">📤 3. Botón "Ceder Mercancía":</strong>
+              Envía unidades de tu sede hacia otra sede que lo necesite, con opción de elegir corredor o marcar salida directa.
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-7">
+          <div class="screenshot-frame">
+            <img src="./assets/manual/manual_07_encargado_panel.png" alt="Panel Principal del Encargado de Sede" class="w-full h-auto block" />
+            <div class="p-3 bg-slate-950 border-t border-slate-800 text-xs font-mono text-slate-400 flex justify-between">
+              <span>Figura 2.1. Panel del Encargado de Sede con fotografías sincronizadas y acciones locales</span>
+              <span class="text-amber-400">Rol: ENCARGADO</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 2.2: Búsqueda en Categoría y Pedir Material a la Red -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start bg-slate-900/70 p-6 rounded-2xl border border-slate-800 card-surface">
+        <div class="lg:col-span-6 space-y-4">
+          <span class="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">Módulo 2.2 · Consulta de Stock Local por Categoría</span>
+          <h3 class="text-xl font-bold text-white">Búsqueda Acotada por Categoría y Escáner de Cámara</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Al entrar a cualquier categoría (ej. <strong>Breakers</strong>), los botones superiores se ocultan para darte una pantalla despejada, la vista sube automáticamente al inicio y el buscador filtra únicamente dentro de esa categoría en tu sede. También puedes pulsar el botón amarillo <strong>Escanear</strong> para buscar con la cámara del celular o lector láser USB.
+          </p>
+          <div class="screenshot-frame">
+            <img src="./assets/manual/manual_08_encargado_categoria.png" alt="Vista Interna de Categoría del Encargado" class="w-full h-auto block" />
+            <div class="p-3 bg-slate-950 border-t border-slate-800 text-xs font-mono text-slate-400">
+              Figura 2.2A. Stock local del Encargado dentro de una categoría con botón "Enviar a Otra Sede"
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-6 space-y-4">
+          <span class="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">Módulo 2.3 · Solicitudes Urgentes entre Sedes</span>
+          <h3 class="text-xl font-bold text-white">¿Cómo pedir material a las demás sedes?</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Al pulsar <strong>Pedir Material a la Red</strong>, puedes agregar uno o varios productos (<code class="text-emerald-300">+ Agregar otro producto</code>), indicar la cantidad requerida y el motivo de urgencia. Todas las demás sedes recibirán una notificación instantánea para despacharte el material.
+          </p>
+          <div class="screenshot-frame">
+            <img src="./assets/manual/manual_09_encargado_pedir_material.png" alt="Modal Pedir Material a la Red" class="w-full h-auto block" />
+            <div class="p-3 bg-slate-950 border-t border-slate-800 text-xs font-mono text-slate-400">
+              Figura 2.2B. Modal "Pedir Material a la Red" con soporte multi-producto en tiempo real
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- MANUAL 3: EMPLEADO / CORREDOR LOGÍSTICO                               -->
+    <!-- ===================================================================== -->
+    <section class="role-section space-y-8" data-role="EMPLEADO">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-sky-500/40 pb-4">
+        <div>
+          <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-sky-400 text-slate-950 uppercase">
+            Manual de Rol #3 · Operación Rápida, Entregas y Escáner
+          </span>
+          <h2 class="text-3xl font-extrabold text-white mt-2">
+            3. Manual del Empleado / Corredor Logístico (<code class="text-sky-400 text-2xl">@corredor_1</code>)
+          </h2>
+          <p class="text-sm text-slate-300 mt-1">
+            Interfaz de alta velocidad en 3 columnas para consulta de precios y existencias por sede, confirmación de entregas en tránsito y conteo físico de mercancía.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start bg-slate-900/70 p-6 rounded-2xl border border-slate-800 card-surface">
+        <div class="lg:col-span-6 space-y-4">
+          <span class="text-xs font-mono font-bold text-sky-400 uppercase tracking-wider">Módulo 3.1 · Los 3 Paneles de Trabajo del Empleado</span>
+          <h3 class="text-xl font-bold text-white">1. Consulta Rápida · 2. Misiones de Entrega · 3. Tareas de Conteo</h3>
+          <ul class="space-y-2 text-xs text-slate-300">
+            <li class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-emerald-400">💲 Columna 1 — Consulta de Precios y Stock por Sede:</strong> Escribe el nombre, código SKU o categoría para ver al instante el precio de referencia y las unidades disponibles en cada sede (<code class="text-slate-200">EP · EP1 · EP3 · EP6</code>).
+            </li>
+            <li class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-yellow-400">🛵 Columna 2 — Misiones Activas y Traslados:</strong> Muestra claramente <strong>1. Dónde recoger</strong> y <strong>2. Dónde entregar</strong> cada solicitud asignada. Al entregar la mercancía en la sede destino, pulsa el botón verde <strong>"Confirmar Entrega en Sede Destino"</strong>.
+            </li>
+            <li class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-sky-400">📋 Columna 3 — Tareas de Conteo (Recepciones):</strong> Cuando el Encargado te asigna revisar un pedido que llegó, aquí digitas cuántas unidades llegaron en buen estado y cuántas defectuosas.
+            </li>
+          </ul>
+          <div class="screenshot-frame">
+            <img src="./assets/manual/manual_10_empleado_panel.png" alt="Panel de 3 Columnas del Empleado / Corredor" class="w-full h-auto block" />
+            <div class="p-3 bg-slate-950 border-t border-slate-800 text-xs font-mono text-slate-400">
+              Figura 3.1. Vista de 3 columnas del Empleado: Consulta rápida con desglose por sede, Traslados y Conteos
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-6 space-y-4">
+          <span class="text-xs font-mono font-bold text-yellow-400 uppercase tracking-wider">Módulo 3.2 · Escáner de Código de Barras Multi-Dispositivo</span>
+          <h3 class="text-xl font-bold text-white">Uso de la Cámara en Celular, Tablet o Lector USB en PC</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Al presionar el botón amarillo <strong>Escanear</strong>, se abre el lector inteligente compatible tanto con celulares/tablets como con computadores:
+          </p>
+          <ul class="space-y-2 text-xs text-slate-300">
+            <li class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-yellow-400">📷 En Celulares y Tablets:</strong> Permite elegir entre cámara trasera o frontal, alinear el código de barras dentro del recuadro amarillo y consultar o trasladar el producto automáticamente.
+            </li>
+            <li class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <strong class="text-emerald-400">⌨️ En Computador sin Cámara o con Pistola Láser USB:</strong> Incluye un campo directo donde puedes disparar con el lector láser USB o escribir el código SKU y presionar <code class="text-white">Enter</code>.
+            </li>
+          </ul>
+          <div class="screenshot-frame">
+            <img src="./assets/manual/manual_11_empleado_escaner.png" alt="Lector de Código de Barras con Cámara y Entrada Manual" class="w-full h-auto block" />
+            <div class="p-3 bg-slate-950 border-t border-slate-800 text-xs font-mono text-slate-400">
+              Figura 3.2. Modal del Lector de Código de Barras / SKU (Cámara en vivo + Entrada manual/USB)
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    function filterRole(role) {
+      document.querySelectorAll('.role-section').forEach(sec => {
+        const secRole = sec.getAttribute('data-role');
+        if (role === 'ALL' || secRole === 'COMMON' || secRole === role) {
+          sec.classList.remove('hidden');
+        } else {
+          sec.classList.add('hidden');
+        }
+      });
+
+      document.querySelectorAll('.role-tab').forEach(btn => {
+        btn.classList.remove('bg-emerald-500', 'text-slate-950', 'shadow-md');
+        btn.classList.add('bg-slate-800/90', 'text-slate-200');
+      });
+      const activeBtn = document.getElementById('tab-' + role);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-slate-800/90', 'text-slate-200');
+        activeBtn.classList.add('bg-emerald-500', 'text-slate-950', 'shadow-md');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>
