@@ -1429,11 +1429,9 @@ function filterAdminSearch(query) {
 function filterAdminCategory(categoryId) {
   currentAdminCategoryFilter = categoryId;
   currentAdminPage = 1;
-  if (categoryId === null) {
-    currentAdminSearchFilter = '';
-    const searchInput = document.getElementById('adminSearchInput');
-    if (searchInput) searchInput.value = '';
-  }
+  currentAdminSearchFilter = '';
+  const searchInput = document.getElementById('adminSearchInput');
+  if (searchInput) searchInput.value = '';
   renderAdminView();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1448,22 +1446,27 @@ window.resetToMainPanel = function() {
   }
 
   // Cerrar cualquier modal abierto en el sistema
-  document.querySelectorAll('#appSection ~ .fixed.inset-0, #createProductModal, #newProductModal, #transferModal, #createCategoryModal, #editProductModal, #deleteProductModal, #networkRequestsModal, #pedirMaterialModal, #cederMaterialModal, #responderSolicitudModal, #asignarCorredorModal, #adminAtenderSolicitudModal, #adminRecepcionesModal, #detalleRecepcionModal, #auditLogsModal, #adminUsersModal, #pendingUsersModal').forEach(m => {
+  document.querySelectorAll('#appSection ~ .fixed.inset-0, #createProductModal, #newProductModal, #transferModal, #createCategoryModal, #editProductModal, #deleteProductModal, #networkRequestsModal, #pedirMaterialModal, #cederMaterialModal, #responderSolicitudModal, #asignarCorredorModal, #adminAtenderSolicitudModal, #adminRecepcionesModal, #detalleRecepcionModal, #auditLogsModal, #adminUsersModal, #pendingUsersModal, #barcodeScannerModal').forEach(m => {
     m.classList.add('hidden');
   });
 
-  // Limpiar filtros y volver a la galería principal de categorías
+  // Limpiar filtros y volver a la galería principal de categorías (Admin)
   currentAdminCategoryFilter = null;
   currentAdminSearchFilter = '';
   currentAdminPage = 1;
   const adminInput = document.getElementById('adminSearchInput');
   if (adminInput) adminInput.value = '';
 
+  // Limpiar filtros y volver a la galería principal de categorías (Encargado)
   currentEncargadoCategoryFilter = null;
   currentEncargadoSearchFilter = '';
   currentEncargadoPage = 1;
   const encInput = document.getElementById('encargadoSearchInput');
   if (encInput) encInput.value = '';
+
+  // Limpiar buscador rápido (Empleado)
+  const empInput = document.getElementById('quickPriceInput');
+  if (empInput) empInput.value = '';
 
   renderActiveView();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1483,7 +1486,7 @@ function goToEncargadoPage(page) {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function renderPaginationControls(containerId, currentPage, totalItems, pageSize, onPageChangeFnName) {
+function renderPaginationControls(containerId, currentPage, totalItems, pageSize, onPageChangeFnName, customItemLabel = null) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
@@ -1574,10 +1577,12 @@ function renderPaginationControls(containerId, currentPage, totalItems, pageSize
     </button>
   `;
 
+  const unitText = customItemLabel || t.page_products || 'productos';
+
   container.innerHTML = `
     <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
       <div class="flex items-center gap-2 text-on-surface-variant font-mono">
-        <span>${t.page_showing || 'Mostrando'} <strong class="text-primary font-bold">${startItem}</strong> - <strong class="text-primary font-bold">${endItem}</strong> ${t.page_of || 'de'} <strong class="text-on-surface font-bold">${totalItems}</strong> ${t.page_products || 'productos'}</span>
+        <span>${t.page_showing || 'Mostrando'} <strong class="text-primary font-bold">${startItem}</strong> - <strong class="text-primary font-bold">${endItem}</strong> ${t.page_of || 'de'} <strong class="text-on-surface font-bold">${totalItems}</strong> ${unitText}</span>
         <span class="text-outline">|</span>
         <span class="text-outline">Pág. <strong class="text-on-surface">${clampedPage}</strong> de <strong class="text-on-surface">${totalPages}</strong></span>
       </div>
@@ -1732,6 +1737,10 @@ function renderAdminView() {
       activeCatBadge.classList.add('hidden');
       activeCatBadge.innerHTML = '';
     }
+    const adminSearchInput = document.getElementById('adminSearchInput');
+    if (adminSearchInput) {
+      adminSearchInput.placeholder = t.search_placeholder || 'Buscar por SKU, producto o marca...';
+    }
     
     // Contar productos por categoría
     const catCounts = {};
@@ -1807,6 +1816,10 @@ function renderAdminView() {
     if (activeCatBadge) {
       activeCatBadge.classList.remove('hidden');
       activeCatBadge.innerHTML = `<span class="material-symbols-outlined text-[15px]">folder_open</span><span>Modo Búsqueda en "${catNameStr}"</span>`;
+    }
+    const adminSearchInput = document.getElementById('adminSearchInput');
+    if (adminSearchInput) {
+      adminSearchInput.placeholder = `Buscar dentro de "${catNameStr}"...`;
     }
 
     if (btnEditCurrentCat) {
@@ -2007,11 +2020,9 @@ function filterEncargadoSearch(query) {
 function filterEncargadoCategory(categoryId) {
   currentEncargadoCategoryFilter = categoryId;
   currentEncargadoPage = 1;
-  if (categoryId === null) {
-    currentEncargadoSearchFilter = '';
-    const searchInput = document.getElementById('encargadoSearchInput');
-    if (searchInput) searchInput.value = '';
-  }
+  currentEncargadoSearchFilter = '';
+  const searchInput = document.getElementById('encargadoSearchInput');
+  if (searchInput) searchInput.value = '';
   renderEncargadoView();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -2046,6 +2057,9 @@ function renderEncargadoView() {
   const tableContainer = document.getElementById('encargadoInventoryTableContainer');
   const categoriesGrid = document.getElementById('encargadoCategoriesGrid');
   const btnBack = document.getElementById('btnEncargadoBackToCategories');
+  const globalToolbar = document.getElementById('encargadoGlobalToolbarButtons');
+  const activeCatBadge = document.getElementById('encargadoActiveCategoryBadge');
+  const encSearchInput = document.getElementById('encargadoSearchInput');
 
   tableBody.innerHTML = '';
   categoriesGrid.innerHTML = '';
@@ -2055,6 +2069,14 @@ function renderEncargadoView() {
     tableContainer.classList.add('hidden');
     categoriesGrid.classList.remove('hidden');
     btnBack.classList.add('hidden');
+    if (globalToolbar) globalToolbar.classList.remove('hidden');
+    if (activeCatBadge) {
+      activeCatBadge.classList.add('hidden');
+      activeCatBadge.innerHTML = '';
+    }
+    if (encSearchInput) {
+      encSearchInput.placeholder = 'Buscar producto en tu sede...';
+    }
     
     const catCounts = {};
     liveProducts.forEach(p => {
@@ -2098,15 +2120,29 @@ function renderEncargadoView() {
     return;
   }
 
-  // Modo Tabla para Encargado
+  // Modo Tabla para Encargado (esconder botones de acción superiores para conservar integridad visual)
   tableContainer.classList.remove('hidden');
   categoriesGrid.classList.add('hidden');
   btnBack.classList.remove('hidden');
+  if (globalToolbar) globalToolbar.classList.add('hidden');
 
   if (currentEncargadoCategoryFilter !== null) {
     const activeCatObj = (liveCategories || []).find(c => Number(c.id) === Number(currentEncargadoCategoryFilter));
     const catNameStr = activeCatObj ? activeCatObj.nombre : 'Sin Categoría';
-    document.getElementById('encargadoTableHeading').textContent = `Categoría: ${catNameStr} — Stock en ${sedeName}`;
+    document.getElementById('encargadoTableHeading').textContent = `Categoría: ${catNameStr}`;
+    if (activeCatBadge) {
+      activeCatBadge.classList.remove('hidden');
+      activeCatBadge.innerHTML = `<span class="material-symbols-outlined text-[15px]">folder_open</span><span>Modo Búsqueda en "${catNameStr}" (${sedeName})</span>`;
+    }
+    if (encSearchInput) {
+      encSearchInput.placeholder = `Buscar dentro de "${catNameStr}"...`;
+    }
+  } else {
+    document.getElementById('encargadoTableHeading').textContent = `Resultados de Búsqueda en ${sedeName}`;
+    if (activeCatBadge) {
+      activeCatBadge.classList.remove('hidden');
+      activeCatBadge.innerHTML = `<span class="material-symbols-outlined text-[15px]">search</span><span>Buscando en todo el catálogo (${sedeName})</span>`;
+    }
   }
 
   const filteredProducts = (liveProducts || []).filter(p => {
@@ -2336,20 +2372,39 @@ function handleQuickPriceSearch(query) {
   if (!container) return;
 
   const q = query.trim().toLowerCase();
-  const filtered = q ? liveProducts.filter(p => p.nombre.toLowerCase().includes(q) || p.codigo_sku.toLowerCase().includes(q)) : liveProducts.slice(0, 4);
+  const filtered = q
+    ? (liveProducts || []).filter(p =>
+        (p.nombre || '').toLowerCase().includes(q) ||
+        (p.codigo_sku || '').toLowerCase().includes(q) ||
+        (p.categoria_nombre || '').toLowerCase().includes(q)
+      ).slice(0, 12)
+    : (liveProducts || []).slice(0, 8);
 
   container.innerHTML = '';
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="p-3 text-center text-outline text-xs">No se encontraron productos para "${query}".</div>`;
+    return;
+  }
+
   filtered.forEach(p => {
+    const s1 = p.sedes?.[1]?.stock_actual ?? 0;
+    const s2 = p.sedes?.[2]?.stock_actual ?? 0;
+    const s3 = p.sedes?.[3]?.stock_actual ?? 0;
+    const s4 = p.sedes?.[4]?.stock_actual ?? 0;
     const div = document.createElement('div');
-    div.className = 'p-2 bg-surface-container-low rounded border border-outline-variant/20 flex items-center justify-between';
+    div.className = 'p-2.5 bg-surface-container-low rounded-lg border border-outline-variant/20 flex items-center justify-between gap-2 hover:border-primary/40 transition-colors';
     div.innerHTML = `
-      <div class="truncate pr-2">
-        <span class="text-on-surface font-semibold block truncate">${p.nombre}</span>
-        <span class="text-[10px] text-outline">${p.codigo_sku}</span>
+      <div class="truncate pr-2 flex-1">
+        <span class="text-on-surface font-semibold block truncate text-xs" title="${p.nombre}">${p.nombre}</span>
+        <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
+          <span class="text-[10px] font-mono text-primary font-bold">${p.codigo_sku}</span>
+          ${p.categoria_nombre ? `<span class="text-[9px] px-1.5 py-0.2 rounded bg-surface-container text-outline">${p.categoria_nombre}</span>` : ''}
+        </div>
+        <div class="text-[9px] font-mono text-outline mt-1">EP:${s1} · EP1:${s2} · EP3:${s3} · EP6:${s4}</div>
       </div>
       <div class="text-right shrink-0">
-        <span class="text-primary font-bold block">$${p.precio_referencia ? p.precio_referencia.toLocaleString() : '0'}</span>
-        <span class="text-[9px] text-outline">Stock Red: ${p.total_stock}</span>
+        <span class="text-primary font-bold font-mono text-xs block">$${p.precio_referencia ? p.precio_referencia.toLocaleString() : '0'}</span>
+        <span class="text-[10px] font-mono text-on-surface-variant font-bold">Red: ${p.total_stock} ${p.unidad_medida || ''}</span>
       </div>
     `;
     container.appendChild(div);
@@ -3885,10 +3940,27 @@ async function loadDashboardMovementsPage(page = 1, isSilent = false) {
   }
 
   try {
+    const authHeaders = currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {};
     const res = await fetch(`${API_BASE}/dashboard/movements?page=${currentDashboardMovementsPage}&limit=${DASHBOARD_MOVEMENTS_PAGE_SIZE}`, {
-      headers: { 'Authorization': `Bearer ${currentToken}` },
+      headers: authHeaders,
+      credentials: 'include',
       cache: 'no-store'
     });
+
+    if (res.status === 404) {
+      // Fallback automático a /dashboard/summary si el proceso del servidor aún no se había reiniciado
+      const fallbackRes = await fetch(`${API_BASE}/dashboard/summary?page=${currentDashboardMovementsPage}&limit=${DASHBOARD_MOVEMENTS_PAGE_SIZE}`, {
+        headers: authHeaders,
+        credentials: 'include',
+        cache: 'no-store'
+      });
+      const fallbackData = await fallbackRes.json();
+      if (fallbackRes.ok && fallbackData.dashboard) {
+        renderExactMovements(fallbackData.dashboard.exactMovements, fallbackData.dashboard.movementsPagination);
+        return;
+      }
+    }
+
     const data = await res.json();
     if (res.ok && data.success) {
       renderExactMovements(data.movements, data.pagination);
@@ -3913,8 +3985,9 @@ window.optimizeMovementsHistory = async function() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${currentToken}`
+        ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {})
       },
+      credentials: 'include',
       body: JSON.stringify({ retentionMonths: 24 })
     });
     const data = await res.json();
@@ -3940,7 +4013,8 @@ async function loadDashboardData(page = 1) {
   let res = null;
   try {
     res = await fetch(`${API_BASE}/dashboard/summary?page=${currentDashboardMovementsPage}&limit=${DASHBOARD_MOVEMENTS_PAGE_SIZE}`, {
-      headers: { 'Authorization': `Bearer ${currentToken}` },
+      headers: currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {},
+      credentials: 'include',
       cache: 'no-store'
     });
     data = await res.json();
@@ -4063,7 +4137,7 @@ function renderExactMovements(movements, pagination) {
     `;
   });
 
-  renderPaginationControls('dashboardMovementsPagination', currentPage, totalItems, pageSize, 'goToDashboardMovementsPage');
+  renderPaginationControls('dashboardMovementsPagination', currentPage, totalItems, pageSize, 'goToDashboardMovementsPage', 'movimientos');
 }
 
 // =============================================================================

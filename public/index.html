@@ -1076,10 +1076,11 @@
 
           <div class="bg-surface-container rounded-xl border border-outline-variant/40 shadow-sm mt-6 block min-h-[300px] visible relative z-10 w-full" style="display: block !important; visibility: visible !important;">
             <div class="p-4 border-b border-outline-variant/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div>
-                <h3 class="font-headline font-semibold text-sm text-on-surface" id="encargadoTableHeading" data-i18n="th_branch_stock">Stock en Sede</h3>
+              <div class="flex items-center gap-2.5 flex-wrap">
+                <h3 class="font-headline font-semibold text-base text-on-surface" id="encargadoTableHeading" data-i18n="th_branch_stock">Stock en Sede</h3>
+                <span id="encargadoActiveCategoryBadge" class="hidden px-2.5 py-1 rounded-lg bg-primary/15 border border-primary/40 text-primary font-mono text-xs font-bold flex items-center gap-1.5"></span>
               </div>
-              <div class="flex flex-wrap gap-2">
+              <div id="encargadoGlobalToolbarButtons" class="flex flex-wrap gap-2">
                 <button type="button" onclick="openCreateRecepcionModal()" class="px-3.5 py-2 bg-tertiary hover:bg-sky-400 text-on-primary font-headline font-semibold text-xs rounded-lg shadow-sm transition-all flex items-center gap-1.5 active:scale-95">
                   <span class="material-symbols-outlined text-[16px]">local_shipping</span>
                   <span data-i18n="btn_register_arrival">Registrar Llegada</span>
@@ -1113,7 +1114,7 @@
             </div>
 
             <!-- Galería de Categorías Encargado -->
-            <div id="encargadoCategoriesGrid" class="p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5 hidden">
+            <div id="encargadoCategoriesGrid" class="p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 hidden">
               <!-- Se cargará desde MySQL con loadEncargadoInventory() -->
             </div>
 
@@ -2730,11 +2731,13 @@
 
   <script>
     function openPendingUsersModal() {
+      if (typeof closeDashboard === 'function') closeDashboard();
       const modal = document.getElementById('pendingUsersModal');
       if (modal) modal.classList.remove('hidden');
       if (typeof loadPendingUsers === 'function') loadPendingUsers();
     }
     function openAuditLogsModal() {
+      if (typeof closeDashboard === 'function') closeDashboard();
       const modal = document.getElementById('auditLogsModal');
       if (modal) modal.classList.remove('hidden');
       if (typeof loadAuditLogsData === 'function') {
@@ -2752,14 +2755,14 @@
   </script>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="./js/passwordPolicy.js?v=27"></script>
-  <script src="./js/i18n.js?v=27"></script>
-  <script src="./js/app.js?v=27"></script>
+  <script type="module" src="./js/passwordPolicy.js?v=28"></script>
+  <script src="./js/i18n.js?v=28"></script>
+  <script src="./js/app.js?v=28"></script>
   <!-- Registro PWA Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js?v=27')
+        navigator.serviceWorker.register('/service-worker.js?v=28')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registrado con éxito con el scope: ', registration.scope);
