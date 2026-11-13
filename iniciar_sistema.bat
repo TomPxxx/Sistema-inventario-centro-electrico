@@ -7,9 +7,15 @@ echo   SISTEMA DE INVENTARIO - GRUPO ELECTRICO CE
 echo ========================================================
 echo.
 
-:: 1. Ir al directorio del proyecto
-cd /d "C:\Users\tomas\OneDrive\Documentos\SISTEMA DE INVENTARIO CE"
+:: 1. Ir al directorio del proyecto (funciona desde cualquier carpeta donde se descomprima)
+cd /d "%~dp0"
 set "PATH=%LOCALAPPDATA%\Programs\DockerDesktop\resources\bin;%PATH%"
+
+:: 1.5 Instalar dependencias automaticamente si no existe node_modules
+if not exist "node_modules" (
+    echo [0/3] Instalando dependencias de Node.js por primera vez...
+    call npm install
+)
 
 :: 2. Verificar si el servidor ya esta corriendo en el puerto 4000
 netstat -ano | findstr /R ":4000.*LISTENING" >nul

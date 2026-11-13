@@ -3,8 +3,11 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
+const isLocal = !process.env.DATABASE_URL || process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1');
 const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL + (process.env.DATABASE_URL.includes('?') ? '&sslmode=require' : '?sslmode=require')
+  connectionString: isLocal
+    ? process.env.DATABASE_URL
+    : process.env.DATABASE_URL + (process.env.DATABASE_URL.includes('?') ? '&sslmode=require' : '?sslmode=require')
 });
 
 async function exportSeed() {
@@ -34,9 +37,23 @@ ${baseSql}
 -- =============================================================================
 `;
 
+    // 0. Exportar categorias con sus nombres e imagenes reales actualizadas por el Admin
+    console.log('Exportando categorías...');
+    const cats = await client.query('SELECT id, nombre, descripcion, imagen_url FROM categorias ORDER BY id');
+    if (cats.rows.length > 0) {
+      outSql += `\n-- Sincronizando categorías e imágenes de perfil...\n`;
+      for (const c of cats.rows) {
+        const nom = `'${(c.nombre || '').replace(/'/g, "''")}'`;
+        const desc = c.descripcion ? `'${c.descripcion.replace(/'/g, "''")}'` : 'NULL';
+        const img = c.imagen_url ? `'${c.imagen_url.replace(/'/g, "''")}'` : 'NULL';
+        outSql += `INSERT INTO categorias (id, nombre, descripcion, imagen_url) VALUES (${c.id}, ${nom}, ${desc}, ${img}) ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion, imagen_url = EXCLUDED.imagen_url;\n`;
+      }
+      outSql += `SELECT setval('categorias_id_seq', (SELECT COALESCE(MAX(id), 1) FROM categorias));\n\n`;
+    }
+
     // 1. Exportar productos
     console.log('Exportando productos...');
-    const prods = await client.query('SELECT id, codigo_sku, nombre, descripcion, categoria_id, unidad_medida, activo FROM productos ORDER BY id');
+    const prods = await client.query('SELECT id, codigo_sku, nombre, descripcion, categoria_id, unidad_medida, marca, imagen_url, activo FROM productos ORDER BY id');
     
     outSql += `\n-- Insertando ${prods.rows.length} productos...\n`;
     
@@ -48,12 +65,14 @@ ${baseSql}
         const nom = `'${p.nombre.replace(/'/g, "''")}'`;
         const sku = `'${p.codigo_sku.replace(/'/g, "''")}'`;
         const unit = `'${(p.unidad_medida || 'UNIDAD').replace(/'/g, "''")}'`;
-        const cat = p.categoria_id || 1;
+        const marca = p.marca ? `'${p.marca.replace(/'/g, "''")}'` : 'NULL';
+        const img = p.imagen_url ? `'${p.imagen_url.replace(/'/g, "''")}'` : 'NULL';
+        const cat = p.categoria_id || 12;
         const act = p.activo ? 'TRUE' : 'FALSE';
-        return `(${p.id}, ${sku}, ${nom}, ${desc}, ${cat}, ${unit}, ${act})`;
+        return `(${p.id}, ${sku}, ${nom}, ${desc}, ${cat}, ${unit}, ${marca}, ${img}, ${act})`;
       }).join(',\n');
       
-      outSql += `INSERT INTO productos (id, codigo_sku, nombre, descripcion, categoria_id, unidad_medida, activo) VALUES\n${values}\nON CONFLICT (id) DO NOTHING;\n\n`;
+      outSql += `INSERT INTO productos (id, codigo_sku, nombre, descripcion, categoria_id, unidad_medida, marca, imagen_url, activo) VALUES\n${values}\nON CONFLICT (id) DO UPDATE SET codigo_sku = EXCLUDED.codigo_sku, nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion, categoria_id = EXCLUDED.categoria_id, unidad_medida = EXCLUDED.unidad_medida, marca = EXCLUDED.marca, imagen_url = EXCLUDED.imagen_url, activo = EXCLUDED.activo;\n\n`;
     }
 
     outSql += `SELECT setval('productos_id_seq', (SELECT MAX(id) FROM productos));\n\n`;
