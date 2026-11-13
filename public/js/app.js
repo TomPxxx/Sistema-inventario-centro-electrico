@@ -1788,7 +1788,7 @@ function renderAdminView() {
           <span class="material-symbols-outlined text-2xl">create_new_folder</span>
         </div>
         <h4 class="font-headline font-bold text-xs sm:text-sm text-primary" data-i18n="btn_create_new_category">+ Crear Categoría</h4>
-        <span class="text-[10px] font-mono text-outline">Subir imagen de perfil opcional</span>
+        <span class="hidden text-[10px] font-mono text-outline"></span>
       </div>
     `;
     
@@ -2372,13 +2372,15 @@ function handleQuickPriceSearch(query) {
   if (!container) return;
 
   const q = query.trim().toLowerCase();
-  const filtered = q
+  if (!q) { container.innerHTML = ''; return; }
+  const filtered = window.rankProductMatches(liveProducts, q, 5);
+  if (false) (q
     ? (liveProducts || []).filter(p =>
         (p.nombre || '').toLowerCase().includes(q) ||
         (p.codigo_sku || '').toLowerCase().includes(q) ||
         (p.categoria_nombre || '').toLowerCase().includes(q)
       ).slice(0, 12)
-    : (liveProducts || []).slice(0, 8);
+    : (liveProducts || []).slice(0, 8));
 
   container.innerHTML = '';
   if (filtered.length === 0) {
@@ -2535,8 +2537,8 @@ async function startBarcodeScannerStream(deviceId = null) {
     try {
       if (engineBadge) {
         engineBadge.textContent = supportsNative1D
-          ? 'Motor activo: Escáner Óptimo Multi-Dispositivo (Nativo + ZXing)'
-          : 'Motor activo: Escáner Universal Multi-Dispositivo (PC / Móvil)';
+          ? 'Cámara activa'
+          : 'Cámara activa';
       }
       if (videoEl) videoEl.classList.add('hidden');
       if (fallbackEl) fallbackEl.classList.remove('hidden');
@@ -2581,7 +2583,7 @@ async function startBarcodeScannerStream(deviceId = null) {
   // 2. Respaldo directo con BarcodeDetector + getUserMedia si html5-qrcode no cargó
   if (supportsNative1D && 'BarcodeDetector' in window) {
     try {
-      if (engineBadge) engineBadge.textContent = 'Motor activo: BarcodeDetector Nativo';
+      if (engineBadge) engineBadge.textContent = 'Cámara activa';
       if (fallbackEl) fallbackEl.classList.add('hidden');
       if (videoEl) videoEl.classList.remove('hidden');
 
@@ -3044,9 +3046,41 @@ function renderTransferProductList(productsToShow) {
   });
 }
 
+window.rankProductMatches = function(products, rawQuery, limit = 5) {
+  const q = (rawQuery || '').trim().toLowerCase();
+  if (!q) return [];
+  const tokens = q.split(/\s+/).filter(Boolean);
+  const scored = [];
+  for (const p of (products || [])) {
+    const nombre = (p.nombre || '').toLowerCase();
+    const sku = (p.codigo_sku || '').toLowerCase();
+    const marca = (p.marca || '').toLowerCase();
+    const cat = (p.categoria_nombre || '').toLowerCase();
+    const full = `${sku} ${nombre} ${marca} ${cat}`;
+    if (!tokens.every(tok => full.includes(tok))) continue;
+    let score = 0;
+    if (sku === q) score += 1000;
+    else if (sku.startsWith(q)) score += 600;
+    else if (sku.includes(q)) score += 350;
+    if (nombre === q) score += 900;
+    else if (nombre.startsWith(q)) score += 500;
+    else if (nombre.includes(q)) score += 300;
+    tokens.forEach(tok => {
+      if (nombre.startsWith(tok)) score += 80;
+      if (sku.startsWith(tok)) score += 80;
+      if (nombre.includes(tok)) score += 40;
+      if (marca.includes(tok)) score += 20;
+    });
+    scored.push({ p, score });
+  }
+  scored.sort((a, b) => b.score - a.score || (a.p.nombre || '').localeCompare(b.p.nombre || ''));
+  return scored.slice(0, limit).map(x => x.p);
+};
 function populateTransferModalProducts() {
+  const ul = document.getElementById('modalTransferProductList');
+  if (ul) { ul.innerHTML = ''; ul.classList.add('hidden'); }
   // Render solo los primeros 30 para no saturar el DOM (UX Refactor para 1000+ productos)
-  const initialProducts = liveProducts.slice(0, 30);
+  const initialProducts = [];
   renderTransferProductList(initialProducts);
   updateTransferAvailabilityHint();
 }
@@ -3056,7 +3090,11 @@ window.filterTransferProducts = function() {
   const filter = input.value.toLowerCase();
   
   // Buscar en memoria y no en el DOM
-  const filtered = liveProducts.filter(p => 
+  if (!filter) { const ul = document.getElementById('modalTransferProductList'); if (ul) { ul.innerHTML = ''; ul.classList.add('hidden'); } const hp = document.getElementById('modalTransferProduct'); if (hp) hp.value = ''; updateTransferAvailabilityHint(); return; }
+  const filtered = window.rankProductMatches(liveProducts, filter, 5);
+  renderTransferProductList(filtered);
+  document.getElementById('modalTransferProductList')?.classList.remove('hidden');
+  if (false) liveProducts.filter(p => 
     p.nombre.toLowerCase().includes(filter) || p.codigo_sku.toLowerCase().includes(filter)
   ).slice(0, 30); // Limitar a 30 resultados para velocidad
 
@@ -3064,7 +3102,7 @@ window.filterTransferProducts = function() {
 };
 
 window.showTransferProductsDropdown = function() {
-  document.getElementById('modalTransferProductList').classList.remove('hidden');
+  if ((document.getElementById('modalTransferProductSearch')?.value || '').trim()) { document.getElementById('modalTransferProductList').classList.remove('hidden'); } else { document.getElementById('modalTransferProductList').classList.add('hidden'); }
 }
 
 window.hideTransferProductsDropdown = function() {
@@ -3103,7 +3141,7 @@ function toggleQuickTransferModal() {
   modal.classList.toggle('hidden');
   updateTransferAvailabilityHint();
   if (!modal.classList.contains('hidden')) {
-    poblarSelectCorredores(document.getElementById('modalTransferCorredor'));
+    const searchIn = document.getElementById('modalTransferProductSearch'); if (searchIn) searchIn.value = ''; const hidIn = document.getElementById('modalTransferProduct'); if (hidIn) hidIn.value = ''; document.getElementById('modalTransferProductList')?.classList.add('hidden'); poblarSelectCorredores(document.getElementById('modalTransferCorredor'));
   }
 }
 
@@ -3338,17 +3376,17 @@ window.handleSearchProductoConteo = function(inputEl) {
   const dropdown = document.getElementById('conteoProductoDropdown');
   if (!dropdown) return;
 
-  if (query.length < 2) {
+  if (query.length < 1) {
     dropdown.classList.add('hidden');
     dropdown.innerHTML = '';
     return;
   }
 
-  const prods = (liveProducts || []).filter(p => 
+  const prods = window.rankProductMatches(liveProducts, query, 5); if (false) (liveProducts || []).filter(p => 
     p.nombre?.toLowerCase().includes(query) ||
     p.codigo_sku?.toLowerCase().includes(query) ||
     (p.marca && p.marca.toLowerCase().includes(query))
-  ).slice(0, 8);
+  ).slice(0, 5);
 
   if (prods.length === 0) {
     dropdown.innerHTML = `
@@ -3975,7 +4013,7 @@ async function loadDashboardMovementsPage(page = 1, isSilent = false) {
 }
 
 window.optimizeMovementsHistory = async function() {
-  if (!confirm('⚡ ¿Deseas optimizar el almacenamiento del Historial de Movimientos?\n\nLos movimientos con más de 24 meses (2 años) de antigüedad se moverán automáticamente a la tabla de archivo histórico (Cold Storage) sin perder trazabilidad, liberando memoria y reconstruyendo los índices B-Tree para máxima velocidad.')) {
+  if (!confirm('⚡ ¿Deseas optimizar el historial de movimientos?\n\nLos movimientos con más de 2 años de antigüedad se archivarán de forma segura para mantener el sistema rápido.')) {
     return;
   }
 
@@ -4515,24 +4553,24 @@ window.renderAdminUsersTable = function(users) {
       <tr class="hover:bg-surface-container-high/50 transition-colors">
         <td class="py-2.5 px-3">
           <div class="font-bold text-on-surface">${u.nombre_completo} ${isMe ? '<span class="text-[10px] font-mono text-primary">(Tú)</span>' : ''}</div>
-          <div class="text-[11px] font-mono text-primary">@${u.username} <span class="text-outline">· ${u.email || 'Sin correo'}</span></div>
+          <div class="text-[11px] font-mono text-primary">@${u.username}</div>
         </td>
         <td class="py-2.5 px-3 font-mono">
           <div class="font-bold text-on-surface">${u.rol}</div>
-          <div class="text-[10px] text-outline">${u.sede_nombre || (u.rol === 'ADMINISTRADOR' ? 'Red Central' : 'Sin sede')}</div>
+          ${u.sede_nombre ? `<div class="text-[10px] text-outline">${u.sede_nombre}</div>` : ''}
         </td>
         <td class="py-2.5 px-3">
           <span class="px-2 py-0.5 rounded border text-[10px] font-mono font-bold ${statusBadgeClass}">${u.estado}</span>
         </td>
         <td class="py-2.5 px-3">${presenceBadge}</td>
-        <td class="py-2.5 px-3 font-mono text-[11px] text-outline">${lastLoginStr}</td>
+        <td class="py-2.5 px-3 font-mono text-[11px] text-on-surface-variant">${lastLoginStr}</td>
         <td class="py-2.5 px-3 text-right">
           <div class="inline-flex items-center justify-end gap-1.5">
             <button
               type="button"
               onclick="forceLogoutUser(${u.id}, '${u.username}')"
               ${isMe ? 'disabled title="Usa el botón Salir para tu propia sesión"' : ''}
-              class="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/40 font-mono text-[11px] font-bold transition-all inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              class="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500 text-amber-800 dark:text-amber-300 hover:text-slate-950 border border-amber-500/40 font-mono text-[11px] font-bold transition-all inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <span class="material-symbols-outlined text-[14px]">power_settings_new</span>
               <span data-i18n="btn_force_logout">${forceLogoutLabel}</span>
@@ -4554,7 +4592,7 @@ window.renderAdminUsersTable = function(users) {
 };
 
 window.forceLogoutUser = async function(userId, username) {
-  if (!confirm(`¿Deseas cerrar forzosamente la sesión de @${username} e invalidar su token en la Blacklist?`)) return;
+  if (!confirm(`¿Deseas cerrar la sesión activa de @${username}?`)) return;
   try {
     const res = await fetch(`${API_BASE}/auth/users/${userId}/force-logout`, {
       method: 'POST',
@@ -4578,7 +4616,7 @@ window.forceLogoutUser = async function(userId, username) {
 };
 
 window.deleteUserAdmin = async function(userId, username) {
-  if (!confirm(`⚠️ ¿Estás seguro de que deseas ELIMINAR permanentemente del sistema al usuario @${username}?\n\nSi tiene sesión activa se le cerrará inmediatamente y esta acción quedará registrada en auditoría.`)) return;
+  if (!confirm(`⚠️ ¿Estás seguro de que deseas eliminar permanentemente al usuario @${username}?`)) return;
   try {
     const res = await fetch(`${API_BASE}/auth/users/${userId}`, {
       method: 'DELETE',
@@ -4690,7 +4728,7 @@ window.submitNewProduct = async function() {
 // BACKUP, RESTAURACIÓN Y SINCRONIZACIÓN NEON (ADMINISTRADOR)
 // =============================================================================
 window.downloadBackup = async function() {
-  if (!confirm('¿Deseas descargar una copia de seguridad SQL completa y auto-recuperable de la base de datos?')) return;
+  if (!confirm('¿Deseas descargar una copia de seguridad completa del sistema?')) return;
   try {
     showToast('Generando copia de seguridad...', 'info');
     const res = await fetch(`${API_BASE}/backup/download`, {
@@ -4797,7 +4835,7 @@ window.restoreLatestBackup = async function() {
 };
 
 window.syncWithNeon = async function() {
-  if (!confirm('¿Deseas sincronizar la base de datos de Docker hacia NEON en la nube?\n\nEsto enviará todas las tablas y datos actuales de Docker a la base de datos de Neon Cloud.')) return;
+  if (!confirm('¿Deseas sincronizar los datos actuales con la nube?')) return;
   try {
     showToast('Sincronizando con Neon Cloud...', 'info');
     const res = await fetch(`${API_BASE}/backup/sync-neon`, {
@@ -4860,7 +4898,7 @@ window.loadAuditLogsData = async function(isSilent = false) {
   const tbody = document.getElementById('auditLogsTableBody');
   if (!tbody) return;
   if (!isSilent && allAuditLogs.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-outline text-sm">Cargando registros de auditoría en tiempo real...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-outline text-sm">Cargando registros...</td></tr>`;
   }
 
   try {
@@ -4904,7 +4942,7 @@ function renderAuditLogs(logs) {
   if (!tbody) return;
 
   if (logs.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-outline text-sm">No se encontraron registros de auditoría.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-outline text-sm">No se encontraron registros.</td></tr>`;
     return;
   }
 
@@ -4926,7 +4964,7 @@ function renderAuditLogs(logs) {
 
     return `
       <tr class="border-b border-outline-variant/20 hover:bg-surface-container-low transition-colors">
-        <td class="py-2.5 px-3 font-mono text-[11px] text-outline whitespace-nowrap">${dateStr}</td>
+        <td class="py-2.5 px-3 font-mono text-[11px] text-on-surface-variant whitespace-nowrap">${dateStr}</td>
         <td class="py-2.5 px-3 font-bold text-on-surface flex items-center gap-1.5">
           <span class="material-symbols-outlined text-sm text-primary">person</span>
           <span>@${log.username || 'SISTEMA'}</span>
@@ -4939,7 +4977,7 @@ function renderAuditLogs(logs) {
         <td class="py-2.5 px-3 text-on-surface-variant max-w-md truncate" title="${(log.detalles || '').replace(/"/g, '&quot;')}">
           ${log.detalles || '-'}
         </td>
-        <td class="py-2.5 px-3 font-mono text-[11px] text-outline whitespace-nowrap">
+        <td class="hidden py-2.5 px-3 font-mono text-[11px] text-outline whitespace-nowrap">
           ${log.ip_address || '-'}
         </td>
       </tr>
@@ -5413,10 +5451,11 @@ window.handleSearchProductoPedido = function(inputEl) {
   const mySedeId = Number(currentUser?.sede_id || 0);
 
   // Filtrar productos
-  const matches = (liveProducts || []).filter(p => 
+  const matches = window.rankProductMatches(liveProducts, query, 5);
+  if (false) (liveProducts || []).filter(p => 
     (p.nombre && p.nombre.toLowerCase().includes(query)) ||
     (p.codigo_sku && p.codigo_sku.toLowerCase().includes(query))
-  ).slice(0, 10);
+  ).slice(0, 5);
 
   if (matches.length === 0) {
     dropdown.innerHTML = `<li class="p-2.5 text-xs text-outline italic">No se encontraron productos coincidentes.</li>`;
@@ -5619,10 +5658,11 @@ window.handleSearchProductoCeder = function(query) {
     return;
   }
 
-  const matches = (liveProducts || []).filter(p => 
+  const matches = window.rankProductMatches(liveProducts, query, 5);
+  if (false) (liveProducts || []).filter(p => 
     (p.nombre && p.nombre.toLowerCase().includes(query)) ||
     (p.codigo_sku && p.codigo_sku.toLowerCase().includes(query))
-  ).slice(0, 8);
+  ).slice(0, 5);
 
   if (matches.length === 0) {
     dropdown.innerHTML = `<li class="p-2.5 text-xs text-outline italic">No se encontraron productos.</li>`;

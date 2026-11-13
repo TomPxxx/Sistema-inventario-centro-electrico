@@ -431,7 +431,37 @@
   <!-- ========================================================================= -->
   <section id="authSection" class="w-full flex-1 flex flex-col items-center justify-center p-4 md:p-8 relative overflow-hidden z-10">
 
-    <div class="w-full max-w-5xl z-20 flex flex-col gap-6 my-auto">
+    <!-- Silueta elegante del logo de Grupo Eléctrico en el fondo del Login -->
+    <div class="pointer-events-none select-none absolute inset-0 flex items-center justify-center z-0 overflow-hidden" aria-hidden="true">
+      <svg class="w-[460px] h-[460px] sm:w-[620px] sm:h-[620px] text-white opacity-[0.07] drop-shadow-[0_0_45px_rgba(255,255,255,0.18)]" viewBox="80 55 240 205" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g stroke="currentColor" stroke-width="11" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M200 230 L130 190 L130 130 L200 170 Z" fill="none"/>
+          <path d="M130 130 L90 140 L160 180 L200 170" fill="none"/>
+          <path d="M200 230 L270 190 L270 130 L200 170 Z" fill="none"/>
+          <path d="M270 130 L310 140 L240 180 L200 170" fill="none"/>
+        </g>
+        <path d="M240 70 L170 150 L210 150 L150 240 L250 130 L210 130 Z" fill="currentColor" fill-opacity="0.16" stroke="currentColor" stroke-width="9" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div class="w-full max-w-5xl z-20 flex flex-col gap-5 my-auto">
+
+      <!-- Identidad Superior del Sistema en el Login -->
+      <div class="flex flex-col items-center justify-center text-center select-none">
+        <svg class="h-14 sm:h-16 w-auto text-white drop-shadow-[0_4px_24px_rgba(0,166,81,0.28)]" viewBox="0 0 420 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg x="0" y="0" width="80" height="80" viewBox="80 60 240 200">
+            <g stroke-width="14" stroke-linejoin="round" stroke-linecap="round">
+              <path d="M200 230 L130 190 L130 130 L200 170 Z" stroke="currentColor" fill="none"/>
+              <path d="M130 130 L90 140 L160 180 L200 170" stroke="currentColor" fill="none"/>
+              <path d="M200 230 L270 190 L270 130 L200 170 Z" stroke="var(--primary)" fill="none"/>
+              <path d="M270 130 L310 140 L240 180 L200 170" stroke="var(--primary)" fill="none"/>
+            </g>
+            <path d="M240 70 L170 150 L210 150 L150 240 L250 130 L210 130 Z" fill="var(--secondary)" stroke="var(--surface-container-lowest)" stroke-width="10" stroke-linejoin="round"/>
+          </svg>
+          <text x="90" y="42" font-family="'Space Grotesk', sans-serif" font-weight="800" font-size="28" fill="currentColor" letter-spacing="-0.5">GRUPO <tspan fill="var(--primary)">ELÉCTRICO</tspan></text>
+          <text x="90" y="65" font-family="'Inter', sans-serif" font-weight="700" font-size="12" fill="currentColor" letter-spacing="1.5" opacity="0.85">SOFTWARE DE INVENTARIO</text>
+        </svg>
+      </div>
       
 
 
@@ -922,9 +952,9 @@
           <button type="button" onclick="openAuditLogsModal()" class="admin-only hidden hide-on-mobile sidebar-link flex items-center justify-between px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all text-left">
             <div class="flex items-center gap-3 text-cyan-400">
               <span class="material-symbols-outlined text-[18px]">security</span>
-              <span class="font-sans font-medium" data-i18n="menu_audit">Vigilancia / Logs</span>
+              <span class="font-sans font-medium" data-i18n="menu_audit">Actividad</span>
             </div>
-            <span class="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 px-1.5 py-0.2 rounded font-bold font-mono" data-i18n="badge_audit">Auditoría</span>
+            <span class="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 px-1.5 py-0.2 rounded font-bold font-mono" data-i18n="badge_audit">Historial</span>
           </button>
         </nav>
       </div>
@@ -971,11 +1001,11 @@
                   </button>
                   <button type="button" onclick="document.getElementById('restoreBackupFile').click()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border-2 border-slate-300 dark:bg-surface-container-high dark:hover:bg-surface-container-highest text-slate-800 dark:text-on-surface dark:border-outline-variant/40 font-bold flex items-center gap-1.5 transition-all shadow-sm" title="Restaurar desde archivo de tu computador">
                     <span class="material-symbols-outlined text-sm">upload_file</span>
-                    <span data-i18n="btn_upload_sql">Subir .SQL</span>
+                    <span data-i18n="btn_upload_sql">Subir Copia</span>
                   </button>
                   <button type="button" onclick="syncWithNeon()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-950 border-2 border-sky-600 dark:bg-cyan-950/40 dark:hover:bg-cyan-900/50 dark:text-cyan-300 dark:border-cyan-500/40 font-bold flex items-center gap-1.5 transition-all shadow-sm" title="Sincronizar base de datos Docker con NEON en la nube">
                     <span class="material-symbols-outlined text-sm">cloud_sync</span>
-                    <span data-i18n="btn_sync_neon">Sync Neon</span>
+                    <span data-i18n="btn_sync_neon">Sincronizar Nube</span>
                   </button>
 
                   <button type="button" onclick="promptCreateCategory()" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border-2 border-amber-500/60 flex items-center gap-1.5 transition-all shadow-sm font-bold">
@@ -1270,7 +1300,7 @@
         <div class="pt-2 border-t border-outline-variant/30 space-y-2">
           <div>
             <span class="text-secondary font-bold uppercase block text-[11px]" data-i18n="lbl_stock_price_branches">Disponibilidad, Stock Inicial y Precio por Sede:</span>
-            <p class="text-[10px] text-outline font-sans">Desmarca <strong>"Maneja en esta sede"</strong> si la sucursal no comercializa este material (ej. herrajes o accesorios exclusivos de EP1) para evitar alertas de agotado.</p>
+            <p class="hidden text-[10px] text-outline font-sans">Desmarca <strong>"Maneja en esta sede"</strong> si la sucursal no comercializa este material (ej. herrajes o accesorios exclusivos de EP1) para evitar alertas de agotado.</p>
           </div>
           
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
@@ -1519,9 +1549,9 @@
         </div>
 
         <div class="space-y-2">
-          <label class="text-outline uppercase block mb-1" data-i18n="lbl_category_profile_image">Imagen de Perfil de Categoría (PNG, JPG, WEBP · Máx 5MB)</label>
+          <label class="text-outline uppercase block mb-1" data-i18n="lbl_category_profile_image">Imagen de la Categoría</label>
           <input id="newCategoryImage" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" onchange="previewCategoryImageInput(this)" class="w-full bg-surface-container-low text-on-surface p-1.5 rounded border border-outline-variant/40 font-sans text-[10px] file:mr-2 file:py-1 file:px-2 file:border-0 file:rounded file:text-xs file:font-semibold file:bg-primary file:text-on-primary hover:file:bg-primary/90"/>
-          <p class="text-[10px] text-outline font-sans" data-i18n="category_image_fallback_hint">
+          <p class="hidden text-[10px] text-outline font-sans" data-i18n="category_image_fallback_hint">
             Si no subes una imagen (o si deseas quitarla), se mostrará automáticamente el ícono eléctrico de respaldo.
           </p>
 
@@ -1617,7 +1647,7 @@
         <div class="pt-2 border-t border-outline-variant/30 space-y-2">
           <div>
             <span class="text-secondary font-bold uppercase block text-[11px]" data-i18n="lbl_stock_price_branches">Disponibilidad, Stock y Precios por Sede:</span>
-            <p class="text-[10px] text-outline font-sans">
+            <p class="hidden text-[10px] text-outline font-sans">
               Desmarca <strong>"Maneja en esta sede"</strong> si esa sucursal (ej. EP3) no vende este producto para que <strong>no muestre alerta de agotado</strong>. Para enviar unidades de una sede a otra usa el botón amarillo <strong>"Trasladar Sede"</strong>.
             </p>
           </div>
@@ -2179,7 +2209,7 @@
                 <span>Historial de Movimientos Exactos</span>
                 <span id="movementsTotalCountBadge" class="px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-mono text-[10px]">En Vivo</span>
               </h2>
-              <p class="text-[11px] text-outline font-mono">15 movimientos por página · Actualización automática en tiempo real (Socket.IO)</p>
+              <p class="hidden text-[11px] text-outline font-mono"></p>
             </div>
           </div>
 
@@ -2319,8 +2349,8 @@
         <div class="flex items-center gap-2.5 text-emerald-400">
           <span class="material-symbols-outlined">manage_accounts</span>
           <div>
-            <h2 class="font-headline font-bold text-lg text-on-surface" data-i18n="admin_users_modal_title">Panel de Usuarios y Sesiones Activas</h2>
-            <p class="text-[11px] text-outline font-sans" data-i18n="admin_users_modal_desc">Presencia en tiempo real vía Socket.IO y cierre forzoso de sesiones con registro en Blacklist y Auditoría.</p>
+            <h2 class="font-headline font-bold text-lg text-on-surface" data-i18n="admin_users_modal_title">Panel de Usuarios</h2>
+            <p class="hidden text-[11px] text-outline font-sans" data-i18n="admin_users_modal_desc"></p>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -2345,7 +2375,7 @@
         </div>
         <div class="p-3 rounded-xl bg-emerald-950/25 border border-emerald-500/40 flex items-center justify-between">
           <div>
-            <span class="text-[10px] uppercase text-emerald-400 block" data-i18n="lbl_online_users">En Línea (Socket.IO)</span>
+            <span class="text-[10px] uppercase text-emerald-400 block" data-i18n="lbl_online_users">En Línea</span>
             <span class="text-xl font-bold text-emerald-400" id="adminUsersOnlineCount">0</span>
           </div>
           <span class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
@@ -2364,11 +2394,11 @@
           <thead>
             <tr class="bg-surface-container border-b border-outline-variant/30 font-mono text-outline uppercase">
               <th class="py-2.5 px-3" data-i18n="th_user">Usuario</th>
-              <th class="py-2.5 px-3" data-i18n="lbl_role">Rol / Sede</th>
-              <th class="py-2.5 px-3" data-i18n="th_status">Estado Cuenta</th>
-              <th class="py-2.5 px-3" data-i18n="th_presence">Presencia</th>
+              <th class="py-2.5 px-3" data-i18n="lbl_role">Rol</th>
+              <th class="py-2.5 px-3" data-i18n="th_status">Estado</th>
+              <th class="py-2.5 px-3" data-i18n="th_presence">Conexión</th>
               <th class="py-2.5 px-3" data-i18n="th_last_login">Último Acceso</th>
-              <th class="py-2.5 px-3 text-right" data-i18n="th_actions">Acción de Sesión</th>
+              <th class="py-2.5 px-3 text-right" data-i18n="th_actions">Acciones</th>
             </tr>
           </thead>
           <tbody id="adminUsersTbody" class="divide-y divide-outline-variant/20">
@@ -2557,8 +2587,8 @@
         <div class="flex items-center gap-2 text-cyan-400">
           <span class="material-symbols-outlined">security</span>
           <div>
-            <h2 class="font-headline font-bold text-lg text-on-surface" data-i18n="audit_modal_title">Registro de Auditoría y Vigilancia del Sistema</h2>
-            <p class="text-[11px] text-outline font-sans" data-i18n="audit_modal_desc">Supervisión en tiempo real de operaciones, movimientos y acciones de usuarios.</p>
+            <h2 class="font-headline font-bold text-lg text-on-surface" data-i18n="audit_modal_title">Registro de Actividad</h2>
+            <p class="hidden text-[11px] text-outline font-sans" data-i18n="audit_modal_desc"></p>
           </div>
         </div>
         <button type="button" onclick="closeAuditLogsModal()" class="text-on-surface-variant hover:text-error transition-colors">
@@ -2604,11 +2634,11 @@
               <th class="py-2.5 px-3 uppercase text-[11px]" data-i18n="th_user">Usuario</th>
               <th class="py-2.5 px-3 uppercase text-[11px]" data-i18n="th_action">Acción</th>
               <th class="py-2.5 px-3 uppercase text-[11px]" data-i18n="th_details">Detalles</th>
-              <th class="py-2.5 px-3 uppercase text-[11px]" data-i18n="th_ip">IP</th>
+              <th class="hidden py-2.5 px-3 uppercase text-[11px]" data-i18n="th_ip">IP</th>
             </tr>
           </thead>
           <tbody id="auditLogsTableBody">
-            <tr><td colspan="5" class="py-6 text-center text-outline text-sm">Cargando registros de auditoría...</td></tr>
+            <tr><td colspan="4" class="py-6 text-center text-outline text-sm">Cargando registros...</td></tr>
           </tbody>
         </table>
       </div>
@@ -2663,7 +2693,7 @@
         <div class="flex items-center gap-2 text-secondary">
           <span class="material-symbols-outlined">barcode_scanner</span>
           <div>
-            <h3 class="font-headline font-bold text-base text-on-surface" data-i18n="barcode_modal_title">Lector de Código de Barras / SKU</h3>
+            <h3 class="font-headline font-bold text-base text-on-surface" data-i18n="barcode_modal_title">Lector de Código</h3>
             <span id="barcodeEngineBadge" class="text-[10px] font-mono text-primary">Inicializando cámara...</span>
           </div>
         </div>
@@ -2755,14 +2785,14 @@
   </script>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="./js/passwordPolicy.js?v=28"></script>
-  <script src="./js/i18n.js?v=28"></script>
-  <script src="./js/app.js?v=28"></script>
+  <script type="module" src="./js/passwordPolicy.js?v=30"></script>
+  <script src="./js/i18n.js?v=30"></script>
+  <script src="./js/app.js?v=30"></script>
   <!-- Registro PWA Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js?v=28')
+        navigator.serviceWorker.register('/service-worker.js?v=30')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registrado con éxito con el scope: ', registration.scope);
