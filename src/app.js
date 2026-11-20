@@ -28,7 +28,7 @@ app.set('trust proxy', 1);
 // Rate Limiting Global (Prevención de DDoS adaptada a multi-dispositivos)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 300, // 300 solicitudes por ventana de 15 minutos
+  max: 6000, // 6000 solicitudes por ventana de 15 minutos (soporta +25 usuarios simultáneos en la misma red Wi-Fi/IP)
   message: { success: false, message: 'Demasiadas solicitudes desde esta IP.' }
 });
 

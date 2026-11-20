@@ -28,7 +28,7 @@ import rateLimit from 'express-rate-limit';
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 10, // Máximo 10 intentos por IP
+  max: 80, // Permite que 15-30 empleados en la misma red Wi-Fi inicien sesión al mismo tiempo
   message: { success: false, message: 'Demasiados intentos de autenticación, intente en 15 minutos.' }
 });
 

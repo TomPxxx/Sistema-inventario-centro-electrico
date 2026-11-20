@@ -127,7 +127,12 @@ router.post('/', authenticateJWT, authorizeRoles('ADMINISTRADOR'), (req, res) =>
         });
       }
 
-      const imageUrl = `/uploads/${req.file.filename}`;
+      let imageUrl = `/uploads/${req.file.filename}`;
+      if (process.env.RENDER || process.env.NODE_ENV === 'production') {
+        const mimeMap = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' };
+        const fileBase64 = fs.readFileSync(req.file.path).toString('base64');
+        imageUrl = `data:${mimeMap[realFormat] || 'image/png'};base64,${fileBase64}`;
+      }
 
       return res.status(200).json({
         success: true,
