@@ -481,7 +481,7 @@
         
         <div class="w-full max-w-md mx-auto glass-panel rounded-xl p-6 relative">
           <!-- Botón de Idioma en Login -->
-          <button type="button" onclick="toggleLanguage()" class="absolute top-4 right-4 text-xs font-mono px-2.5 py-1 bg-surface-container hover:bg-surface-container-high rounded-lg border border-outline-variant/40 flex items-center gap-1.5 text-on-surface transition-colors z-20" title="Switch Language / Cambiar Idioma">
+          <button type="button" onclick="toggleLanguage()" class="fixed top-4 right-4 text-xs font-mono px-2.5 py-1.5 bg-surface-container hover:bg-surface-container-high rounded-lg border border-outline-variant/40 flex items-center gap-1.5 text-on-surface transition-colors z-30 shadow-md" title="Switch Language / Cambiar Idioma">
             <span class="material-symbols-outlined text-[16px]">translate</span>
             <span class="lang-indicator font-bold text-primary">ES</span>
           </button>
@@ -2785,14 +2785,14 @@
   </script>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="./js/passwordPolicy.js?v=30"></script>
-  <script src="./js/i18n.js?v=30"></script>
-  <script src="./js/app.js?v=30"></script>
+  <script type="module" src="./js/passwordPolicy.js?v=31"></script>
+  <script src="./js/i18n.js?v=31"></script>
+  <script src="./js/app.js?v=31"></script>
   <!-- Registro PWA Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js?v=30')
+        navigator.serviceWorker.register('/service-worker.js?v=31')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registrado con éxito con el scope: ', registration.scope);

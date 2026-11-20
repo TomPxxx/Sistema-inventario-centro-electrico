@@ -257,11 +257,12 @@ async function loadRecaptcha() {
         initCaptcha();
       }
 
-      if (data.googleClientId) {
+      const activeGoogleClientId = data.googleClientId || '460591835450-t0m0gili2fq31q61jgkflla3mqo4vv8u.apps.googleusercontent.com';
+      if (activeGoogleClientId) {
         const initGoogle = () => {
           if (typeof google !== 'undefined' && google.accounts) {
             google.accounts.id.initialize({
-              client_id: data.googleClientId,
+              client_id: activeGoogleClientId,
               callback: handleGoogleLogin,
               context: 'signin',
               ux_mode: 'popup'

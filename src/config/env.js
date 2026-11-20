@@ -17,7 +17,7 @@ export const config = {
     siteKey: process.env.RECAPTCHA_SITE_KEY,
   },
   google: {
-    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientId: process.env.GOOGLE_CLIENT_ID || '460591835450-t0m0gili2fq31q61jgkflla3mqo4vv8u.apps.googleusercontent.com',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   }
 };
