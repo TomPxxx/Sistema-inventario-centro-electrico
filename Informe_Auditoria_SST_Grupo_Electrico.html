@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Informe SST</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  max-width: 1200px;
+  margin: 30px auto;
+  padding: 0 16px;
+  color: #202830;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0 30px;
+}
+th, td {
+  border: 1px solid #ccd2d8;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+th { background: #eaf0f6; }
+.note {
+  padding: 14px;
+  background: #fff3cd;
+  border-left: 4px solid #d39e00;
+}
+</style>
+</head>
+<body>
+<h1>Informe de auditoría SST</h1>
+<p><b>Versión:</b> 2.0.0</p>
+<p><b>Objetivo:</b> http://localhost:4000/</p>
+<p><b>Inicio:</b> 2026-11-16T18:09:25-05:00</p>
+<p><b>Fin:</b> 2026-11-16T18:09:25-05:00</p>
+
+<div class="note">
+Este informe contiene comprobaciones e indicadores heurísticos.
+La ausencia de hallazgos no demuestra que la aplicación sea segura.
+Valida manualmente los resultados y prueba únicamente sistemas autorizados.
+</div>
+
+<h2>Resumen</h2>
+<p>Módulos ejecutados: 9</p>
+<p>Hallazgos e indicadores: 0</p>
+
+<h2>Resultados por módulo</h2>
+<table>
+<thead><tr><th>Módulo</th><th>Estado</th><th>Detalle</th></tr></thead>
+<tbody><tr><td>Cabeceras HTTP</td><td>PASS</td><td>HTTP 200. Hallazgos: 0.</td></tr><tr><td>Archivos expuestos</td><td>PASS</td><td>5 rutas revisadas. Los resultados HTTP 200 requieren interpretación.</td></tr><tr><td>Errores y validación de entradas</td><td>NOT_DETECTED</td><td>3 solicitudes de prueba. No se enviaron formularios.</td></tr><tr><td>Indicadores de SQL Injection</td><td>NOT_CONFIRMED</td><td>3 solicitudes revisadas. La ausencia de errores SQL visibles no descarta SQLi.</td></tr><tr><td>Reflexión de entradas / XSS</td><td>NOT_DETECTED</td><td>No se encontró el marcador literal ni codificado. Esto no descarta XSS en otros puntos de entrada.</td></tr><tr><td>Cookies y sesión</td><td>PASS</td><td>0 cabeceras Set-Cookie inspeccionadas en la respuesta inicial. No se evaluó el ciclo de vida de la sesión.</td></tr><tr><td>Indicadores CSRF</td><td>PASS</td><td>11 formularios inspeccionados. SST no envió los formularios.</td></tr><tr><td>Autenticación (pasiva)</td><td>INFO</td><td>Posible formulario de login detectado. La lógica de autenticación no fue evaluada.</td></tr><tr><td>Autorización (rutas comunes)</td><td>PASS</td><td>6 rutas candidatas revisadas sin sesión. No se confirmó ningún fallo de autorización.</td></tr></tbody>
+</table>
+
+<h2>Hallazgos</h2>
+<table>
+<thead>
+<tr>
+<th>Severidad</th><th>Hallazgo</th><th>Estado</th>
+<th>Confianza</th><th>Endpoint</th><th>Evidencia</th>
+<th>Mitigación</th><th>CWE</th><th>Módulo</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</body>
+</html>

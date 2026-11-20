@@ -276,6 +276,8 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_accion ON audit_logs(accion);
 
 -- 15. ASEGURAR COLUMNAS Y CONSTRAINTS EN TABLAS PREEXISTENTES (MIGRACIONES IDEMPOTENTES)
 ALTER TABLE categorias ADD COLUMN IF NOT EXISTS imagen_url VARCHAR(255) DEFAULT NULL;
+ALTER TABLE producto_sede ADD COLUMN IF NOT EXISTS disponible_en_sede BOOLEAN NOT NULL DEFAULT TRUE;
+CREATE TABLE IF NOT EXISTS movimientos_inventario_archivo (LIKE movimientos_inventario INCLUDING ALL);
 
 ALTER TABLE productos ADD COLUMN IF NOT EXISTS imagen_url VARCHAR(255) DEFAULT NULL;
 ALTER TABLE productos ADD COLUMN IF NOT EXISTS marca VARCHAR(100) DEFAULT NULL;
@@ -302,6 +304,7 @@ ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_estado_check;
 `;
 
 export async function generateSqlDump(pool = defaultPool) {
+  await pool.query('SELECT 1 FROM sedes LIMIT 1');
   const tables = [
     'sedes', 
     'usuarios', 

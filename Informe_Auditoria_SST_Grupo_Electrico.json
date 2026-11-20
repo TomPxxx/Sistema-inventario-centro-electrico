@@ -1,0 +1,56 @@
+{
+  "tool": "SST",
+  "version": "2.0.0",
+  "target": "http://localhost:4000/",
+  "started_at": "2026-11-16T18:09:25-05:00",
+  "finished_at": "2026-11-16T18:09:25-05:00",
+  "cancelled": false,
+  "results": [
+    {
+      "module": "Cabeceras HTTP",
+      "status": "PASS",
+      "detail": "HTTP 200. Hallazgos: 0."
+    },
+    {
+      "module": "Archivos expuestos",
+      "status": "PASS",
+      "detail": "5 rutas revisadas. Los resultados HTTP 200 requieren interpretación."
+    },
+    {
+      "module": "Errores y validación de entradas",
+      "status": "NOT_DETECTED",
+      "detail": "3 solicitudes de prueba. No se enviaron formularios."
+    },
+    {
+      "module": "Indicadores de SQL Injection",
+      "status": "NOT_CONFIRMED",
+      "detail": "3 solicitudes revisadas. La ausencia de errores SQL visibles no descarta SQLi."
+    },
+    {
+      "module": "Reflexión de entradas / XSS",
+      "status": "NOT_DETECTED",
+      "detail": "No se encontró el marcador literal ni codificado. Esto no descarta XSS en otros puntos de entrada."
+    },
+    {
+      "module": "Cookies y sesión",
+      "status": "PASS",
+      "detail": "0 cabeceras Set-Cookie inspeccionadas en la respuesta inicial. No se evaluó el ciclo de vida de la sesión."
+    },
+    {
+      "module": "Indicadores CSRF",
+      "status": "PASS",
+      "detail": "11 formularios inspeccionados. SST no envió los formularios."
+    },
+    {
+      "module": "Autenticación (pasiva)",
+      "status": "INFO",
+      "detail": "Posible formulario de login detectado. La lógica de autenticación no fue evaluada."
+    },
+    {
+      "module": "Autorización (rutas comunes)",
+      "status": "PASS",
+      "detail": "6 rutas candidatas revisadas sin sesión. No se confirmó ningún fallo de autorización."
+    }
+  ],
+  "findings": []
+}

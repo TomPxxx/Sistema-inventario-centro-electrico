@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authenticateJWT } from '../middlewares/authMiddleware.js';
 import authRoutes from './authRoutes.js';
 import inventoryRoutes from './inventoryRoutes.js';
 import dashboardRoutes from './dashboardRoutes.js';
@@ -21,7 +22,7 @@ router.use('/backup', backupRoutes);
 router.use('/solicitudes', solicitudRoutes);
 
 // Ruta base de la API
-router.get('/', (req, res) => {
+router.get('/', authenticateJWT, (req, res) => {
   res.json({
     name: 'API Sistema de Inventario Multisede (Material Eléctrico)',
     version: '1.0.0',

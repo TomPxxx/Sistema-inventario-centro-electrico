@@ -16,7 +16,7 @@ import rateLimit from 'express-rate-limit';
 
 // Seguridad HTTP con Helmet (CSP desactivado para evitar conflictos con CDNs)
 app.use(helmet({ 
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: { useDefaults: false, directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://www.google.com", "https://www.gstatic.com", "https://accounts.google.com"], scriptSrcAttr: ["'unsafe-inline'"], styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://accounts.google.com"], fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"], imgSrc: ["'self'", "data:", "blob:", "https:"], connectSrc: ["'self'", "ws:", "wss:", "https:", "http://localhost:*", "http://127.0.0.1:*", "https://www.google.com", "https://accounts.google.com"], frameSrc: ["'self'", "https://www.google.com", "https://accounts.google.com"], objectSrc: ["'none'"], baseUri: ["'self'"], formAction: ["'self'"], frameAncestors: ["'self'"] } },
   crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginEmbedderPolicy: false
